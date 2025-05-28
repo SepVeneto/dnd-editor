@@ -1,0 +1,10 @@
+@forward 'element-plus/theme-chalk/src/mixins/config.scss' with (
+  $namespace: 'mpd'
+);
+@use 'element-plus/theme-chalk/src/index.scss' as *;
+
+.mpd-form-item {
+  .mpd-select {
+    width: 240px;
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "name": "@sepveneto/dnde",
+  "version": "0.0.1",
+  "description": "",
+  "author": "",
+  "license": "ISC",
+  "keywords": [],
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/editor.js"
+    }
+
+  },
+  "dependencies": {
+    "@element-plus/icons-vue": "^2.3.1",
+    "@module-federation/enhanced": "^0.14.3",
+    "@sepveneto/basic-comp": "^0.9.6",
+    "@sepveneto/dnde-core": "workspace: *",
+    "@sepveneto/free-dom": "^0.14.7",
+    "element-plus": "^2.9.11",
+    "lodash-es": "^4.17.21",
+    "pinia": "^3.0.2",
+    "sass": "^1.89.0",
+    "vue": "^3.5.15",
+    "vue-router": "^4.5.1",
+    "vuedraggable": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.23",
+    "@vitejs/plugin-vue": "^5.2.4",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5"
+  }
+}
