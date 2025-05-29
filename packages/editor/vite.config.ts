@@ -1,18 +1,27 @@
-import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import vue from '@vitejs/plugin-vue'
+import { defineConfig } from 'vite'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [vue({
+    template: {
+      compilerOptions: {
+        isCustomElement: tag => tag === 'mpd-editor',
+      },
+    },
+    features: {
+      customElement: true,
+    },
+  })],
   server: {
     port: 8082,
   },
   resolve: {
     alias: {
-      '@': resolve(__dirname, 'src'),
+      '@': resolve(__dirname, 'lib'),
     },
   },
   optimizeDeps: {
@@ -29,8 +38,6 @@ export default defineConfig({
       output: {
         manualChunks: {
           'stable-vendor': ['vue-router', 'vue', 'pinia', 'vuedraggable', 'lodash-es'],
-          element: ['element-plus', '@element-plus/icons-vue'],
-          sepveneto: ['@sepveneto/basic-comp', '@sepveneto/free-dom'],
         },
       },
     },

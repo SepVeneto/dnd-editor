@@ -69,6 +69,9 @@ importers:
       sass:
         specifier: ^1.89.0
         version: 1.89.0
+      uuid:
+        specifier: ^11.1.0
+        version: 11.1.0
       vue:
         specifier: ^3.5.15
         version: 3.5.15(typescript@5.8.3)
@@ -3239,6 +3242,10 @@ packages:
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
 
+  uuid@11.1.0:
+    resolution: {integrity: sha512-0/A9rDy9P7cJ+8w1c9WD9V//9Wj15Ce2MPz8Ri6032usz+NfePxx5AcN3bN+r6ZL6jEo066/yNYB3tn4pQEx+A==}
+    hasBin: true
+
   uuid@9.0.1:
     resolution: {integrity: sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA==}
     hasBin: true
@@ -3340,17 +3347,6 @@ packages:
       happy-dom:
         optional: true
       jsdom:
-        optional: true
-
-  vue-demi@0.13.11:
-    resolution: {integrity: sha512-IR8HoEEGM65YY3ZJYAjMlKygDQn25D5ajNFNoKh9RSDMQtlzCxtfQjdQgv9jjK+m3377SsJXY8ysq8kLCZL25A==}
-    engines: {node: '>=12'}
-    hasBin: true
-    peerDependencies:
-      '@vue/composition-api': ^1.0.0-rc.1
-      vue: ^3.0.0-0 || ^2.6.0
-    peerDependenciesMeta:
-      '@vue/composition-api':
         optional: true
 
   vue-demi@0.14.10:
@@ -4637,7 +4633,7 @@ snapshots:
       '@types/web-bluetooth': 0.0.16
       '@vueuse/metadata': 9.13.0
       '@vueuse/shared': 9.13.0(@vue/composition-api@1.7.2(vue@3.5.15(typescript@5.8.3)))(vue@3.5.15(typescript@5.8.3))
-      vue-demi: 0.13.11(@vue/composition-api@1.7.2(vue@3.5.15(typescript@5.8.3)))(vue@3.5.15(typescript@5.8.3))
+      vue-demi: 0.14.10(@vue/composition-api@1.7.2(vue@3.5.15(typescript@5.8.3)))(vue@3.5.15(typescript@5.8.3))
     transitivePeerDependencies:
       - '@vue/composition-api'
       - vue
@@ -4646,7 +4642,7 @@ snapshots:
 
   '@vueuse/shared@9.13.0(@vue/composition-api@1.7.2(vue@3.5.15(typescript@5.8.3)))(vue@3.5.15(typescript@5.8.3))':
     dependencies:
-      vue-demi: 0.13.11(@vue/composition-api@1.7.2(vue@3.5.15(typescript@5.8.3)))(vue@3.5.15(typescript@5.8.3))
+      vue-demi: 0.14.10(@vue/composition-api@1.7.2(vue@3.5.15(typescript@5.8.3)))(vue@3.5.15(typescript@5.8.3))
     transitivePeerDependencies:
       - '@vue/composition-api'
       - vue
@@ -6714,6 +6710,8 @@ snapshots:
 
   util-deprecate@1.0.2: {}
 
+  uuid@11.1.0: {}
+
   uuid@9.0.1: {}
 
   vary@1.1.2: {}
@@ -6796,12 +6794,6 @@ snapshots:
       - sugarss
       - supports-color
       - terser
-
-  vue-demi@0.13.11(@vue/composition-api@1.7.2(vue@3.5.15(typescript@5.8.3)))(vue@3.5.15(typescript@5.8.3)):
-    dependencies:
-      vue: 3.5.15(typescript@5.8.3)
-    optionalDependencies:
-      '@vue/composition-api': 1.7.2(vue@3.5.15(typescript@5.8.3))
 
   vue-demi@0.14.10(@vue/composition-api@1.7.2(vue@3.5.15(typescript@5.8.3)))(vue@3.5.15(typescript@5.8.3)):
     dependencies:

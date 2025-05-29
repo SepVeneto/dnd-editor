@@ -3,7 +3,28 @@
     :locale="zhCn"
     namespace="mpd"
   >
-    <ViewRender type="menuItem" />
+    <div>{{ editor.nodeList }}</div>
+    <div style="display: flex;">
+      <WidgetsMenu />
+      <VueDraggable
+        v-model="editor.nodeList"
+        :group="{ name: 'editor', pull: true, put: true }"
+        style="width: 375px; min-height: calc(667px - 60px); position: relative; background: #ddd;"
+        :component-data="{ type: 'transition-group', name: 'flip-list' }"
+        :animation="200"
+        item-key="wid"
+      >
+        <template #item="{ element }">
+          <NodeWrap
+            :node="element"
+          >
+            <ViewRender :type="element.type" />
+          </NodeWrap>
+        </template>
+      </VueDraggable>
+
+      <ConfigPanel />
+    </div>
   </ElConfigProvider>
 </template>
 
@@ -23,10 +44,19 @@ import { registerRemotes } from '@module-federation/enhanced/runtime'
 // import EditorOperate from '@/layout/EditorOperate.ce.vue'
 // @ts-expect-error: no def
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
+import { watchEffect } from 'vue'
+import VueDraggable from 'vuedraggable'
+import NodeWrap from './components/NodeWrap.vue'
+import ConfigPanel from './layout/configPanel.vue'
+import WidgetsMenu from './layout/widgetsMenu.vue'
 import { editorProps } from './props'
+import { useEditor } from './store'
+import { useApp } from './store/app'
 import { loadFromRemote } from './utils'
 
 const props = defineProps(editorProps)
+const app = useApp()
+const editor = useEditor()
 
 registerRemotes([
   {
@@ -38,6 +68,10 @@ registerRemotes([
 ], { force: true })
 
 const ViewRender = loadFromRemote('widgets', 'viewRender')
+
+watchEffect(() => {
+  app.setWidgets(props.widgets)
+})
 </script>
 
 <style lang="scss">

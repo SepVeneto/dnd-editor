@@ -1,15 +1,15 @@
-import App from './App.ce.vue'
-import { createPinia } from 'pinia'
-import ElementPlus from 'element-plus'
-import BasicComp from '@sepveneto/basic-comp'
 // import { router } from './router'
 import { init } from '@module-federation/enhanced/runtime'
+import BasicComp from '@sepveneto/basic-comp'
+import ElementPlus from 'element-plus'
+import { createPinia } from 'pinia'
 import * as Vue from 'vue'
 import { createApp, defineCustomElement, getCurrentInstance, h } from 'vue'
-import { editorProps } from './props'
 import packageJson from '../package.json'
+import App from './App.ce.vue'
+import { editorProps } from './props'
 
-function createElementInstance() {
+export function createElementInstance() {
   console.log(packageJson.dependencies.vue)
   return defineCustomElement({
     props: editorProps,
@@ -49,6 +49,10 @@ function createElementInstance() {
   })
 }
 
+export const Editor = createElementInstance()
+
 export function register() {
-  customElements.define('mpd-editor', createElementInstance())
+  console.log(customElements.getName(Editor))
+  if (customElements.getName(Editor)) return
+  customElements.define('mpd-editor', Editor)
 }
