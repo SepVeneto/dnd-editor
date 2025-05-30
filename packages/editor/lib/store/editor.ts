@@ -1,11 +1,11 @@
 import type { Node } from '@/class'
 import { defineStore } from 'pinia'
-import { ref, shallowRef, triggerRef } from 'vue'
+import { ref, triggerRef } from 'vue'
 
 export const useEditor = defineStore('editor', () => {
   const isPreview = ref(false)
   const nodeMap = new Map<string, Node>()
-  const nodeList = shallowRef<Node[]>([])
+  const nodeList = ref<Node[]>([])
   const selected = ref<string>()
 
   function addNode(node: Node) {

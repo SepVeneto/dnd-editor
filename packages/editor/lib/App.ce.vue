@@ -4,6 +4,7 @@
     namespace="mpd"
   >
     <div>{{ editor.nodeList }}</div>
+    <div>{{ editor.selected }}</div>
     <div style="display: flex;">
       <WidgetsMenu />
       <VueDraggable

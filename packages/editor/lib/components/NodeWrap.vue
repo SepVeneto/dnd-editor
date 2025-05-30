@@ -1,9 +1,16 @@
 <template>
   <div
+    class="node-wrap"
     :class="[isActive && 'selected']"
-    @click="editor.selected = node.wid"
+    @click.stop="editor.selected = node.wid"
   >
-    <slot />
+    <NodeContainer
+      v-if="node.type === 'container'"
+      :node="node"
+    />
+    <slot v-else>
+      <div>拖曳组件</div>
+    </slot>
   </div>
 </template>
 
@@ -11,6 +18,7 @@
 import type { Node } from '@/class'
 import { computed } from 'vue'
 import { useEditor } from '@/store'
+import NodeContainer from './NodeContainer.vue'
 
 const props = defineProps<{ node: Node }>()
 
@@ -20,6 +28,11 @@ const isActive = computed(() => props.node.wid === editor.selected)
 
 <style lang="scss" scoped>
 .selected {
-  border: 1px solid #4089Ef;
+  outline: 1px solid #4089Ef;
+}
+.node-wrap {
+  &:hover {
+    outline: 1px dashed #4089Ef;
+  }
 }
 </style>
