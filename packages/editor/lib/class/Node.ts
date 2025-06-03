@@ -22,8 +22,11 @@ export class Node {
   }
 
   setList(list: Node[]) {
-    console.log('set', list)
     this.list = list
+  }
+
+  copy() {
+    return new Node(this.widget)
   }
 }
 

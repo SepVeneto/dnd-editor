@@ -25,6 +25,7 @@
 
     <div
       class="icon-wrap"
+      @click="handleAction('copy')"
       @mouseenter="onMouseenter($event, '复制')"
     >
       <ElIcon>
@@ -34,6 +35,7 @@
 
     <div
       class="icon-wrap"
+      @click="handleAction('delete')"
       @mouseenter="onMouseenter($event, '删除')"
     >
       <ElIcon>
@@ -73,6 +75,17 @@ const inst = getCurrentInstance()!
 function onMouseenter(evt: Event, content: string) {
   const target = evt.target as HTMLElement
   createPopper(inst.appContext, target, content, parent)
+}
+
+function handleAction(action: 'copy' | 'delete') {
+  switch (action) {
+    case 'copy':
+      editor.addNode(props.node.copy(), props.node.parent)
+      break
+    case 'delete':
+      editor.delNode(props.node.wid)
+      break
+  }
 }
 </script>
 

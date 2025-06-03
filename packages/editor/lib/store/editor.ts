@@ -35,6 +35,17 @@ export const useEditor = defineStore('editor', () => {
     nodeMap.set(node.wid, node)
     node.parent = pNode
   }
+  function delNode(wid: string) {
+    const node = nodeMap.get(wid)
+    const index = node?.parent?.list.findIndex(item => item.wid === wid)
+    if (index == null) {
+      throw new Error(`找不到节点 ${wid}`)
+    }
+    node?.parent?.list.splice(index, 1)
+    nodeMap.delete(wid)
+    selected.value = undefined
+    refresh()
+  }
   function refresh() {
     triggerRef(nodeList)
   }
@@ -50,6 +61,7 @@ export const useEditor = defineStore('editor', () => {
     selectedNode,
     selectedNodes,
     addNode,
+    delNode,
     refresh,
     nodeList,
     isPreview,
