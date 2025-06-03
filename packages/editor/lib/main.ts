@@ -8,12 +8,13 @@ import { createApp, defineCustomElement, getCurrentInstance, h } from 'vue'
 import packageJson from '../package.json'
 import App from './App.ce.vue'
 import { editorProps } from './props'
+import { useEditor } from './store'
 
 export function createElementInstance() {
   console.log(packageJson.dependencies.vue)
   return defineCustomElement({
     props: editorProps,
-    setup() {
+    setup(props, { expose }) {
       init({
         name: 'editor',
         remotes: [],
@@ -41,6 +42,15 @@ export function createElementInstance() {
         Object.assign(inst.appContext, app._context)
         // Object.assign(inst.provides, app._context.provides)
       }
+      const editor = useEditor()
+      editor.shadowRoot = Vue.useShadowRoot()!
+
+      expose({
+        register(fn: any) {
+          const editor = useEditor()
+          editor.register(fn)
+        },
+      })
     },
 
     render() {
@@ -53,6 +63,7 @@ export const Editor = createElementInstance()
 
 export function register() {
   console.log(customElements.getName(Editor))
-  if (customElements.getName(Editor)) return
+  if (customElements.getName(Editor))
+    return
   customElements.define('mpd-editor', Editor)
 }

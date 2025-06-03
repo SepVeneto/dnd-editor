@@ -1,5 +1,8 @@
-import { defineAsyncComponent, h } from "vue"
-import { loadRemote } from "@module-federation/enhanced/runtime"
+import type { AppContext, VNode } from 'vue'
+import { loadRemote } from '@module-federation/enhanced/runtime'
+import { ElTooltip } from 'element-plus'
+import { AppConfig, createVNode, defineAsyncComponent, h, render, useHost, useShadowRoot } from 'vue'
+
 export function loadFromRemote(scope: string, module: string) {
   const renderer = defineAsyncComponent({
     loader: () => loadRemote(`${scope}/${module}`) as any,
@@ -11,4 +14,47 @@ export function loadFromRemote(scope: string, module: string) {
   })
 
   return renderer
+}
+
+type RemovePopperFn = (() => void) & {
+  trigger?: HTMLElement
+  vm?: VNode
+}
+// eslint-disable-next-line import/no-mutable-exports
+export let removePopper: RemovePopperFn | null = null
+
+export function createPopper(
+  ctx: AppContext,
+  trigger: HTMLElement,
+  content: string,
+  parent?: HTMLElement,
+) {
+  if (removePopper?.trigger === trigger) {
+    return
+  }
+  removePopper?.()
+
+  const vm = createVNode(ElTooltip, {
+    virtualTriggering: true,
+    virtualRef: trigger,
+    appendTo: parent,
+    // teleported: false,
+    placement: 'top',
+    transition: 'none',
+    offset: 4,
+    hideAfter: 0,
+  }, { content: () => content })
+  vm.appContext = ctx
+
+  const container = document.createElement('div')
+  render(vm, container)
+  vm.component!.exposed!.onOpen()
+
+  removePopper = () => {
+    render(null, container)
+    removePopper = null
+  }
+
+  removePopper.trigger = trigger
+  removePopper.vm = vm
 }

@@ -3,17 +3,22 @@
     :locale="zhCn"
     namespace="mpd"
   >
-    <div>{{ editor.nodeList }}</div>
     <div>{{ editor.selected }}</div>
-    <div style="display: flex;">
+    <div
+      class="mpd-editor"
+      style="display: flex;"
+    >
       <WidgetsMenu />
       <VueDraggable
         v-model="editor.nodeList"
         :group="{ name: 'editor', pull: true, put: true }"
-        style="width: 375px; min-height: calc(667px - 60px); position: relative; background: #ddd;"
+        style="width: 375px; min-height: calc(667px - 60px); position: relative; background: #eee;"
         :component-data="{ type: 'transition-group', name: 'flip-list' }"
         :animation="200"
+        ghost-class="dragging-ghost"
+        handle=".node-wrap"
         item-key="wid"
+        @add="onAdd"
       >
         <template #item="{ element }">
           <NodeWrap
@@ -30,6 +35,7 @@
 </template>
 
 <script lang="ts" setup>
+import type { DraggableEvt } from './type'
 // import SettingGlobal from './layout/Setting.global.ce.vue'
 // import SettingWidget from './layout/Setting.widget.ce.vue'
 // import { useConfig } from './hooks'
@@ -59,6 +65,18 @@ const props = defineProps(editorProps)
 const app = useApp()
 const editor = useEditor()
 
+function onAdd(evt: DraggableEvt) {
+  const node = editor.nodeList[evt.newDraggableIndex]
+  editor.addNode(node)
+  console.log(editor.nodeList)
+}
+function onStart(evt) {
+  console.log('start', evt)
+}
+function onEnd(evt) {
+  console.log('end', evt)
+}
+
 registerRemotes([
   {
     name: 'widgets',
@@ -77,6 +95,7 @@ watchEffect(() => {
 
 <style lang="scss">
 @use './styles/global.scss';
+@use 'element-plus/theme-chalk/src/index.scss';
 @use '@sepveneto/basic-comp/css';
 .top-header {
   background: #fff;

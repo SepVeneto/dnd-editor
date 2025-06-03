@@ -8,3 +8,9 @@
     width: 240px;
   }
 }
+.dragging-ghost {
+  width: 100%;
+  height: 4px;
+  background-color: crimson;
+  overflow: hidden;
+}
