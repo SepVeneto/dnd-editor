@@ -1,7 +1,10 @@
-import type { AppContext, VNode } from 'vue'
+import type { AppContext, InjectionKey, VNode } from 'vue'
+import type { Node } from './class'
 import { loadRemote } from '@module-federation/enhanced/runtime'
 import { ElTooltip } from 'element-plus'
-import { AppConfig, createVNode, defineAsyncComponent, h, render, useHost, useShadowRoot } from 'vue'
+import { createVNode, defineAsyncComponent, h, render } from 'vue'
+
+export const EditorContext: InjectionKey<{ nodeList: Node[] }> = Symbol('editor')
 
 export function loadFromRemote(scope: string, module: string) {
   const renderer = defineAsyncComponent({

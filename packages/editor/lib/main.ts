@@ -5,13 +5,11 @@ import ElementPlus from 'element-plus'
 import { createPinia } from 'pinia'
 import * as Vue from 'vue'
 import { createApp, defineCustomElement, getCurrentInstance, h } from 'vue'
-import packageJson from '../package.json'
 import App from './App.ce.vue'
 import { editorProps } from './props'
 import { useEditor } from './store'
 
 export function createElementInstance() {
-  console.log(packageJson.dependencies.vue)
   return defineCustomElement({
     props: editorProps,
     setup(props, { expose }) {

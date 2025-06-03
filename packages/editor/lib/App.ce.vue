@@ -51,7 +51,7 @@ import { registerRemotes } from '@module-federation/enhanced/runtime'
 // import EditorOperate from '@/layout/EditorOperate.ce.vue'
 // @ts-expect-error: no def
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
-import { watchEffect } from 'vue'
+import { provide, reactive, watchEffect } from 'vue'
 import VueDraggable from 'vuedraggable'
 import NodeWrap from './components/NodeWrap.vue'
 import ConfigPanel from './layout/configPanel.vue'
@@ -59,11 +59,15 @@ import WidgetsMenu from './layout/widgetsMenu.vue'
 import { editorProps } from './props'
 import { useEditor } from './store'
 import { useApp } from './store/app'
-import { loadFromRemote } from './utils'
+import { EditorContext, loadFromRemote } from './utils'
 
 const props = defineProps(editorProps)
 const app = useApp()
 const editor = useEditor()
+
+provide(EditorContext, reactive({
+  nodeList: editor.nodeList,
+}))
 
 function onAdd(evt: DraggableEvt) {
   const node = editor.nodeList[evt.newDraggableIndex]
