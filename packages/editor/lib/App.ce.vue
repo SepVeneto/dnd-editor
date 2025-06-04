@@ -10,7 +10,7 @@
     >
       <WidgetsMenu />
       <VueDraggable
-        v-model="editor.nodeList"
+        v-model="editor.rootNode.list"
         :group="{ name: 'editor', pull: true, put: true }"
         style="width: 375px; min-height: calc(667px - 60px); position: relative; background: #eee;"
         :component-data="{ type: 'transition-group', name: 'flip-list' }"
@@ -40,6 +40,7 @@ import type { DraggableEvt } from './type'
 // import SettingWidget from './layout/Setting.widget.ce.vue'
 // import { useConfig } from './hooks'
 import { registerRemotes } from '@module-federation/enhanced/runtime'
+import { EditorContext } from '@sepveneto/dnde-core'
 // import Editor from '@/layout/editor.ce.vue'
 // import widgetWrap from '@/layout/widgetWrap.ce.vue'
 // import { tabbarPreview } from '@/layout/tabbar'
@@ -51,7 +52,7 @@ import { registerRemotes } from '@module-federation/enhanced/runtime'
 // import EditorOperate from '@/layout/EditorOperate.ce.vue'
 // @ts-expect-error: no def
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
-import { provide, reactive, watchEffect } from 'vue'
+import { computed, provide, reactive, useSlots, watchEffect } from 'vue'
 import VueDraggable from 'vuedraggable'
 import NodeWrap from './components/NodeWrap.vue'
 import ConfigPanel from './layout/configPanel.vue'
@@ -59,26 +60,24 @@ import WidgetsMenu from './layout/widgetsMenu.vue'
 import { editorProps } from './props'
 import { useEditor } from './store'
 import { useApp } from './store/app'
-import { EditorContext, loadFromRemote } from './utils'
+import { loadFromRemote } from './utils'
 
 const props = defineProps(editorProps)
+
 const app = useApp()
 const editor = useEditor()
 
 provide(EditorContext, reactive({
-  nodeList: editor.nodeList,
+  node: computed(() => editor.selectedNode),
 }))
 
+// provide(EditorContext, reactive({
+//   nodeList: editor.rootNode,
+// }))
+
 function onAdd(evt: DraggableEvt) {
-  const node = editor.nodeList[evt.newDraggableIndex]
+  const node = editor.rootNode.list[evt.newDraggableIndex]
   editor.addNode(node)
-  console.log(editor.nodeList)
-}
-function onStart(evt) {
-  console.log('start', evt)
-}
-function onEnd(evt) {
-  console.log('end', evt)
 }
 
 registerRemotes([
@@ -173,4 +172,3 @@ watchEffect(() => {
   min-height: 400px;
 }
 </style>
-section

@@ -26,6 +26,10 @@ importers:
         version: 5.8.3
 
   packages/core:
+    dependencies:
+      uuid:
+        specifier: ^11.1.0
+        version: 11.1.0
     devDependencies:
       tsup:
         specifier: ^8.4.0

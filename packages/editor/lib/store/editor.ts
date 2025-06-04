@@ -1,17 +1,18 @@
-import type { Node } from '@/class'
+import type { Node } from '@sepveneto/dnde-core/class'
+import { RootNode } from '@sepveneto/dnde-core/class'
 import { defineStore } from 'pinia'
 import { computed, ref, shallowRef, triggerRef } from 'vue'
-import { RootNode } from '@/class'
 
 export const useEditor = defineStore('editor', () => {
   const shadowRoot = shallowRef<ShadowRoot>()
   const isPreview = ref(false)
   const nodeMap = new Map<string, Node>()
-  const nodeList = ref<Node[]>([])
   const selected = ref<string>()
   const dragging = ref<Node>()
   const rootNode = new RootNode()
-  const plugins: any[] = []
+  const plugins = {
+    helper: [],
+  }
   const selectedNode = computed(() => {
     if (!selected.value)
       return
@@ -31,9 +32,10 @@ export const useEditor = defineStore('editor', () => {
     return pathNodes
   })
 
-  function addNode(node: Node, pNode: Node = rootNode) {
+  function addNode(node: Node, pNode: Node = rootNode, manual = false) {
     nodeMap.set(node.wid, node)
     node.parent = pNode
+    manual && pNode.list.push(node)
   }
   function delNode(wid: string) {
     const node = nodeMap.get(wid)
@@ -44,26 +46,17 @@ export const useEditor = defineStore('editor', () => {
     node?.parent?.list.splice(index, 1)
     nodeMap.delete(wid)
     selected.value = undefined
-    refresh()
-  }
-  function refresh() {
-    triggerRef(nodeList)
-  }
-
-  function register(plugin: any) {
-    plugins.push(plugin)
   }
 
   return {
+    rootNode,
     shadowRoot,
-    register,
     selected,
     selectedNode,
     selectedNodes,
     addNode,
     delNode,
-    refresh,
-    nodeList,
+    // nodeList,
     isPreview,
     dragging,
     plugins,

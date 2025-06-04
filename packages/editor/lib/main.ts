@@ -12,7 +12,8 @@ import { useEditor } from './store'
 export function createElementInstance() {
   return defineCustomElement({
     props: editorProps,
-    setup(props, { expose }) {
+    setup(props, { expose, slots }) {
+      console.log(slots.default)
       init({
         name: 'editor',
         remotes: [],
@@ -46,13 +47,19 @@ export function createElementInstance() {
       expose({
         register(fn: any) {
           const editor = useEditor()
-          editor.register(fn)
+          const pluginConstructor = fn(editor)
+          pluginConstructor.init()
         },
       })
     },
 
     render() {
-      return h(App, this.$props)
+      // console.log(this.$slots)
+      return h(
+        App,
+        { remoteUrl: this.remoteUrl },
+        { helper: () => h('slot', { name: 'helper' }, 'placeholder') },
+      )
     },
   })
 }

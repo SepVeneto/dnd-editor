@@ -3,13 +3,11 @@ import { v4 } from 'uuid'
 
 export class Node {
   public wid: string
-  public widget?: Widget
+  public widget?: Readonly<Widget>
   public parent?: Node
   public list: Node[] = []
   constructor(widget?: Widget) {
-    if (widget) {
-      this.widget = widget.clone()
-    }
+    this.widget = widget
     this.wid = v4()
   }
 
@@ -26,7 +24,7 @@ export class Node {
   }
 
   copy() {
-    return new Node(this.widget)
+    return new Node(this.widget?.clone())
   }
 }
 

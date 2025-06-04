@@ -1,4 +1,4 @@
-import type { IWidget } from '@sepveneto/dnde-core'
+import type { IWidget } from '@/types'
 import { Widget } from './Widget'
 
 export class Container extends Widget {

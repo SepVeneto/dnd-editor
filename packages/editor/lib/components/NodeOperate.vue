@@ -23,12 +23,16 @@
       </template>
     </ElDropdown>
 
-    <div
+    <NodePlugin />
+
+    <!-- <div
+      v-for="item in editor.plugins.helper"
+      :key="item"
       class="icon-wrap"
-      @click="handleAction('copy')"
+      @click="handleAction(item)"
       @mouseenter="onMouseenter($event, '复制')"
     >
-      <ElIcon>
+      <ElIcon v-if="item === 'copy'">
         <IconCopy />
       </ElIcon>
     </div>
@@ -41,7 +45,7 @@
       <ElIcon>
         <IconDelete />
       </ElIcon>
-    </div>
+    </div> -->
   </div>
 </template>
 
@@ -54,6 +58,7 @@ import {
 import { computed, getCurrentInstance } from 'vue'
 import { useEditor } from '@/store'
 import { createPopper } from '@/utils'
+import NodePlugin from './NodePlugin'
 
 const props = defineProps<{
   node: Node
@@ -64,9 +69,9 @@ const props = defineProps<{
 // ]
 
 const editor = useEditor()
-editor.plugins.forEach((item) => {
-  console.log('plugin', item().init())
-})
+// editor.plugins.forEach((item) => {
+//   console.log('plugin', item.init())
+// })
 const nodes = computed(() => {
   return editor.selectedNodes.slice(1)
 })
@@ -80,7 +85,7 @@ function onMouseenter(evt: Event, content: string) {
 function handleAction(action: 'copy' | 'delete') {
   switch (action) {
     case 'copy':
-      editor.addNode(props.node.copy(), props.node.parent)
+      editor.addNode(props.node.copy(), props.node.parent, true)
       break
     case 'delete':
       editor.delNode(props.node.wid)

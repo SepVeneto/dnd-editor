@@ -23,7 +23,7 @@
 </template>
 
 <script lang="ts" setup>
-import type { Node } from '@/class'
+import type { Node } from '@sepveneto/dnde-core/class'
 import type { DraggableEvt } from '@/type'
 import VueDraggable from 'vuedraggable'
 import { useEditor } from '@/store'
