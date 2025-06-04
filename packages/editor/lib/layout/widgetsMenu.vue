@@ -27,9 +27,9 @@
 </template>
 
 <script lang="ts" setup>
-import type { Widget } from '@/class'
+import type { Widget } from '@sepveneto/dnde-core/class'
+import { Node } from '@sepveneto/dnde-core/class'
 import VueDraggable from 'vuedraggable'
-import { Node } from '@/class'
 import { useApp } from '@/store/app'
 
 const app = useApp()

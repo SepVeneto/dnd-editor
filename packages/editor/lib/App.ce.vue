@@ -69,6 +69,7 @@ const editor = useEditor()
 
 provide(EditorContext, reactive({
   node: computed(() => editor.selectedNode),
+  editor,
 }))
 
 // provide(EditorContext, reactive({

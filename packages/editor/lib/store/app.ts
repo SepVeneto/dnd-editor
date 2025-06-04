@@ -1,7 +1,7 @@
 import type { IWidget } from '@sepveneto/dnde-core'
+import { Container, Widget } from '@sepveneto/dnde-core/class'
 import { defineStore } from 'pinia'
 import { shallowRef } from 'vue'
-import { Container, Widget } from '@/class'
 
 export const useApp = defineStore('app', () => {
   const widgets = shallowRef<Widget[]>()

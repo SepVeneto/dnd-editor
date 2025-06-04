@@ -1,4 +1,5 @@
 import type { Node } from '@sepveneto/dnde-core/class'
+import type { HelperAction } from '@/type'
 import { RootNode } from '@sepveneto/dnde-core/class'
 import { defineStore } from 'pinia'
 import { computed, ref, shallowRef, triggerRef } from 'vue'
@@ -11,7 +12,7 @@ export const useEditor = defineStore('editor', () => {
   const dragging = ref<Node>()
   const rootNode = new RootNode()
   const plugins = {
-    helper: [],
+    helper: [] as HelperAction[],
   }
   const selectedNode = computed(() => {
     if (!selected.value)
