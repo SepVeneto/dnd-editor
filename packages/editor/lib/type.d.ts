@@ -6,4 +6,5 @@ export interface HelperAction {
   title: string
   name: string
   action?: (node: Node) => void
+  condition?: (node: Node) => boolean
 }

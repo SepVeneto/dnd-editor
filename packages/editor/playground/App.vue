@@ -8,9 +8,9 @@
 
 <script setup lang="ts">
 import type { IWidget } from '@sepveneto/dnde-core'
+import { createCopy, createDelete } from '@sepveneto/dnde-core'
 import { onMounted, useTemplateRef } from 'vue'
 import { register } from '@/main'
-import { createCopy, createDelete} from '@sepveneto/dnde-core'
 // import { register } from '../dist/editor.js'
 
 const editorRef = useTemplateRef('editorRef')
@@ -19,15 +19,24 @@ register()
 onMounted(() => {
   editorRef.value?.register(ctx => ({
     init() {
-      const copy = createCopy(ctx)
-      const del = createDelete(ctx)
-      ctx.plugins.helper = [{
+      // const copy = createCopy(ctx)
+      // const del = createDelete(ctx)
+      ctx.plugins.helper.addBuiltin({
         name: 'export',
         title: '导出组件配置',
         action: (node: any) => {
           console.log('export', node)
         },
-      }, copy, del]
+        condition: (node: any) => {
+          return true
+        },
+      })
+      ctx.plugins.helper.addBuiltin({
+        name: 'delete',
+        condition: (node: any) => {
+          return node.type !== 'container'
+        },
+      })
       // console.log('init')
       // console.log(IconUpload)
       // return h(IconUpload)

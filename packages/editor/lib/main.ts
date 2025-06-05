@@ -57,8 +57,7 @@ export function createElementInstance() {
       // console.log(this.$slots)
       return h(
         App,
-        { remoteUrl: this.remoteUrl },
-        { helper: () => h('slot', { name: 'helper' }, 'placeholder') },
+        this.$props,
       )
     },
   })

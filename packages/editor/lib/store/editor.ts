@@ -2,7 +2,43 @@ import type { Node } from '@sepveneto/dnde-core/class'
 import type { HelperAction } from '@/type'
 import { RootNode } from '@sepveneto/dnde-core/class'
 import { defineStore } from 'pinia'
-import { computed, ref, shallowRef, triggerRef } from 'vue'
+import { computed, ref, shallowRef } from 'vue'
+import { removePopper } from '@/utils'
+
+class HelperPlugin {
+  public list: HelperAction[] = []
+  // TODO: type
+  constructor(ctx: any) {
+    this.list = [
+      {
+        title: '复制',
+        name: 'copy',
+        action: (node) => {
+          const newNode = node.copy()
+          ctx.addNode(newNode, node.parent, true)
+        },
+      },
+      {
+        title: '删除',
+        name: 'delete',
+        action: (node) => {
+          ctx.delNode(node.wid)
+          removePopper?.()
+        },
+      },
+    ]
+  }
+
+  addBuiltin(config: HelperAction) {
+    const exist = this.list.filter(item => item.name === config.name)
+    if (!exist.length) {
+      this.list.unshift(config)
+    }
+    else {
+      Object.assign(exist[0], config)
+    }
+  }
+}
 
 export const useEditor = defineStore('editor', () => {
   const shadowRoot = shallowRef<ShadowRoot>()
@@ -12,7 +48,7 @@ export const useEditor = defineStore('editor', () => {
   const dragging = ref<Node>()
   const rootNode = new RootNode()
   const plugins = {
-    helper: [] as HelperAction[],
+    helper: new HelperPlugin({ addNode, delNode }),
   }
   const selectedNode = computed(() => {
     if (!selected.value)
@@ -31,6 +67,13 @@ export const useEditor = defineStore('editor', () => {
       current = current.parent
     }
     return pathNodes
+  })
+  const selectedNodeOperates = computed(() => {
+    const node = selectedNode.value
+    if (!node)
+      return []
+
+    return plugins.helper.list.filter(item => !item.condition || item.condition(node))
   })
 
   function addNode(node: Node, pNode: Node = rootNode, manual = false) {
@@ -55,6 +98,7 @@ export const useEditor = defineStore('editor', () => {
     selected,
     selectedNode,
     selectedNodes,
+    selectedNodeOperates,
     addNode,
     delNode,
     // nodeList,

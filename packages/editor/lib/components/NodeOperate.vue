@@ -44,7 +44,7 @@ import type { Node } from '@sepveneto/dnde-core/class'
 import { ScaleToOriginal as IconWrap } from '@element-plus/icons-vue'
 import { computed } from 'vue'
 import { useEditor } from '@/store'
-import NodePlugin from './NodePlugin'
+import NodePlugin from './NodePlugin.vue'
 
 defineProps<{
   node: Node
