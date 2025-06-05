@@ -45,6 +45,15 @@ onMounted(() => {
 })
 
 const widgets: IWidget<object>[] = [
-  { _name: '菜单', _view: 'menuItem', _schema: 'menuItem', isShow: 0, style: {} },
+  {
+    _name: '菜单',
+    _view: 'menuItem',
+    _schema: 'menuItem',
+    isShow: 0,
+    style: {},
+    meta: {
+      draggable: false,
+    },
+  },
 ]
 </script>

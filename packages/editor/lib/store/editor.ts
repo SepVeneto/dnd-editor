@@ -43,10 +43,11 @@ class HelperPlugin {
 export const useEditor = defineStore('editor', () => {
   const shadowRoot = shallowRef<ShadowRoot>()
   const isPreview = ref(false)
-  const nodeMap = new Map<string, Node>()
-  const selected = ref<string>()
   const dragging = ref<Node>()
   const rootNode = new RootNode()
+  const selected = ref<string>(rootNode.wid)
+  const nodeMap = new Map<string, Node>()
+  nodeMap.set(rootNode.wid, rootNode)
   const plugins = {
     helper: new HelperPlugin({ addNode, delNode }),
   }
@@ -89,7 +90,7 @@ export const useEditor = defineStore('editor', () => {
     }
     node?.parent?.list.splice(index, 1)
     nodeMap.delete(wid)
-    selected.value = undefined
+    selected.value = rootNode.wid
   }
 
   return {

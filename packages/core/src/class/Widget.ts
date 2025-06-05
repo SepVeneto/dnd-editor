@@ -17,4 +17,8 @@ export class Widget {
   clone(): Widget {
     return new Widget(this._data)
   }
+
+  get draggable() {
+    return this._data.meta?.draggable ?? true
+  }
 }

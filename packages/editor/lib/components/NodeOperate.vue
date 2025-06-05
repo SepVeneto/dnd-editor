@@ -5,6 +5,7 @@
   position: absolute;
   right: 0;
   z-index: 1;
+  cursor: default;
     "
     @click.stop
   >

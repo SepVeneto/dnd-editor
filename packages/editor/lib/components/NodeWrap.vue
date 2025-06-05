@@ -2,7 +2,7 @@
   <div>
     <div
       class="node-wrap"
-      :class="[isActive && 'selected']"
+      :class="[isActive && 'selected', isDraggable && 'draggable']"
       :data-name="node.name"
       @click.stop="editor.selected = node.wid"
     >
@@ -22,7 +22,7 @@
 </template>
 
 <script lang="ts" setup>
-import type { Node } from '@/class'
+import type { Node } from '@sepveneto/dnde-core/class'
 import { computed } from 'vue'
 import { useEditor } from '@/store'
 import NodeContainer from './NodeContainer.vue'
@@ -32,11 +32,19 @@ const props = defineProps<{ node: Node }>()
 
 const editor = useEditor()
 const isActive = computed(() => props.node.wid === editor.selected)
+const isDraggable = computed(() => props.node.widget?.draggable)
 </script>
 
 <style lang="scss" scoped>
 .node-wrap {
   position: relative;
+  cursor: default;
+  &.draggable {
+    cursor: grab;
+    &:active {
+      cursor: grabbing;
+    }
+  }
   &.selected::after {
     border: 1px solid #4089Ef;
   }

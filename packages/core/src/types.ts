@@ -17,6 +17,9 @@ type Base<T = any> = {
   _custom?: boolean
   _disableDel?: boolean
   _inContainer?: 'inner' | 'outer' | boolean
+  meta?: {
+    draggable?: boolean
+  }
   isShow: 0 | 1
   style: CSSProperties & WidgetPos
 } & T

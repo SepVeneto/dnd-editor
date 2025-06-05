@@ -6,7 +6,7 @@
     style="width: 375px; min-height: calc(667px - 60px); position: relative; background: #ddd;"
     :component-data="{ type: 'transition-group', name: 'flip-list' }"
     :animation="200"
-    handle=".node-wrap"
+    handle=".node-wrap.draggable"
     ghost-class="dragging-ghost"
     item-key="wid"
     @update:model-value="list => node.setList(list)"

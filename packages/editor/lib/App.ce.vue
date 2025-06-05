@@ -16,7 +16,7 @@
         :component-data="{ type: 'transition-group', name: 'flip-list' }"
         :animation="200"
         ghost-class="dragging-ghost"
-        handle=".node-wrap"
+        handle=".node-wrap.draggable"
         item-key="wid"
         @add="onAdd"
       >
