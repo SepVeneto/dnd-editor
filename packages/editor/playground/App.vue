@@ -54,6 +54,14 @@ const widgets: IWidget<object>[] = [
     meta: {
       draggable: false,
     },
+    schema: {
+      props: [
+        { type: 'input', label: '名称', key: 'title' },
+      ],
+      style: [
+        { type: 'number', label: '高度', key: 'height' },
+      ],
+    },
   },
 ]
 </script>

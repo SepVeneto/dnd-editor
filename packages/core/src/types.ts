@@ -12,16 +12,15 @@ export interface WidgetPos {
 type Base<T = any> = {
   _uuid?: string
   _name: string
-  _schema: string
   _view: string
-  _custom?: boolean
-  _disableDel?: boolean
-  _inContainer?: 'inner' | 'outer' | boolean
   meta?: {
     draggable?: boolean
   }
-  isShow: 0 | 1
-  style: CSSProperties & WidgetPos
+  schema?: {
+    props?: any[]
+    style?: any[]
+  }
+  style?: CSSProperties & WidgetPos
 } & T
 
 type BaseKey =

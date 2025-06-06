@@ -1,12 +1,12 @@
-import type { Widget } from './Widget'
 import { v4 } from 'uuid'
+import { Widget } from './Widget'
 
 export class Node {
   public wid: string
-  public widget?: Readonly<Widget>
+  public widget: Readonly<Widget>
   public parent?: Node
   public list: Node[] = []
-  constructor(widget?: Widget) {
+  constructor(widget: Widget) {
     this.widget = widget
     this.wid = v4()
   }
@@ -24,12 +24,12 @@ export class Node {
   }
 
   copy() {
-    return new Node(this.widget?.clone())
+    return new Node(this.widget.clone())
   }
 }
 
 export class RootNode extends Node {
   constructor() {
-    super()
+    super(new Widget({ _name: '页面', _view: 'page' }))
   }
 }
