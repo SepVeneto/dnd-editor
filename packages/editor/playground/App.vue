@@ -1,4 +1,5 @@
 <template>
+  <div>topbar</div>
   <mpd-editor
     ref="editorRef"
     remote-url="http://localhost:8090"
@@ -31,15 +32,12 @@ onMounted(() => {
           return true
         },
       })
-      ctx.plugins.helper.addBuiltin({
-        name: 'delete',
-        condition: (node: any) => {
-          return node.type !== 'container'
-        },
-      })
-      // console.log('init')
-      // console.log(IconUpload)
-      // return h(IconUpload)
+      // ctx.plugins.helper.addBuiltin({
+      //   name: 'delete',
+      //   condition: (node: any) => {
+      //     return node.type !== 'container'
+      //   },
+      // })
     },
   }))
 })

@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="mpd-node">
     <div
       class="node-wrap"
       :class="[isActive && 'selected', isDraggable && 'draggable']"

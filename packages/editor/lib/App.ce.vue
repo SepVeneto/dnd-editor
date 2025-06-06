@@ -29,7 +29,7 @@
         </template>
       </VueDraggable>
 
-      <ConfigPanel />
+      <ConfigPanel @click.stop />
     </div>
   </ElConfigProvider>
 </template>
@@ -52,7 +52,7 @@ import { EditorContext } from '@sepveneto/dnde-core'
 // import EditorOperate from '@/layout/EditorOperate.ce.vue'
 // @ts-expect-error: no def
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
-import { computed, provide, reactive, useSlots, watchEffect } from 'vue'
+import { computed, provide, reactive, watchEffect } from 'vue'
 import VueDraggable from 'vuedraggable'
 import NodeWrap from './components/NodeWrap.vue'
 import ConfigPanel from './layout/configPanel.vue'

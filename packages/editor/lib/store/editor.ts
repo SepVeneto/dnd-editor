@@ -48,6 +48,7 @@ export const useEditor = defineStore('editor', () => {
   const selected = ref<string>(rootNode.wid)
   const nodeMap = new Map<string, Node>()
   nodeMap.set(rootNode.wid, rootNode)
+
   const plugins = {
     helper: new HelperPlugin({ addNode, delNode }),
   }
@@ -93,9 +94,14 @@ export const useEditor = defineStore('editor', () => {
     selected.value = rootNode.wid
   }
 
+  function selectNode(wid?: string) {
+    selected.value = wid || rootNode.wid
+  }
+
   return {
     rootNode,
     shadowRoot,
+    selectNode,
     selected,
     selectedNode,
     selectedNodes,

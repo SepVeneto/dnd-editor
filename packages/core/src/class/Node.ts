@@ -30,6 +30,9 @@ export class Node {
 
 export class RootNode extends Node {
   constructor() {
-    super(new Widget({ _name: '页面', _view: 'page' }))
+    super(new Widget({
+      _name: '页面',
+      _view: 'page',
+    }))
   }
 }

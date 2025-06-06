@@ -1,6 +1,7 @@
 // import { router } from './router'
 import { init } from '@module-federation/enhanced/runtime'
 import BasicComp from '@sepveneto/basic-comp'
+import { useEventListener } from '@vueuse/core'
 import ElementPlus from 'element-plus'
 import { createPinia } from 'pinia'
 import * as Vue from 'vue'
@@ -12,8 +13,7 @@ import { useEditor } from './store'
 export function createElementInstance() {
   return defineCustomElement({
     props: editorProps,
-    setup(props, { expose, slots }) {
-      console.log(slots.default)
+    setup(props, { expose }) {
       init({
         name: 'editor',
         remotes: [],
@@ -33,16 +33,25 @@ export function createElementInstance() {
       app.use(ElementPlus, { namespace: 'mpd' })
       app.use(BasicComp, {})
       app.use(store)
+
       // app.use(router)
 
       const inst = getCurrentInstance()
       if (inst) {
-        console.log('inst', inst)
         Object.assign(inst.appContext, app._context)
-        // Object.assign(inst.provides, app._context.provides)
       }
       const editor = useEditor()
       editor.shadowRoot = Vue.useShadowRoot()!
+      // 编辑器内不需要触发取消选中的已经通过click.stop屏蔽了
+      useEventListener(editor.shadowRoot, 'click', () => {
+        editor.selectNode()
+      })
+      useEventListener(document, 'click', (e) => {
+        const node = e.target as HTMLElement
+        if (node.tagName !== 'MPD-EDITOR') {
+          editor.selectNode()
+        }
+      })
 
       expose({
         register(fn: any) {
@@ -66,7 +75,6 @@ export function createElementInstance() {
 export const Editor = createElementInstance()
 
 export function register() {
-  console.log(customElements.getName(Editor))
   if (customElements.getName(Editor))
     return
   customElements.define('mpd-editor', Editor)
