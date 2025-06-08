@@ -3,6 +3,12 @@
   <button @click="handleValid">
     valid
   </button>
+  <button @click="handleSet">
+    set config
+  </button>
+  <button @click="handleGet">
+    get config
+  </button>
   <mpd-editor
     ref="editorRef"
     remote-url="http://localhost:8090"
@@ -78,5 +84,16 @@ const widgets: IWidget<object>[] = [
 
 function handleValid() {
   editorRef.value?.valid()
+}
+function handleSet() {
+  editorRef.value?.setData([{
+    _uuid: 1,
+    _view: 'container',
+    title: 'manual',
+  }])
+}
+function handleGet() {
+  const res = editorRef.value?.getData()
+  console.log(res)
 }
 </script>

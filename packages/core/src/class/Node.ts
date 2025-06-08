@@ -8,11 +8,14 @@ export class Node {
   public widget: Readonly<Widget>
   public parent?: Node
   public list: Node[] = []
-  public data: Record<string, any> = { title: '' }
+  public data: Record<string, any> = {}
   public style: CSSProperties = {}
-  constructor(widget: Widget) {
+  constructor(widget: Widget, info?: { props?: Node['data'], style?: Node['style'], list?: Node['list'] }) {
     this.widget = widget
     this.wid = v4()
+    this.list = info?.list || []
+    this.data = info?.props || {}
+    this.style = info?.style || {}
   }
 
   get type() {
@@ -27,8 +30,27 @@ export class Node {
     this.list = list
   }
 
-  copy() {
-    return new Node(this.widget.clone())
+  copy(): Node {
+    const info = {
+      props: JSON.parse(JSON.stringify(this.data)),
+      style: JSON.parse(JSON.stringify(this.style)),
+      list: this.list.map(item => item.copy()),
+    }
+    return new Node(this.widget.clone(), info)
+  }
+
+  public parse(): Record<string, any> {
+    const res = {
+      _uuid: this.wid,
+      _name: this.name,
+      _view: this.type,
+      // TODO
+      isShow: true,
+      ...this.data,
+      style: this.style,
+      list: this.list.map(item => item.parse()),
+    }
+    return res
   }
 }
 

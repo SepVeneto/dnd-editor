@@ -1,10 +1,11 @@
-import type { Node } from '@sepveneto/dnde-core/class'
+import type { Widget } from '@sepveneto/dnde-core/class'
 import type { Reactive } from 'vue'
 import type { HelperAction } from '@/type'
-import { RootNode } from '@sepveneto/dnde-core/class'
+import { Node, RootNode } from '@sepveneto/dnde-core/class'
 import { defineStore } from 'pinia'
 import { computed, reactive, ref, shallowRef } from 'vue'
 import { removePopper } from '@/utils'
+import { useApp } from './app'
 
 class HelperPlugin {
   public list: HelperAction[] = []
@@ -97,6 +98,28 @@ export const useEditor = defineStore('editor', () => {
     selected.value = wid || rootNode.wid
   }
 
+  function getData() {
+    return rootNode.parse()
+  }
+
+  const app = useApp()
+  function setData(data: any[], parent = rootNode) {
+    data.forEach((item) => {
+      const widget = app.widgetMap.get(item._view) as Widget
+      if (!widget)
+        return
+
+      const { _uuid, _name, _view, style, isShow, list, ...props } = item
+      const info = {
+        props,
+        style,
+        list: [],
+      }
+      const node = new Node(widget, info)
+      addNode(reactive(node), parent, true)
+    })
+  }
+
   return {
     rootNode,
     shadowRoot,
@@ -111,5 +134,8 @@ export const useEditor = defineStore('editor', () => {
     isPreview,
     dragging,
     plugins,
+
+    getData,
+    setData,
   }
 })

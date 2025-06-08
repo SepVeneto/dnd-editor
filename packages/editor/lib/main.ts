@@ -62,6 +62,12 @@ export function createElementInstance() {
         valid() {
 
         },
+        getData() {
+          return editor.getData()
+        },
+        setData(data: any[]) {
+          editor.setData(data)
+        },
       })
     },
 

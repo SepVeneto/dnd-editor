@@ -1,5 +1,6 @@
 import type { ElOption, FormItemRule, InputInstance, InputNumberInstance, SelectInstance } from 'element-plus'
 import type { IWidget } from '@/types'
+import { Node } from './Node'
 
 type Option = InstanceType<typeof ElOption>
 
@@ -13,8 +14,7 @@ export type SchemaItem = ShcemaItemInput | SchemaItemSelect | SchemaItemNumber
 export class Widget {
   public name: string
   public view: string
-  public type?: string
-  private _data: IWidget<object>
+  public _data: IWidget<object>
 
   constructor(widget: IWidget<object>) {
     this._data = JSON.parse(JSON.stringify(widget))
