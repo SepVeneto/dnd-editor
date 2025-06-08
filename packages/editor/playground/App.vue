@@ -1,5 +1,8 @@
 <template>
   <div>topbar</div>
+  <button @click="handleValid">
+    valid
+  </button>
   <mpd-editor
     ref="editorRef"
     remote-url="http://localhost:8090"
@@ -9,7 +12,6 @@
 
 <script setup lang="ts">
 import type { IWidget } from '@sepveneto/dnde-core'
-import { createCopy, createDelete } from '@sepveneto/dnde-core'
 import { onMounted, useTemplateRef } from 'vue'
 import { register } from '@/main'
 // import { register } from '../dist/editor.js'
@@ -44,10 +46,21 @@ onMounted(() => {
 
 const widgets: IWidget<object>[] = [
   {
+    _name: '容器',
+    _view: 'container',
+    style: {},
+    schema: {
+      props: [
+        { type: 'input', label: '名称', key: 'title', rules: { required: true, message: '名称' } },
+      ],
+      style: [
+        { type: 'number', label: '高度', key: 'height' },
+      ],
+    },
+  },
+  {
     _name: '菜单',
     _view: 'menuItem',
-    _schema: 'menuItem',
-    isShow: 0,
     style: {},
     meta: {
       draggable: false,
@@ -62,4 +75,8 @@ const widgets: IWidget<object>[] = [
     },
   },
 ]
+
+function handleValid() {
+  editorRef.value?.valid()
+}
 </script>

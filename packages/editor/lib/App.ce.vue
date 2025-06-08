@@ -5,6 +5,7 @@
   >
     <div>{{ editor.selected }}</div>
     <div
+      ref="rootRef"
       class="mpd-editor"
       style="display: flex;"
     >
@@ -35,6 +36,8 @@
 </template>
 
 <script lang="ts" setup>
+import type { Node } from '@sepveneto/dnde-core/class'
+import type { Reactive } from 'vue'
 import type { DraggableEvt } from './type'
 // import SettingGlobal from './layout/Setting.global.ce.vue'
 // import SettingWidget from './layout/Setting.widget.ce.vue'
@@ -52,7 +55,7 @@ import { EditorContext } from '@sepveneto/dnde-core'
 // import EditorOperate from '@/layout/EditorOperate.ce.vue'
 // @ts-expect-error: no def
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
-import { computed, provide, reactive, watchEffect } from 'vue'
+import { provide, useTemplateRef, watchEffect } from 'vue'
 import VueDraggable from 'vuedraggable'
 import NodeWrap from './components/NodeWrap.vue'
 import ConfigPanel from './layout/configPanel.vue'
@@ -67,17 +70,19 @@ const props = defineProps(editorProps)
 const app = useApp()
 const editor = useEditor()
 
-provide(EditorContext, reactive({
-  node: computed(() => editor.selectedNode),
-  editor,
-}))
+provide(EditorContext, {
+  node: editor.selectedNode,
+  plugins: editor.plugins,
+})
+
+const rootRef = useTemplateRef('rootRef')
 
 // provide(EditorContext, reactive({
 //   nodeList: editor.rootNode,
 // }))
 
 function onAdd(evt: DraggableEvt) {
-  const node = editor.rootNode.list[evt.newDraggableIndex]
+  const node = editor.rootNode.list[evt.newDraggableIndex] as Reactive<Node>
   editor.addNode(node)
 }
 

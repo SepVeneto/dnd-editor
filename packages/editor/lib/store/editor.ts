@@ -1,8 +1,9 @@
 import type { Node } from '@sepveneto/dnde-core/class'
+import type { Reactive } from 'vue'
 import type { HelperAction } from '@/type'
 import { RootNode } from '@sepveneto/dnde-core/class'
 import { defineStore } from 'pinia'
-import { computed, ref, shallowRef } from 'vue'
+import { computed, reactive, ref, shallowRef } from 'vue'
 import { removePopper } from '@/utils'
 
 class HelperPlugin {
@@ -44,26 +45,24 @@ export const useEditor = defineStore('editor', () => {
   const shadowRoot = shallowRef<ShadowRoot>()
   const isPreview = ref(false)
   const dragging = ref<Node>()
-  const rootNode = new RootNode()
+  const rootNode = reactive(new RootNode())
   const selected = ref<string>(rootNode.wid)
-  const nodeMap = new Map<string, Node>()
+  const nodeMap = new Map<string, Reactive<Node>>()
   nodeMap.set(rootNode.wid, rootNode)
 
   const plugins = {
     helper: new HelperPlugin({ addNode, delNode }),
   }
   const selectedNode = computed(() => {
-    if (!selected.value)
-      return
-
-    return nodeMap.get(selected.value)
+    const node = nodeMap.get(selected.value)
+    if (!node) {
+      throw new Error('cannot find node')
+    }
+    return node
   })
   const selectedNodes = computed(() => {
-    if (!selectedNode.value)
-      return []
-
-    let current: Node | undefined = selectedNode.value
-    const pathNodes = []
+    let current: Reactive<Node> | undefined = selectedNode.value
+    const pathNodes: Reactive<Node>[] = []
     while (current) {
       pathNodes.push(current)
       current = current.parent
@@ -78,7 +77,7 @@ export const useEditor = defineStore('editor', () => {
     return plugins.helper.list.filter(item => !item.condition || item.condition(node))
   })
 
-  function addNode(node: Node, pNode: Node = rootNode, manual = false) {
+  function addNode(node: Reactive<Node>, pNode: Reactive<Node> = rootNode, manual = false) {
     nodeMap.set(node.wid, node)
     node.parent = pNode
     manual && pNode.list.push(node)

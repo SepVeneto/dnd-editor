@@ -45,6 +45,7 @@
     "uuid": "^11.1.0"
   },
   "devDependencies": {
+    "element-plus": "^2.9.11",
     "tsup": "^8.4.0",
     "vite": "^4.5.5",
     "vitest": "^0.28.5",

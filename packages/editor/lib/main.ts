@@ -59,6 +59,9 @@ export function createElementInstance() {
           const pluginConstructor = fn(editor)
           pluginConstructor.init()
         },
+        valid() {
+
+        },
       })
     },
 

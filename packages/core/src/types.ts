@@ -1,5 +1,6 @@
 import type { FormItemRule, UploadRequestOptions } from 'element-plus'
 import type { CSSProperties } from 'vue'
+import type { SchemaItem } from './class'
 
 // region Widget
 export interface WidgetPos {
@@ -17,8 +18,8 @@ type Base<T = any> = {
     draggable?: boolean
   }
   schema?: {
-    props?: any[]
-    style?: any[]
+    props?: SchemaItem[]
+    style?: SchemaItem[]
   }
   style?: CSSProperties & WidgetPos
 } & T

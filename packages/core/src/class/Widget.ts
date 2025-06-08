@@ -1,4 +1,14 @@
+import type { ElOption, FormItemRule, InputInstance, InputNumberInstance, SelectInstance } from 'element-plus'
 import type { IWidget } from '@/types'
+
+type Option = InstanceType<typeof ElOption>
+
+interface SchemaItemBase { rules?: FormItemRule | FormItemRule[] }
+interface ShcemaItemInput extends SchemaItemBase { label: string, key: string, type: 'input', attrs?: InputInstance['$props'] }
+interface SchemaItemSelect extends SchemaItemBase { label: string, key: string, type: 'select', options?: Option['$props'][], attrs?: SelectInstance['$props'] }
+interface SchemaItemNumber extends SchemaItemBase { label: string, key: string, type: 'number', attrs?: InputNumberInstance['$props'] }
+
+export type SchemaItem = ShcemaItemInput | SchemaItemSelect | SchemaItemNumber
 
 export class Widget {
   public name: string
@@ -16,12 +26,12 @@ export class Widget {
     return new Widget(this._data)
   }
 
-  get props() {
-    return this._data.schema?.props || {}
+  get props(): SchemaItem[] {
+    return this._data.schema?.props || []
   }
 
-  get style() {
-    return this._data.schema?.style || {}
+  get style(): SchemaItem[] {
+    return this._data.schema?.style || []
   }
 
   get draggable() {
