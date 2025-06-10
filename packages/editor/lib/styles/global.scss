@@ -3,6 +3,8 @@
 );
 @use 'element-plus/theme-chalk/src/index.scss' as *;
 
+@import "tailwindcss";
+
 .mpd-form-item {
   .mpd-select {
     width: 240px;

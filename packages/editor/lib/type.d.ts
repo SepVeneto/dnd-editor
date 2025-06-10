@@ -6,6 +6,6 @@ export interface DraggableEvt { oldDraggableIndex: number, oldIndex: number, new
 export interface HelperAction {
   title: string
   name: string
-  action?: (node: Node) => void
+  action?: (node: Reactive<Node>) => void
   condition?: (node: Reactive<Node>) => boolean
 }

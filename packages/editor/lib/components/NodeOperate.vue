@@ -1,11 +1,12 @@
 <template>
   <div
     style="display: flex; justify-content: flex-end;
+    height: 20px;
     align-items: center;
-  position: absolute;
-  right: 0;
-  z-index: 1;
-  cursor: default;
+    position: absolute;
+    right: 0;
+    z-index: 1;
+    cursor: default;
     "
     @click.stop
   >
@@ -63,8 +64,11 @@ const nodes = computed(() => {
   column-gap: 6px;
   align-items: center;
   background: #4089ef;
-  padding: 4px 6px;
   color: #fff;
+  padding: 4px;
+  font-size: 14px;
+  box-sizing: border-box;
+  height: 100%;
 }
 .icon-wrap {
   cursor: pointer;
