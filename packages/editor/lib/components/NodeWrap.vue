@@ -1,9 +1,11 @@
 <template>
-  <div class="mpd-node">
+  <div class="mpd-node mpd-relative">
     <div
       class="node-wrap"
-      :class="[isActive && 'selected', isDraggable && 'draggable']"
+      :class="[isActive && 'selected', isDraggable && 'draggable', isHover && 'hover']"
       :data-name="node.name"
+      @mouseenter.stop="editor.hovering = node.wid"
+      @mouseleave.stop="editor.hovering = undefined"
       @click.stop="editor.selected = node.wid"
     >
       <NodeContainer
@@ -32,6 +34,12 @@ const props = defineProps<{ node: Node }>()
 
 const editor = useEditor()
 const isActive = computed(() => props.node.wid === editor.selected)
+const isHover = computed(() => {
+  if (isActive.value)
+    return false
+
+  return props.node.wid === editor.hovering
+})
 const isDraggable = computed(() => props.node.widget?.draggable)
 </script>
 
@@ -48,16 +56,19 @@ const isDraggable = computed(() => props.node.widget?.draggable)
   &.selected::after {
     border: 1px solid #4089Ef;
   }
-  &:not(.selected):hover::after {
+  &.hover::after {
     border: 1px dashed #4089Ef;
   }
-  &:not(.selected):hover::before {
+  &.hover::before {
     content: attr(data-name);
     position: absolute;
     top: 0;
-    transform: translateY(-100%);
+    // transform: translateY(100%);
     font-size: 14px;
-    color: #4089Ef;
+    z-index: 1;
+    color: #fff;
+    background: #4089Ef;
+    padding: 4px;
   }
   &::after {
     content: '';

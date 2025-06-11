@@ -8,6 +8,7 @@
     "source.fixAll.eslint": "explicit",
     "source.organizeImports": "never"
   },
+  "scss.lint.unknownAtRules": "ignore",
 
   // Silent the stylistic rules in you IDE, but still auto fix them
   "eslint.rules.customizations": [

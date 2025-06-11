@@ -6,14 +6,14 @@
     <div>{{ editor.selected }}</div>
     <div
       ref="rootRef"
-      class="mpd-editor"
-      style="display: flex;"
+      class="mpd-editor mpd-flex"
     >
       <WidgetsMenu />
       <VueDraggable
         v-model="editor.rootNode.list"
         :group="{ name: 'editor', pull: true, put: true }"
-        style="width: 375px; min-height: calc(667px - 60px); position: relative; background: #eee;"
+        class=" mpd-relative mpd-bg-gray-100"
+        style="width: 375px; min-height: calc(667px - 60px);"
         :component-data="{ type: 'transition-group', name: 'flip-list' }"
         :animation="200"
         ghost-class="dragging-ghost"
@@ -37,7 +37,6 @@
 
 <script lang="ts" setup>
 import type { Node } from '@sepveneto/dnde-core/class'
-import type { Reactive } from 'vue'
 import type { DraggableEvt } from './type'
 // import SettingGlobal from './layout/Setting.global.ce.vue'
 // import SettingWidget from './layout/Setting.widget.ce.vue'
@@ -82,7 +81,7 @@ const rootRef = useTemplateRef('rootRef')
 // }))
 
 function onAdd(evt: DraggableEvt) {
-  const node = editor.rootNode.list[evt.newDraggableIndex] as Reactive<Node>
+  const node = editor.rootNode.list[evt.newDraggableIndex] as Node
   editor.addNode(node)
 }
 

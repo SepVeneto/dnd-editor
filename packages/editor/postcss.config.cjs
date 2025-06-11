@@ -1,9 +1,11 @@
 module.exports = {
-  "plugins": [
-      require('postcss-selector-replace')({
-        before: [':root'],
-        after: [':host'],
-        include: /node_modules\/element-plus/,
-      })
-    ]
+  plugins: [
+    require('postcss-selector-replace')({
+      before: [':root'],
+      after: [':host'],
+      include: /node_modules\/element-plus/,
+    }),
+    require('tailwindcss'),
+    require('autoprefixer'),
+  ],
 }

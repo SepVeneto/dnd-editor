@@ -1,5 +1,4 @@
 import type { Widget } from '@sepveneto/dnde-core/class'
-import type { Reactive } from 'vue'
 import type { HelperAction } from '@/type'
 import { Node, RootNode } from '@sepveneto/dnde-core/class'
 import { defineStore } from 'pinia'
@@ -48,8 +47,10 @@ export const useEditor = defineStore('editor', () => {
   const dragging = ref<Node>()
   const rootNode = reactive(new RootNode())
   const selected = ref<string>(rootNode.wid)
-  const nodeMap = new Map<string, Reactive<Node>>()
-  nodeMap.set(rootNode.wid, rootNode)
+  // TODO: hover栈
+  const hovering = ref<string>()
+  const nodeMap = new Map<string, Node>()
+  nodeMap.set(rootNode.wid, rootNode as Node)
 
   const plugins = {
     helper: new HelperPlugin({ addNode, delNode }),
@@ -62,8 +63,8 @@ export const useEditor = defineStore('editor', () => {
     return node
   })
   const selectedNodes = computed(() => {
-    let current: Reactive<Node> | undefined = selectedNode.value
-    const pathNodes: Reactive<Node>[] = []
+    let current: Node | undefined = selectedNode.value
+    const pathNodes: Node[] = []
     while (current) {
       pathNodes.push(current)
       current = current.parent
@@ -78,7 +79,7 @@ export const useEditor = defineStore('editor', () => {
     return plugins.helper.list.filter(item => !item.condition || item.condition(node))
   })
 
-  function addNode(node: Reactive<Node>, pNode: Reactive<Node> = rootNode, manual = false) {
+  function addNode(node: Node, pNode: Node = rootNode as Node, manual = false) {
     nodeMap.set(node.wid, node)
     node.parent = pNode
     manual && pNode.list.push(node)
@@ -103,7 +104,7 @@ export const useEditor = defineStore('editor', () => {
   }
 
   const app = useApp()
-  function setData(data: any[], parent = rootNode) {
+  function setData(data: any[], parent = rootNode as Node) {
     data.forEach((item) => {
       const widget = app.widgetMap.get(item._view) as Widget
       if (!widget)
@@ -116,7 +117,7 @@ export const useEditor = defineStore('editor', () => {
         list: [],
       }
       const node = new Node(widget, info)
-      addNode(reactive(node), parent, true)
+      addNode(node, parent, true)
     })
   }
 
@@ -125,6 +126,7 @@ export const useEditor = defineStore('editor', () => {
     shadowRoot,
     selectNode,
     selected,
+    hovering,
     selectedNode,
     selectedNodes,
     selectedNodeOperates,

@@ -1,24 +1,20 @@
 <template>
   <div
-    style="display: flex; justify-content: flex-end;
-    height: 20px;
-    align-items: center;
-    position: absolute;
-    right: 0;
-    z-index: 1;
-    cursor: default;
-    "
+    class="mpd-h-6 mpd-flex mpd-justify-end mpd-items-center mpd-absolute mpd-right-0 mpd-z-10 mpd-cursor-default mpd-bottom-0"
     @click.stop
   >
     <div
-      style="padding: 2px 6px; background: #4089ef;font: 12px; height: 100%; margin-right: 10px;"
+      class=" mpd-p-1 mpd-box-border mpd-h-full mpd-text-xs mpd-bg-primary mpd-mr-1 mpd-rounded-sm"
     >
       <ElDropdown
         :teleported="false"
         :persistent="false"
         @command="editor.selected = $event"
       >
-        <div style="display: flex; align-items: center; color: #fff;">
+        <div
+          class="mpd-flex mpd-items-center"
+          style="color: #fff;"
+        >
           <ElIcon><IconWrap /></ElIcon>
           <span>{{ node.name }}</span>
         </div>
@@ -36,7 +32,7 @@
       </ElDropdown>
     </div>
     <NodePlugin
-      class="node-operate"
+      class="node-operate mpd-rounded-sm"
     />
   </div>
 </template>

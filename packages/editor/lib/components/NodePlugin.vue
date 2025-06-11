@@ -1,5 +1,4 @@
 <script lang="ts">
-import type { Node } from '@sepveneto/dnde-core/class'
 import type { HelperAction } from '@/type'
 import {
   CopyDocument as IconCopy,

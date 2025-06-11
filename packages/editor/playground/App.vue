@@ -69,7 +69,7 @@ const widgets: IWidget<object>[] = [
     _view: 'menuItem',
     style: {},
     meta: {
-      draggable: false,
+      draggable: true,
     },
     schema: {
       props: [

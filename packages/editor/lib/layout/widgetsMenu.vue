@@ -2,7 +2,7 @@
   <aside
     style="width: 300px;"
   >
-    <ElCard>
+    <ElCard shadow="never">
       <template #header>
         <span>组件</span>
       </template>

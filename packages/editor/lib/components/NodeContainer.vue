@@ -1,9 +1,9 @@
 <template>
   <VueDraggable
-    class="node-container"
+    class="node-container "
     :model-value="node.list"
     :group="{ name: 'editor', pull: true, put: true }"
-    style="width: 375px; min-height: calc(667px - 60px); position: relative; background: #ddd;"
+    style=""
     :component-data="{ type: 'transition-group', name: 'flip-list' }"
     :animation="200"
     handle=".node-wrap.draggable"
@@ -43,8 +43,18 @@ function onAdd(evt: DraggableEvt) {
 
 <style scoped lang="scss">
 .node-container {
+  width: 375px;
+  min-height: calc(667px - 60px);
+  background: #ddd;
+  position: relative;
   &::before {
     content: '拖曳组件到这里';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    color: #aaa;
     display: flex;
     justify-content: center;
     align-items: center;

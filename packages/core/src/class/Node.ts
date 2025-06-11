@@ -1,6 +1,5 @@
-import type { CSSProperties, Reactive, Ref } from 'vue'
+import type { CSSProperties } from 'vue'
 import { v4 } from 'uuid'
-import { ref } from 'vue'
 import { Widget } from './Widget'
 
 export class Node {
@@ -10,12 +9,17 @@ export class Node {
   public list: Node[] = []
   public data: Record<string, any> = {}
   public style: CSSProperties = {}
+  private hovering: boolean = false
   constructor(widget: Widget, info?: { props?: Node['data'], style?: Node['style'], list?: Node['list'] }) {
     this.widget = widget
     this.wid = v4()
     this.list = info?.list || []
     this.data = info?.props || {}
     this.style = info?.style || {}
+  }
+
+  get mouseover() {
+    return this.hovering
   }
 
   get type() {
@@ -26,15 +30,20 @@ export class Node {
     return this.widget?.name || '页面'
   }
 
+  triggerHover(hover: boolean) {
+    this.hovering = hover
+  }
+
   setList(list: Node[]) {
     this.list = list
   }
 
   copy(): Node {
+    const list = this.list.map(item => item.copy())
     const info = {
       props: JSON.parse(JSON.stringify(this.data)),
       style: JSON.parse(JSON.stringify(this.style)),
-      list: this.list.map(item => item.copy()),
+      list,
     }
     return new Node(this.widget.clone(), info)
   }
