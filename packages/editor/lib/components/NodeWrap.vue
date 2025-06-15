@@ -9,7 +9,7 @@
       @click.stop="editor.selected = node.wid"
     >
       <NodeContainer
-        v-if="node.type === 'container'"
+        v-if="node.type === 'containerGrid'"
         :node="node"
       />
       <slot v-else>

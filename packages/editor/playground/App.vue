@@ -52,8 +52,8 @@ onMounted(() => {
 
 const widgets: IWidget<object>[] = [
   {
-    _name: '容器',
-    _view: 'container',
+    _name: '栅格容器',
+    _view: 'containerGrid',
     style: {},
     schema: {
       props: [
