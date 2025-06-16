@@ -13,16 +13,22 @@
     ref="editorRef"
     remote-url="http://localhost:8090"
     :widgets="widgets"
+    @choose="onChoose"
   />
 </template>
 
 <script setup lang="ts">
 import type { IWidget } from '@sepveneto/dnde-core'
+import type { EditorInstance } from '@/main'
+// import { register } from '../dist/editor.js'
 import { onMounted, useTemplateRef } from 'vue'
 import { register } from '@/main'
-// import { register } from '../dist/editor.js'
 
-const editorRef = useTemplateRef('editorRef')
+function onChoose() {
+  alert('choose')
+}
+
+const editorRef = useTemplateRef<EditorInstance>('editorRef')
 register()
 
 onMounted(() => {
@@ -40,6 +46,8 @@ onMounted(() => {
           return true
         },
       })
+
+      ctx.plugins.widget.addPanel({ label: '模板', name: 'template' })
       // ctx.plugins.helper.addBuiltin({
       //   name: 'delete',
       //   condition: (node: any) => {
@@ -83,7 +91,7 @@ const widgets: IWidget<object>[] = [
 ]
 
 function handleValid() {
-  editorRef.value?.valid()
+  editorRef.value?.validate()
 }
 function handleSet() {
   editorRef.value?.setData([{

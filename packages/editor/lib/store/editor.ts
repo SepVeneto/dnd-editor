@@ -41,6 +41,21 @@ class HelperPlugin {
   }
 }
 
+interface PanelInfo {
+  label: string
+  name: string
+}
+class WidgetPlugin {
+  public list: PanelInfo[] = []
+  constructor(ctx: any) {
+
+  }
+
+  addPanel(panel: PanelInfo) {
+    this.list.push(panel)
+  }
+}
+
 export const useEditor = defineStore('editor', () => {
   const shadowRoot = shallowRef<ShadowRoot>()
   const isPreview = ref(false)
@@ -54,6 +69,7 @@ export const useEditor = defineStore('editor', () => {
 
   const plugins = {
     helper: new HelperPlugin({ addNode, delNode }),
+    widget: new WidgetPlugin({ addPanel }),
   }
   const selectedNode = computed(() => {
     const node = nodeMap.get(selected.value)
@@ -78,6 +94,10 @@ export const useEditor = defineStore('editor', () => {
 
     return plugins.helper.list.filter(item => !item.condition || item.condition(node))
   })
+
+  function addPanel() {
+
+  }
 
   function addNode(node: Node, pNode: Node = rootNode as Node, manual = false) {
     nodeMap.set(node.wid, node)

@@ -1,8 +1,12 @@
 import type { InjectionKey } from 'vue'
+import type { EventEmitter } from './helper'
 import type { Node } from '@/class'
 
-// 会分别导入，不能使用symbol
-export const EditorContext: InjectionKey<{
+export interface EditorContext {
   node?: Node
   plugins?: any
-}> = '$_EDITOR' as unknown as symbol
+  bus: EventEmitter
+}
+
+// 会分别导入，不能使用symbol
+export const editorContextKey: InjectionKey<EditorContext> = '$_EDITOR' as unknown as symbol

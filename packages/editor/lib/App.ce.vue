@@ -8,7 +8,7 @@
       ref="rootRef"
       class="mpd-editor mpd-flex"
     >
-      <WidgetsMenu />
+      <WidgetsMenu v-bind="$slots" />
       <VueDraggable
         v-model="editor.rootNode.list"
         :group="{ name: 'editor', pull: true, put: true }"
@@ -42,7 +42,7 @@ import type { DraggableEvt } from './type'
 // import SettingWidget from './layout/Setting.widget.ce.vue'
 // import { useConfig } from './hooks'
 import { registerRemotes } from '@module-federation/enhanced/runtime'
-import { EditorContext } from '@sepveneto/dnde-core'
+import { editorContextKey, EventEmitter } from '@sepveneto/dnde-core'
 // import Editor from '@/layout/editor.ce.vue'
 // import widgetWrap from '@/layout/widgetWrap.ce.vue'
 // import { tabbarPreview } from '@/layout/tabbar'
@@ -54,7 +54,7 @@ import { EditorContext } from '@sepveneto/dnde-core'
 // import EditorOperate from '@/layout/EditorOperate.ce.vue'
 // @ts-expect-error: no def
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
-import { provide, useTemplateRef, watchEffect } from 'vue'
+import { getCurrentInstance, provide, useTemplateRef, watchEffect } from 'vue'
 import VueDraggable from 'vuedraggable'
 import NodeWrap from './components/NodeWrap.vue'
 import ConfigPanel from './layout/configPanel.vue'
@@ -68,10 +68,15 @@ const props = defineProps(editorProps)
 
 const app = useApp()
 const editor = useEditor()
+const inst = getCurrentInstance()
+const bus = new EventEmitter((event: string, ...args: any) => {
+  inst?.parent?.emit(event, ...args)
+})
 
-provide(EditorContext, {
+provide(editorContextKey, {
   node: editor.selectedNode,
   plugins: editor.plugins,
+  bus,
 })
 
 const rootRef = useTemplateRef('rootRef')

@@ -4,7 +4,7 @@ import {
   CopyDocument as IconCopy,
   Delete as IconDelete,
 } from '@element-plus/icons-vue'
-import { EditorContext } from '@sepveneto/dnde-core'
+import { editorContextKey } from '@sepveneto/dnde-core'
 import { ElIcon } from 'element-plus'
 import { defineComponent, getCurrentInstance, h, inject } from 'vue'
 import { useEditor } from '@/store'
@@ -12,7 +12,7 @@ import { createPopper, loadFromRemote } from '@/utils'
 
 export default defineComponent({
   setup() {
-    const ctx = inject(EditorContext)!
+    const ctx = inject(editorContextKey)!
     const editor = useEditor()
     const inst = getCurrentInstance()!
     const parent: HTMLElement = editor.shadowRoot!.querySelector('.mpd-editor')!
