@@ -23,8 +23,10 @@ export default defineComponent({
           return h(ElIcon, () => h(IconCopy))
         case 'delete':
           return h(ElIcon, () => h(IconDelete))
-        default:
-          return h(loadFromRemote('widgets', 'helperRender'))
+        default: {
+          const render = loadFromRemote('widgets', 'remote')
+          return h(render, { scope: 'helper', type: action })
+        }
       }
     }
 
