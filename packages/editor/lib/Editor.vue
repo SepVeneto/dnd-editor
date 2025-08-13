@@ -3,13 +3,14 @@
 </template>
 
 <script lang="ts" setup>
-import { init } from '@module-federation/enhanced/runtime'
+import { init, registerPlugins } from '@module-federation/enhanced/runtime'
 import BasicComp from '@sepveneto/basic-comp'
 import { useEventListener } from '@vueuse/core'
 import ElementPlus from 'element-plus'
 import { createPinia } from 'pinia'
 import * as Vue from 'vue'
 import App from './App.ce.vue'
+import mfShadowdom from './mf-shadowdom'
 import { editorProps } from './props'
 import { useEditor } from './store'
 
@@ -29,6 +30,8 @@ init({
     },
   },
 })
+
+registerPlugins([mfShadowdom()])
 
 const app = Vue.createApp(App)
 const store = createPinia()
