@@ -1,0 +1,24 @@
+{
+  "name": "@sepveneto/dnd-plugins",
+  "version": "0.0.1",
+  "description": "",
+  "author": "",
+  "license": "ISC",
+  "keywords": [],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsup"
+  },
+  "devDependencies": {
+    "@rsbuild/core": "^1.4.15",
+    "@rspack/core": "^1.4.11",
+    "tsup": "^8.4.0"
+  }
+}

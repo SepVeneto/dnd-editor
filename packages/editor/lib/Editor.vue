@@ -3,14 +3,13 @@
 </template>
 
 <script lang="ts" setup>
-import { init, registerPlugins } from '@module-federation/enhanced/runtime'
+import { init } from '@module-federation/enhanced/runtime'
 import BasicComp from '@sepveneto/basic-comp'
 import { useEventListener } from '@vueuse/core'
 import ElementPlus from 'element-plus'
 import { createPinia } from 'pinia'
 import * as Vue from 'vue'
 import App from './App.ce.vue'
-import mfShadowdom from './mf-shadowdom'
 import { editorProps } from './props'
 import { useEditor } from './store'
 
@@ -31,8 +30,6 @@ init({
   },
 })
 
-registerPlugins([mfShadowdom()])
-
 const app = Vue.createApp(App)
 const store = createPinia()
 app.use(ElementPlus, { namespace: 'mpd' })
@@ -45,6 +42,24 @@ if (inst) {
 }
 const editor = useEditor()
 editor.shadowRoot = Vue.useShadowRoot()!
+// 让动态组件的样式加载在shadow dom中，而不是宿主环境中
+// @ts-expect-error: ignore
+window.__shadowdom_css_runtime__ = async (tagLink: HTMLLinkElement) => {
+  try {
+    const res = await fetch(tagLink.href)
+    const stylecontent = await res.text()
+    const style = document.createElement('style')
+    style.textContent = stylecontent
+    const shadowRoot = editor.shadowRoot
+    shadowRoot?.appendChild(style)
+    // 手动触发link标签的load事件，保证组件渲染流程正常
+    tagLink.dispatchEvent(new Event('load'))
+  }
+  catch (err) {
+    console.error(err)
+    tagLink.dispatchEvent(new Event('error'))
+  }
+}
 // 编辑器内不需要触发取消选中的已经通过click.stop屏蔽了
 useEventListener(editor.shadowRoot, 'click', () => {
   editor.selectNode()

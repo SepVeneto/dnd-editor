@@ -7,7 +7,9 @@
   "keywords": [],
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build:core": "pnpm -C packages/core build",
+    "bootstrap": "pnpm build:core",
+    "dev": "pnpm -C packages/editor dev"
   },
   "dependencies": {
     "element-plus": "^2.9.11",
