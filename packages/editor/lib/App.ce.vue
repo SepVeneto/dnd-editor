@@ -8,12 +8,12 @@
       ref="rootRef"
       class="mpd-editor mpd-flex mpd-gap-x-2"
     >
-      <WidgetsMenu v-bind="$slots" />
+      <WidgetsMenu class="mpd-flex-shrink-0" />
       <VueDraggable
         v-model="editor.rootNode.list"
         :group="{ name: 'editor', pull: true, put: true }"
-        class=" mpd-relative mpd-bg-gray-100"
-        style="width: 375px; min-height: calc(667px - 60px);"
+        class="mpd-relative mpd-bg-gray-100"
+        style="min-width: 375px; min-height: calc(667px - 60px);"
         :component-data="{ type: 'transition-group', name: 'flip-list' }"
         :animation="200"
         ghost-class="dragging-ghost"
@@ -54,7 +54,7 @@ import { editorContextKey, EventEmitter } from '@sepveneto/dnde-core'
 // import EditorOperate from '@/layout/EditorOperate.ce.vue'
 // @ts-expect-error: no def
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
-import { getCurrentInstance, provide, useTemplateRef, watchEffect } from 'vue'
+import { getCurrentInstance, provide, watchEffect } from 'vue'
 import VueDraggable from 'vuedraggable'
 import NodeWrap from './components/NodeWrap.vue'
 import ConfigPanel from './layout/configPanel.vue'
@@ -78,8 +78,6 @@ provide(editorContextKey, {
   plugins: editor.plugins,
   bus,
 })
-
-const rootRef = useTemplateRef('rootRef')
 
 // provide(EditorContext, reactive({
 //   nodeList: editor.rootNode,

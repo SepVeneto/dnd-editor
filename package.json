@@ -1,5 +1,6 @@
 {
   "name": "dnd-editor",
+  "type": "module",
   "version": "1.0.0",
   "description": "",
   "author": "",
@@ -9,8 +10,10 @@
   "scripts": {
     "build:plugin": "pnpm -C packages/plugins build",
     "build:core": "pnpm -C packages/core build",
+    "build:editor": "pnpm -C packages/editor build",
     "bootstrap": "pnpm build:core && pnpm build:plugin",
-    "dev": "pnpm -C packages/editor dev"
+    "dev": "pnpm -C packages/editor dev",
+    "docs:dev": "pnpm -C packages/docs dev"
   },
   "dependencies": {
     "element-plus": "^2.9.11",

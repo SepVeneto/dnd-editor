@@ -1,0 +1,19 @@
+{
+  "name": "@sepveneto/dnd-docs",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "",
+  "author": "",
+  "license": "ISC",
+  "keywords": [],
+  "main": "index.js",
+  "scripts": {
+    "dev": "vitepress"
+  },
+  "dependencies": {
+    "@sepveneto/dnde": "workspace: *",
+    "@vitejs/plugin-vue": "^5.2.4",
+    "markdown-it-task-lists": "^2.1.1",
+    "vitepress": "^1.6.4"
+  }
+}
