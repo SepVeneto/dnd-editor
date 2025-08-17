@@ -14,6 +14,7 @@ type Base<T = any> = {
   _uuid?: string
   _name: string
   _view: string
+  _icon?: string
   meta?: {
     draggable?: boolean
   }

@@ -6,7 +6,7 @@
     <div>{{ editor.selected }}</div>
     <div
       ref="rootRef"
-      class="mpd-editor mpd-flex"
+      class="mpd-editor mpd-flex mpd-gap-x-2"
     >
       <WidgetsMenu v-bind="$slots" />
       <VueDraggable

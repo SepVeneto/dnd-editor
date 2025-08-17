@@ -7,8 +7,9 @@
   "keywords": [],
   "main": "index.js",
   "scripts": {
+    "build:plugin": "pnpm -C packages/plugins build",
     "build:core": "pnpm -C packages/core build",
-    "bootstrap": "pnpm build:core",
+    "bootstrap": "pnpm build:core && pnpm build:plugin",
     "dev": "pnpm -C packages/editor dev"
   },
   "dependencies": {

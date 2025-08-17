@@ -62,6 +62,7 @@ const widgets: IWidget<object>[] = [
   {
     _name: '栅格容器',
     _view: 'containerGrid',
+    _icon: 'column',
     style: {},
     schema: {
       props: [

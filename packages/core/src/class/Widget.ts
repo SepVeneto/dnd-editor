@@ -1,6 +1,5 @@
 import type { ElOption, FormItemRule, InputInstance, InputNumberInstance, SelectInstance } from 'element-plus'
 import type { IWidget } from '@/types'
-import { Node } from './Node'
 
 type Option = InstanceType<typeof ElOption>
 
@@ -24,6 +23,10 @@ export class Widget {
 
   clone(): Widget {
     return new Widget(this._data)
+  }
+
+  get icon(): string | undefined {
+    return this._data._icon
   }
 
   get props(): SchemaItem[] {

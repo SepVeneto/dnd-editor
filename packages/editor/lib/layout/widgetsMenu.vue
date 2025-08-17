@@ -4,29 +4,32 @@
   >
     <ElTabs v-if="needTabs">
       <ElTabPane label="组件">
-        <ElCard
-          shadow="never"
+        <el-scrollbar
+          wrap-style="height: 700px;"
+          noresize
         >
-          <template #header>
-            <span>组件</span>
-          </template>
-          <el-scrollbar
-            wrap-style="height: 700px;"
-            noresize
+          <VueDraggable
+            v-model="app.widgets"
+            :group="{ name: 'editor', pull: 'clone', put: false }"
+            :clone="handleClone"
+            :sort="false"
+            item-key="name"
+            class="mpd-grid mpd-grid-cols-3 mpd-gap-4"
           >
-            <VueDraggable
-              v-model="app.widgets"
-              :group="{ name: 'editor', pull: 'clone', put: false }"
-              :clone="handleClone"
-              :sort="false"
-              item-key="name"
-            >
-              <template #item="{ element }">
+            <template #item="{ element }">
+              <div
+                class="mpd-flex mpd-flex-col mpd-justify-center mpd-items-center mpd-bg-gray-100 mpd-py-2 mpd-cursor-grab"
+              >
+                <component
+                  :is="render"
+                  scope="icons"
+                  :type="element.icon"
+                />
                 <div>{{ element.name }}</div>
-              </template>
-            </VueDraggable>
-          </el-scrollbar>
-        </ElCard>
+              </div>
+            </template>
+          </VueDraggable>
+        </el-scrollbar>
       </ElTabPane>
       <ElTabPane
         v-for="item in editor.plugins.widget.list"
