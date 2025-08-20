@@ -30,5 +30,6 @@ const form = defineModel<Record<string, any>>({ required: true })
 const formRef = useTemplateRef('formRef')
 defineExpose({
   validate: () => formRef.value?.validate(),
+  clearValidate: () => formRef.value?.clearValidate(),
 })
 </script>

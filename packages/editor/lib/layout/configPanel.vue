@@ -39,7 +39,7 @@
 
 <script lang="ts" setup>
 import { ArrowRight } from '@element-plus/icons-vue'
-import { computed, ref, useTemplateRef, watch } from 'vue'
+import { computed, nextTick, ref, useTemplateRef, watch } from 'vue'
 import ConfigForm from '@/components/ConfigForm.vue'
 import { useEditor } from '@/store'
 
@@ -59,13 +59,19 @@ const active = ref<'props' | 'style'>('props')
 
 watch(() => editor.selected, () => {
   active.value = 'props'
+  nextTick().then(() => {
+    propRef.value?.clearValidate()
+    styleRef.value?.clearValidate()
+  })
 })
 
 defineExpose({
   async validate() {
-    await propRef.value?.validate()?.catch(() => {
+    const propValid = await propRef.value?.validate()?.catch(() => {
       active.value = 'props'
     })
+    if (!propValid) return
+
     await styleRef.value?.validate()?.catch(() => {
       active.value = 'style'
     })
