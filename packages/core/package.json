@@ -42,6 +42,7 @@
   },
   "changelog": "https://github.com/SepVeneto/miniprogram-design/blob/master/packages/core/CHANGELOG.md",
   "dependencies": {
+    "async-validator": "^4.2.5",
     "uuid": "^11.1.0"
   },
   "devDependencies": {

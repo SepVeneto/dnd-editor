@@ -12,6 +12,7 @@
   <mpd-editor
     ref="editorRef"
     remote-url="http://localhost:8090"
+    :root="rootSchema"
     :widgets="widgets"
     @choose="onChoose"
   />
@@ -58,6 +59,16 @@ onMounted(() => {
   }))
 })
 
+const rootSchema = {
+  props: [
+    { label: '标题', type: 'input', key: 'title', rules: [{ required: true, message: '请输入' }] },
+    { label: '数字', type: 'number', key: 'num' },
+    { label: '选择器', type: 'select', key: 'opts', options: [{ label: '选项1', value: 'option1' }, { label: '选项2', value: 'option2' }] },
+  ],
+  style: [
+    { label: '标题', type: 'input', key: 'styles', rules: [{ required: true, message: '请输入' }] },
+  ],
+}
 const widgets: IWidget<object>[] = [
   {
     _name: '栅格容器',
@@ -82,10 +93,10 @@ const widgets: IWidget<object>[] = [
     },
     schema: {
       props: [
-        { type: 'input', label: '名称', key: 'title' },
+        { type: 'input', label: '名称', key: 'title', rules: { required: true, message: '名称' } },
       ],
       style: [
-        { type: 'number', label: '高度', key: 'height' },
+        { type: 'number', label: '高度', key: 'height', rules: { required: true, message: '1'} },
       ],
     },
   },

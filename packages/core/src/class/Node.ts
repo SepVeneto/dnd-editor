@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'vue'
+import type { Widget } from './Widget'
+import type { IWidget } from '@/types'
 import { v4 } from 'uuid'
-import { Widget } from './Widget'
 
 export class Node {
   public wid: string
@@ -9,7 +10,7 @@ export class Node {
   public list: Node[] = []
   public data: Record<string, any> = {}
   public style: CSSProperties = {}
-  private hovering: boolean = false
+  public hovering: boolean = false
   constructor(widget: Widget, info?: { props?: Node['data'], style?: Node['style'], list?: Node['list'] }) {
     this.widget = widget
     this.wid = v4()
@@ -28,6 +29,28 @@ export class Node {
 
   get name() {
     return this.widget?.name || '页面'
+  }
+
+
+  async validate(only = false): Promise<string | undefined> {
+    const valid = await Promise.all([
+      this.widget.validatorProps.validate(this.data),
+      this.widget.validatorStyle.validate(this.style),
+    ]).catch(() => {
+      return false
+    })
+    if (!valid) {
+      return this.wid
+    }
+    if (only) {
+      return
+    }
+    for (const item of this.list) {
+      const invalid = await item.validate()
+      if (invalid) {
+        return invalid
+      }
+    }
   }
 
   triggerHover(hover: boolean) {
@@ -64,17 +87,11 @@ export class Node {
 }
 
 export class RootNode extends Node {
-  constructor() {
-    super(new Widget({
-      _name: '页面',
-      _view: 'page',
-      schema: {
-        props: [
-          { label: '标题', type: 'input', key: 'title', rules: [{ required: true, message: '1' }] },
-          { label: '数字', type: 'number', key: 'num' },
-          { label: '选择器', type: 'select', key: 'opts', options: [{ label: '选项1', value: 'option1' }, { label: '选项2', value: 'option2' }] },
-        ],
-      },
-    }))
+  constructor(widget: Widget) {
+    super(widget)
+  }
+
+  setSchema(schema: IWidget['schema']) {
+    this.widget._data.schema = schema
   }
 }

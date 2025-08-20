@@ -27,6 +27,7 @@
           name="style"
         >
           <ConfigForm
+            ref="styleRef"
             v-model="editor.selectedNode.style"
             :list="styleSchema"
           />
@@ -38,7 +39,7 @@
 
 <script lang="ts" setup>
 import { ArrowRight } from '@element-plus/icons-vue'
-import { computed, onMounted, ref, useTemplateRef, watch } from 'vue'
+import { computed, ref, useTemplateRef, watch } from 'vue'
 import ConfigForm from '@/components/ConfigForm.vue'
 import { useEditor } from '@/store'
 
@@ -52,6 +53,7 @@ const styleSchema = computed(() => editor.selectedNode?.widget.style)
 const propSchema = computed(() => editor.selectedNode?.widget.props)
 
 const propRef = useTemplateRef('propRef')
+const styleRef = useTemplateRef('styleRef')
 
 const active = ref<'props' | 'style'>('props')
 
@@ -59,7 +61,14 @@ watch(() => editor.selected, () => {
   active.value = 'props'
 })
 
-onMounted(() => {
-  propRef.value?.validate()
+defineExpose({
+  async validate() {
+    await propRef.value?.validate()?.catch(() => {
+      active.value = 'props'
+    })
+    await styleRef.value?.validate()?.catch(() => {
+      active.value = 'style'
+    })
+  }
 })
 </script>

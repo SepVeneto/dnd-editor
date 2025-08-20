@@ -1,12 +1,12 @@
+import type { EditorRoute, EditorSchema, EditorSettings, EditorWidget } from '@sepveneto/dnde-core'
 import type { PropType } from 'vue'
-import type { EditorRoute, EditorSchema, EditorSettings, EditorWidget } from '@sepveneto/mpd-core'
 
 export const editorProps = {
   remoteUrl: {
     type: String,
     required: true,
   },
-  schema: {
+  root: {
     type: Object as PropType<EditorSchema>,
     default: () => ({}),
   },

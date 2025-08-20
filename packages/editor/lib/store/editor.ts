@@ -1,6 +1,6 @@
-import type { Widget } from '@sepveneto/dnde-core/class'
+import type { IWidget } from '@sepveneto/dnde-core'
 import type { HelperAction } from '@/type'
-import { Node, RootNode } from '@sepveneto/dnde-core/class'
+import { Node, RootNode, Widget } from '@sepveneto/dnde-core/class'
 import { defineStore } from 'pinia'
 import { computed, reactive, ref, shallowRef } from 'vue'
 import { removePopper } from '@/utils'
@@ -47,7 +47,7 @@ interface PanelInfo {
 }
 class WidgetPlugin {
   public list: PanelInfo[] = []
-  constructor(ctx: any) {
+  constructor(_ctx: any) {
 
   }
 
@@ -57,10 +57,17 @@ class WidgetPlugin {
 }
 
 export const useEditor = defineStore('editor', () => {
+  const app = useApp()
+
   const shadowRoot = shallowRef<ShadowRoot>()
   const isPreview = ref(false)
   const dragging = ref<Node>()
-  const rootNode = reactive(new RootNode())
+  const defaultPage: IWidget = app.widgetMap.get('page') || {
+    name: '页面',
+    view: 'page',
+    schema: [],
+  }
+  const rootNode = reactive(new RootNode(new Widget(defaultPage)))
   const selected = ref<string>(rootNode.wid)
   // TODO: hover栈
   const hovering = ref<string>()
@@ -123,7 +130,6 @@ export const useEditor = defineStore('editor', () => {
     return rootNode.parse()
   }
 
-  const app = useApp()
   function setData(data: any[], parent = rootNode as Node) {
     data.forEach((item) => {
       const widget = app.widgetMap.get(item._view) as Widget

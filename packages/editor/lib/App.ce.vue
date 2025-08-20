@@ -5,7 +5,6 @@
   >
     <div>{{ editor.selected }}</div>
     <div
-      ref="rootRef"
       class="mpd-editor mpd-flex mpd-gap-x-2"
     >
       <WidgetsMenu class="mpd-flex-shrink-0" />
@@ -30,7 +29,9 @@
         </template>
       </VueDraggable>
 
-      <ConfigPanel @click.stop />
+      <ConfigPanel
+        ref="configPanelRef"
+      @click.stop />
     </div>
   </ElConfigProvider>
 </template>
@@ -54,7 +55,7 @@ import { editorContextKey, EventEmitter } from '@sepveneto/dnde-core'
 // import EditorOperate from '@/layout/EditorOperate.ce.vue'
 // @ts-expect-error: no def
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
-import { getCurrentInstance, provide, watchEffect } from 'vue'
+import { getCurrentInstance, provide, useTemplateRef } from 'vue'
 import VueDraggable from 'vuedraggable'
 import NodeWrap from './components/NodeWrap.vue'
 import ConfigPanel from './layout/configPanel.vue'
@@ -99,8 +100,14 @@ registerRemotes([
 
 const ViewRender = loadFromRemote('widgets', 'viewRender')
 
-watchEffect(() => {
-  app.setWidgets(props.widgets)
+editor.rootNode.setSchema(props.root)
+app.setWidgets(props.widgets)
+
+const configPanelRef = useTemplateRef('configPanelRef')
+defineExpose({
+  validate() {
+    return configPanelRef.value?.validate()
+  }
 })
 </script>
 

@@ -5,9 +5,9 @@
 </template>
 
 <script lang="ts" setup>
-import { inject } from 'vue'
-import { editorContextKey } from '@sepveneto/dnde-core'
 import type { EditorContext } from '@sepveneto/dnde-core'
+import { editorContextKey } from '@sepveneto/dnde-core'
+import { inject } from 'vue'
 
 const editor = inject<EditorContext>(editorContextKey)
 

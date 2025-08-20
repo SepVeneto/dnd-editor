@@ -1,5 +1,8 @@
 <template>
-  <App v-bind="$props" />
+  <App
+    ref="appRef"
+    v-bind="$props"
+  />
 </template>
 
 <script lang="ts" setup>
@@ -9,9 +12,10 @@ import { useEventListener } from '@vueuse/core'
 import ElementPlus from 'element-plus'
 import { createPinia } from 'pinia'
 import * as Vue from 'vue'
+import { useTemplateRef } from 'vue'
 import App from './App.ce.vue'
 import { editorProps } from './props'
-import { useEditor } from './store'
+import { useApp, useEditor } from './store'
 
 defineProps(editorProps)
 
@@ -64,21 +68,28 @@ window.__shadowdom_css_runtime__ = async (tagLink: HTMLLinkElement) => {
 useEventListener(editor.shadowRoot, 'click', () => {
   editor.selectNode()
 })
-useEventListener(document, 'click', (e) => {
-  const node = e.target as HTMLElement
-  if (node.tagName !== 'MPD-EDITOR') {
-    editor.selectNode()
-  }
-})
+// 应该不需要点击编辑外也要重置组件的选中状态
+// useEventListener(document, 'click', (e) => {
+//   const node = e.target as HTMLElement
+//   if (node.tagName !== 'MPD-EDITOR') {
+//     editor.selectNode()
+//   }
+// })
 
+const appRef = useTemplateRef('appRef')
 defineExpose({
   register(fn: (ctx: typeof editor) => { init: () => void }) {
     const editor = useEditor()
     const pluginConstructor = fn(editor)
     pluginConstructor.init()
   },
-  validate() {
-
+  async validate() {
+    const invalidNode = await editor.rootNode.validate()
+    if (invalidNode) {
+      editor.selectNode(invalidNode)
+      await Vue.nextTick()
+      appRef.value?.validate()
+    }
   },
   getData() {
     return editor.getData()

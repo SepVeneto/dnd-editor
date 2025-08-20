@@ -1,5 +1,7 @@
+import type { Rule } from 'async-validator'
 import type { ElOption, FormItemRule, InputInstance, InputNumberInstance, SelectInstance } from 'element-plus'
 import type { IWidget } from '@/types'
+import Validator from 'async-validator'
 
 type Option = InstanceType<typeof ElOption>
 
@@ -39,5 +41,22 @@ export class Widget {
 
   get draggable() {
     return this._data.meta?.draggable ?? true
+  }
+
+  get validatorProps() {
+    const _rules = this._data.schema?.props?.reduce<Record<string, Rule>>((all, curr) => {
+      all[curr.key] = curr.rules || []
+      return all
+    }, {}) || {}
+    const validator = new Validator(_rules)
+    return validator
+  }
+  get validatorStyle() {
+    const _rules = this._data.schema?.style?.reduce<Record<string, Rule>>((all, curr) => {
+      all[curr.key] = curr.rules || []
+      return all
+    }, {}) || {}
+    const validator = new Validator(_rules)
+    return validator
   }
 }
