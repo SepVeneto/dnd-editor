@@ -4,6 +4,7 @@ import type { IWidget } from '@/types'
 import { v4 } from 'uuid'
 
 export class Node {
+  public level = 0
   public wid: string
   public widget: Readonly<Widget>
   public parent?: Node
@@ -11,12 +12,21 @@ export class Node {
   public data: Record<string, any> = {}
   public style: CSSProperties = {}
   public hovering: boolean = false
+  public dragging: boolean = false
   constructor(widget: Widget, info?: { props?: Node['data'], style?: Node['style'], list?: Node['list'] }) {
     this.widget = widget
     this.wid = v4()
     this.list = info?.list || []
     this.data = info?.props || {}
     this.style = info?.style || {}
+  }
+
+  get isContainer() {
+    return !!this.widget.container
+  }
+
+  get hasList() {
+    return this.list && this.list.length > 0
   }
 
   get mouseover() {
@@ -30,7 +40,6 @@ export class Node {
   get name() {
     return this.widget?.name || '页面'
   }
-
 
   async validate(only = false): Promise<string | undefined> {
     const valid = await Promise.all([

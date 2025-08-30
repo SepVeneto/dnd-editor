@@ -2,9 +2,10 @@ import type { IWidget } from '@sepveneto/dnde-core'
 import type { HelperAction } from '@/type'
 import { Node, RootNode, Widget } from '@sepveneto/dnde-core/class'
 import { defineStore } from 'pinia'
-import { computed, reactive, ref, shallowRef } from 'vue'
+import { computed, customRef, reactive, ref, shallowRef } from 'vue'
 import { removePopper } from '@/utils'
 import { useApp } from './app'
+import { get } from '@vueuse/core'
 
 class HelperPlugin {
   public list: HelperAction[] = []
@@ -61,7 +62,25 @@ export const useEditor = defineStore('editor', () => {
 
   const shadowRoot = shallowRef<ShadowRoot>()
   const isPreview = ref(false)
-  const dragging = ref<Node>()
+  const dragging = customRef<Node | null>((track, trigger) => {
+    let draggingNode: Node | null
+    return {
+      get() {
+        track()
+        return draggingNode
+      },
+      set(node) {
+        if (node) {
+          draggingNode = node
+          draggingNode.dragging = true
+        } else {
+          draggingNode!.dragging = false
+          draggingNode = null
+        }
+        trigger()
+      }
+    }
+  })
   const defaultPage: IWidget = app.widgetMap.get('page') || {
     name: '页面',
     view: 'page',
@@ -107,6 +126,7 @@ export const useEditor = defineStore('editor', () => {
   }
 
   function addNode(node: Node, pNode: Node = rootNode as Node, manual = false) {
+    node.level = pNode.level + 1
     nodeMap.set(node.wid, node)
     node.parent = pNode
     manual && pNode.list.push(node)

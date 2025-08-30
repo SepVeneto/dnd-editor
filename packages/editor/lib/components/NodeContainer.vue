@@ -9,8 +9,10 @@
     handle=".node-wrap.draggable"
     ghost-class="dragging-ghost"
     item-key="wid"
-    @update:model-value="list => node.setList(list)"
+    @update:model-value="(list: any) => node.setList(list)"
+    @start="handleStart"
     @add="onAdd"
+    @end="editor.dragging = null"
   >
     <template #item="{ element }">
       <NodeWrap
@@ -35,6 +37,11 @@ const props = defineProps<{ node: Node }>()
 const ViewRender = loadFromRemote('widgets', 'viewRender')
 const editor = useEditor()
 
+function handleStart(evt: DraggableEvt) {
+  const nodeId = evt.item.dataset.id
+  const draggingNode = props.node.list.find(node => node.wid === nodeId)!
+  editor.dragging = draggingNode
+}
 function onAdd(evt: DraggableEvt) {
   const node = props.node.list[evt.newDraggableIndex]
   editor.addNode(node, props.node)

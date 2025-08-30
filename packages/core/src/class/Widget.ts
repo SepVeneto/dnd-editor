@@ -16,11 +16,13 @@ export class Widget {
   public name: string
   public view: string
   public _data: IWidget<object>
+  public container: IWidget<object>['container']
 
   constructor(widget: IWidget<object>) {
     this._data = JSON.parse(JSON.stringify(widget))
     this.name = widget._name
     this.view = widget._view
+    this.container = widget.container
   }
 
   clone(): Widget {
@@ -51,6 +53,7 @@ export class Widget {
     const validator = new Validator(_rules)
     return validator
   }
+
   get validatorStyle() {
     const _rules = this._data.schema?.style?.reduce<Record<string, Rule>>((all, curr) => {
       all[curr.key] = curr.rules || []

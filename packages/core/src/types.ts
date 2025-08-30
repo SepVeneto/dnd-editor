@@ -15,6 +15,7 @@ type Base<T = any> = {
   _name: string
   _view: string
   _icon?: string
+  container?: boolean
   meta?: {
     draggable?: boolean
   }

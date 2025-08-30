@@ -1,5 +1,8 @@
 <template>
-  <div class="mpd-node mpd-relative">
+  <div
+    class="mpd-node mpd-relative"
+    :data-id="node.wid"
+  >
     <div
       class="node-wrap"
       :class="[isActive && 'selected', isDraggable && 'draggable', isHover && 'hover']"

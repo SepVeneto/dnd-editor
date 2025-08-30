@@ -74,6 +74,7 @@ const widgets: IWidget<object>[] = [
     _name: '栅格容器',
     _view: 'containerGrid',
     _icon: 'column',
+    container: true,
     style: {},
     schema: {
       props: [
@@ -96,7 +97,7 @@ const widgets: IWidget<object>[] = [
         { type: 'input', label: '名称', key: 'title', rules: { required: true, message: '名称' } },
       ],
       style: [
-        { type: 'number', label: '高度', key: 'height', rules: { required: true, message: '1'} },
+        { type: 'number', label: '高度', key: 'height', rules: { required: true, message: '1' } },
       ],
     },
   },

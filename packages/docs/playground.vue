@@ -60,6 +60,7 @@ const widgets = [
     _name: '栅格容器',
     _view: 'containerGrid',
     _icon: 'column',
+    container: true,
     style: {},
     schema: {
       props: [

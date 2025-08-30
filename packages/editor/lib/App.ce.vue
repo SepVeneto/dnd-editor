@@ -18,7 +18,9 @@
         ghost-class="dragging-ghost"
         handle=".node-wrap.draggable"
         item-key="wid"
+        @start="handelStart"
         @add="onAdd"
+        @end="editor.dragging = null"
       >
         <template #item="{ element }">
           <NodeWrap
@@ -30,8 +32,11 @@
       </VueDraggable>
 
       <ConfigPanel
+        v-if="!editor.dragging"
         ref="configPanelRef"
-      @click.stop />
+        @click.stop
+      />
+      <TreePanel v-else />
     </div>
   </ElConfigProvider>
 </template>
@@ -59,6 +64,7 @@ import { getCurrentInstance, provide, useTemplateRef } from 'vue'
 import VueDraggable from 'vuedraggable'
 import NodeWrap from './components/NodeWrap.vue'
 import ConfigPanel from './layout/configPanel.vue'
+import TreePanel from './layout/treePanel.vue'
 import WidgetsMenu from './layout/widgetsMenu.vue'
 import { editorProps } from './props'
 import { useEditor } from './store'
@@ -84,6 +90,11 @@ provide(editorContextKey, {
 //   nodeList: editor.rootNode,
 // }))
 
+function handelStart(evt: DraggableEvt) {
+  const nodeId = evt.item.dataset.id
+  const draggingNode = editor.rootNode.list.find(node => node.wid === nodeId)!
+  editor.dragging = draggingNode as Node
+}
 function onAdd(evt: DraggableEvt) {
   const node = editor.rootNode.list[evt.newDraggableIndex] as Node
   editor.addNode(node)
@@ -107,7 +118,7 @@ const configPanelRef = useTemplateRef('configPanelRef')
 defineExpose({
   validate() {
     return configPanelRef.value?.validate()
-  }
+  },
 })
 </script>
 

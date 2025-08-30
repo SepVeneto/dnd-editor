@@ -15,6 +15,7 @@
             :sort="false"
             item-key="name"
             class="mpd-grid mpd-grid-cols-3 mpd-gap-4"
+            @end="handleEnd"
           >
             <template #item="{ element }">
               <div
@@ -84,7 +85,11 @@ const editor = useEditor()
 
 function handleClone(original: Widget) {
   const node = new Node(original)
+  editor.dragging = node
   return node
+}
+function handleEnd() {
+  editor.dragging = null
 }
 
 const render = shallowRef()
