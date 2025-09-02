@@ -29,24 +29,24 @@ import TreePanelItem from './treePanel.item.vue'
 const editor = useEditor()
 function onAdd(evt: DraggableEvt) {
   const nodeId = evt.item.dataset.id
-  const node = editor.rootNode.list.find(node => node.wid === nodeId)!
+  const node = editor.rootNode.list.find(item => item.wid === nodeId)
   node && editor.addNode(node)
 }
 function onInput(val: Node[]) {
-  if (editor.rootNode.list.length === val.length) {
+  if (editor.rootNode.list!.length === val.length) {
     editor.rootNode.list = val
   }
   else {
     const wid = findExistWid(val)
     const originIndex = editor.rootNode.list.findIndex(node => node.wid === wid)
     if (originIndex === -1) {
-      editor.rootNode.list = val
+      (editor.rootNode as Node).list = val
       return
     }
     // 只处理同级同节点跨组件移动节点消失的情况
     val.splice(originIndex, 1)
     nextTick().then(() => {
-      editor.rootNode.list = val
+      (editor.rootNode as Node).list = val
     })
   }
 }

@@ -5,7 +5,6 @@ import { defineStore } from 'pinia'
 import { computed, customRef, reactive, ref, shallowRef } from 'vue'
 import { removePopper } from '@/utils'
 import { useApp } from './app'
-import { get } from '@vueuse/core'
 
 class HelperPlugin {
   public list: HelperAction[] = []
@@ -73,12 +72,13 @@ export const useEditor = defineStore('editor', () => {
         if (node) {
           draggingNode = node
           draggingNode.dragging = true
-        } else {
+        }
+        else {
           draggingNode!.dragging = false
           draggingNode = null
         }
         trigger()
-      }
+      },
     }
   })
   const defaultPage: IWidget = app.widgetMap.get('page') || {

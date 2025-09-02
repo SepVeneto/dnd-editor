@@ -8,28 +8,37 @@
       class="mpd-editor mpd-flex mpd-gap-x-2"
     >
       <WidgetsMenu class="mpd-flex-shrink-0" />
-      <VueDraggable
-        v-model="editor.rootNode.list"
-        :group="{ name: 'editor', pull: true, put: true }"
-        class="mpd-relative mpd-bg-gray-100"
-        style="min-width: 375px; min-height: calc(667px - 60px);"
-        :component-data="{ type: 'transition-group', name: 'flip-list' }"
-        :animation="200"
-        ghost-class="dragging-ghost"
-        handle=".node-wrap.draggable"
-        item-key="wid"
-        @start="handelStart"
-        @add="onAdd"
-        @end="editor.dragging = null"
-      >
-        <template #item="{ element }">
-          <NodeWrap
-            :node="element"
+      <div class="phone-wrap mpd-relative">
+        <img src="./assets/iPhone13.png">
+        <ElScrollbar
+          height="714px"
+          class=" phone-body"
+          noresize
+        >
+          <VueDraggable
+            v-model="editor.rootNode.list"
+            :group="{ name: 'editor', pull: true, put: true }"
+            class="mpd-relative mpd-bg-gray-100"
+            style="width: 375px; min-height: 714px;"
+            :component-data="{ type: 'transition-group', name: 'flip-list' }"
+            :animation="200"
+            ghost-class="dragging-ghost"
+            handle=".node-wrap.draggable"
+            item-key="wid"
+            @start="handelStart"
+            @add="onAdd"
+            @end="editor.dragging = null"
           >
-            <ViewRender :type="element.type" />
-          </NodeWrap>
-        </template>
-      </VueDraggable>
+            <template #item="{ element }">
+              <NodeWrap
+                :node="element"
+              >
+                <ViewRender :type="element.type" />
+              </NodeWrap>
+            </template>
+          </VueDraggable>
+        </ElScrollbar>
+      </div>
 
       <ConfigPanel
         v-if="!editor.dragging"
@@ -196,5 +205,14 @@ defineExpose({
 // }
 .draggable-box {
   min-height: 400px;
+}
+.phone-wrap > img {
+  width: 403px;
+}
+.phone-body {
+  position: absolute;
+  top: 50px;
+  left: 14px;
+  right: 14px;
 }
 </style>

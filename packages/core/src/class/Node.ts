@@ -3,6 +3,34 @@ import type { Widget } from './Widget'
 import type { IWidget } from '@/types'
 import { v4 } from 'uuid'
 
+// interface BaseNode<T extends BaseNode<T>> {
+//   level: number
+//   wid: string
+//   widget: Readonly<Widget>
+//   parent?: Node
+//   list: BaseNode<Node>[]
+//   data: Record<string, any> = {}
+//   style: CSSProperties = {}
+//   hovering: boolean = false
+//   dragging: boolean = false
+
+//   validate: (only: boolean) => string
+//   copy: () => BaseNode<Node>
+//   parse: any
+// }
+
+abstract class BaseNode {
+  abstract level: number
+  abstract wid: string
+  abstract widget: Readonly<Widget>
+  abstract parent?: Node
+  abstract list: Node[]
+  abstract data: Record<string, any>
+  abstract style: CSSProperties
+  abstract hovering: boolean
+  abstract dragging: boolean
+}
+
 export class Node {
   public level = 0
   public wid: string
@@ -51,9 +79,10 @@ export class Node {
     if (!valid) {
       return this.wid
     }
-    if (only) {
+    if (only || !this.list) {
       return
     }
+
     for (const item of this.list) {
       const invalid = await item.validate()
       if (invalid) {
@@ -71,7 +100,7 @@ export class Node {
   }
 
   copy(): Node {
-    const list = this.list.map(item => item.copy())
+    const list = this.list?.map(item => item.copy())
     const info = {
       props: JSON.parse(JSON.stringify(this.data)),
       style: JSON.parse(JSON.stringify(this.style)),
@@ -89,15 +118,28 @@ export class Node {
       isShow: true,
       ...this.data,
       style: this.style,
-      list: this.list.map(item => item.parse()),
+      list: this.list?.map(item => item.parse()),
     }
     return res
   }
 }
 
-export class RootNode extends Node {
-  constructor(widget: Widget) {
-    super(widget)
+export class RootNode {
+  public level = 0
+  public wid: string
+  public widget: Readonly<Widget>
+  public parent?: Node
+  public list: any[] = []
+  public data: Record<string, any> = {}
+  public style: CSSProperties = {}
+  public hovering: boolean = false
+  public dragging: boolean = false
+  constructor(widget: Widget, info?: { props?: Node['data'], style?: Node['style'], list?: Node['list'] }) {
+    this.widget = widget
+    this.wid = v4()
+    // this.list = info?.list || []
+    this.data = info?.props || {}
+    this.style = info?.style || {}
   }
 
   setSchema(schema: IWidget['schema']) {
