@@ -1,6 +1,7 @@
 <template>
   <div
     class="menu-item-wrapper"
+    :style="renderStyle"
   >
     <div>
       <img
@@ -21,12 +22,20 @@
 </template>
 
 <script lang="ts" setup>
-defineProps({
+import { toRef } from 'vue'
+import { useNormalizeStyle } from '@/hooks'
+
+const props = defineProps({
   config: {
     type: Object,
     default: () => ({}),
   },
+  style: {
+    type: Object,
+    default: () => ({}),
+  },
 })
+const renderStyle = useNormalizeStyle(toRef(props, 'style'))
 </script>
 
 <style lang="scss" scoped>

@@ -33,7 +33,11 @@
               <NodeWrap
                 :node="element"
               >
-                <ViewRender :type="element.type" />
+                <ViewRender
+                  :type="element.type"
+                  :config="element.data"
+                  :style="element.style"
+                />
               </NodeWrap>
             </template>
           </VueDraggable>
@@ -120,7 +124,7 @@ registerRemotes([
 
 const ViewRender = loadFromRemote('widgets', 'viewRender')
 
-editor.rootNode.setSchema(props.root)
+editor.setSchema(props.root)
 app.setWidgets(props.widgets)
 
 const configPanelRef = useTemplateRef('configPanelRef')

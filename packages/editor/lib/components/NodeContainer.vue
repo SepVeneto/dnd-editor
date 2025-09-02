@@ -18,7 +18,11 @@
       <NodeWrap
         :node="element"
       >
-        <ViewRender :type="element.type" />
+        <ViewRender
+          :type="element.type"
+          :config="element.data"
+          :style="element.style"
+        />
       </NodeWrap>
     </template>
   </VueDraggable>

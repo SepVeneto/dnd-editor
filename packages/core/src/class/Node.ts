@@ -1,35 +1,6 @@
 import type { CSSProperties } from 'vue'
 import type { Widget } from './Widget'
-import type { IWidget } from '@/types'
 import { v4 } from 'uuid'
-
-// interface BaseNode<T extends BaseNode<T>> {
-//   level: number
-//   wid: string
-//   widget: Readonly<Widget>
-//   parent?: Node
-//   list: BaseNode<Node>[]
-//   data: Record<string, any> = {}
-//   style: CSSProperties = {}
-//   hovering: boolean = false
-//   dragging: boolean = false
-
-//   validate: (only: boolean) => string
-//   copy: () => BaseNode<Node>
-//   parse: any
-// }
-
-abstract class BaseNode {
-  abstract level: number
-  abstract wid: string
-  abstract widget: Readonly<Widget>
-  abstract parent?: Node
-  abstract list: Node[]
-  abstract data: Record<string, any>
-  abstract style: CSSProperties
-  abstract hovering: boolean
-  abstract dragging: boolean
-}
 
 export class Node {
   public level = 0
@@ -140,9 +111,5 @@ export class RootNode {
     // this.list = info?.list || []
     this.data = info?.props || {}
     this.style = info?.style || {}
-  }
-
-  setSchema(schema: IWidget['schema']) {
-    this.widget._data.schema = schema
   }
 }

@@ -1,6 +1,7 @@
 import type { IWidget } from '@sepveneto/dnde-core'
+import type { Raw } from 'vue'
 import type { HelperAction } from '@/type'
-import { Node, RootNode, Widget } from '@sepveneto/dnde-core/class'
+import { Node, Widget } from '@sepveneto/dnde-core/class'
 import { defineStore } from 'pinia'
 import { computed, customRef, reactive, ref, shallowRef } from 'vue'
 import { removePopper } from '@/utils'
@@ -86,12 +87,13 @@ export const useEditor = defineStore('editor', () => {
     view: 'page',
     schema: [],
   }
-  const rootNode = reactive(new RootNode(new Widget(defaultPage)))
+  // 防止类型实例化过于深并且可能无限错误
+  const rootNode = reactive<Raw<Node>>(new Node(new Widget(defaultPage)))
   const selected = ref<string>(rootNode.wid)
   // TODO: hover栈
   const hovering = ref<string>()
   const nodeMap = new Map<string, Node>()
-  nodeMap.set(rootNode.wid, rootNode as Node)
+  nodeMap.set(rootNode.wid, rootNode)
 
   const plugins = {
     helper: new HelperPlugin({ addNode, delNode }),
@@ -167,6 +169,10 @@ export const useEditor = defineStore('editor', () => {
     })
   }
 
+  function setSchema(schema: IWidget['schema']) {
+    rootNode.widget._data.schema = schema
+  }
+
   return {
     rootNode,
     shadowRoot,
@@ -185,5 +191,6 @@ export const useEditor = defineStore('editor', () => {
 
     getData,
     setData,
+    setSchema,
   }
 })
