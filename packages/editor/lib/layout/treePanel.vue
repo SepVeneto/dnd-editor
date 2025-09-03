@@ -28,8 +28,7 @@ import TreePanelItem from './treePanel.item.vue'
 
 const editor = useEditor()
 function onAdd(evt: DraggableEvt) {
-  const nodeId = evt.item.dataset.id
-  const node = editor.rootNode.list.find(item => item.wid === nodeId)
+  const node = editor.rootNode.list[evt.newDraggableIndex]
   node && editor.addNode(node)
 }
 function onInput(val: Node[]) {
