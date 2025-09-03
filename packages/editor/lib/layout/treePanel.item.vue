@@ -29,6 +29,7 @@
         item-key="wid"
         @update:model-value="onInput"
         @add="onAdd"
+        @end="editor.dragging = null"
       >
         <template #item="{ element }">
           <TreePanelItem
@@ -57,6 +58,7 @@ const editor = useEditor()
 function onAdd(evt: DraggableEvt) {
   const node = props.node.list[evt.newDraggableIndex]
   node && editor.addNode(node, props.node)
+  console.log('add')
 }
 
 function onInput(val: Node[]) {
@@ -71,7 +73,11 @@ function onInput(val: Node[]) {
       return
     }
     // 只处理同级同节点跨组件移动节点消失的情况
-    val.splice(originIndex, 1)
+    if (wid === val[originIndex].wid) {
+      val.splice(originIndex, 1)
+    } else {
+      val.splice(originIndex + 1, 1)
+    }
     nextTick().then(() => {
       props.node.setList(val)
     })

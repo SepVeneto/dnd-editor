@@ -10,6 +10,7 @@
     handle=".node-wrap.draggable"
     item-key="wid"
     @add="onAdd"
+    @end="editor.dragging = null"
     @update:model-value="onInput"
   >
     <template #item="{ element }">
@@ -33,7 +34,7 @@ function onAdd(evt: DraggableEvt) {
   node && editor.addNode(node)
 }
 function onInput(val: Node[]) {
-  if (editor.rootNode.list!.length === val.length) {
+  if (editor.rootNode.list.length >= val.length) {
     editor.rootNode.list = val
   }
   else {
@@ -44,7 +45,15 @@ function onInput(val: Node[]) {
       return
     }
     // 只处理同级同节点跨组件移动节点消失的情况
-    val.splice(originIndex, 1)
+    // 需要比较在移动后数组中，相较原数组中的位置
+    // 如果是向上移动，那originIndex就不是被复制元素的位置
+    // 可以被删除的前提一定是该元素的wid与其原始位置的元素一样
+    // 否则就向下找，即下标加1
+    if (wid === val[originIndex].wid) {
+      val.splice(originIndex, 1)
+    } else {
+      val.splice(originIndex + 1, 1)
+    }
     nextTick().then(() => {
       (editor.rootNode as Node).list = val
     })
