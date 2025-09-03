@@ -34,16 +34,18 @@ register()
 
 onMounted(() => {
   editorRef.value?.register(ctx => ({
+    // helper: 节点的操作菜单
+    // widget: 组件菜单
     init() {
       // const copy = createCopy(ctx)
       // const del = createDelete(ctx)
       ctx.plugins.helper.addBuiltin({
         name: 'export',
         title: '导出组件配置',
-        action: (node: any) => {
+        action: (node) => {
           console.log('export', node)
         },
-        condition: (node: any) => {
+        condition: (node) => {
           return true
         },
       })

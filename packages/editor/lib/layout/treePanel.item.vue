@@ -94,16 +94,25 @@ function findExistWid(list: Node[]) {
 
 <style lang="scss" scoped>
 .node-container.placeholder {
-  min-height: 20px;
+  height: 64px;
+  line-height: 64px;
   background: #ddd;
   &::after {
     content: '放置子节点';
     display: block;
-    font-size: 12px;
+    font-size: 14px;
     color: #222;
     width: 100%;
     text-align: center;
   }
+}
+.tree-item {
+  height: 32px;
+  line-height: 32px;
+}
+.tree-wrap.dragging .placeholder::after {
+  color: #fff;
+  background: var(--mpd-color-primary);
 }
 .tree-item, .tree-wrap {
   &.dragging {
