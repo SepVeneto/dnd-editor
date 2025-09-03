@@ -2,8 +2,7 @@
   <Vuedraggable
     :model-value="editor.rootNode.list"
     :group="{ name: 'editor', pull: true, put: true }"
-    class="mpd-relative"
-    style="min-width: 375px; min-height: calc(667px - 60px);"
+    class="tree-panel-container"
     :component-data="{ type: 'transition-group', name: 'flip-list' }"
     :animation="200"
     ghost-class="dragging-ghost"
@@ -51,7 +50,8 @@ function onInput(val: Node[]) {
     // 否则就向下找，即下标加1
     if (wid === val[originIndex].wid) {
       val.splice(originIndex, 1)
-    } else {
+    }
+    else {
       val.splice(originIndex + 1, 1)
     }
     nextTick().then(() => {
@@ -73,3 +73,66 @@ function findExistWid(list: Node[]) {
   }
 }
 </script>
+
+<style scoped>
+.tree-panel-container {
+  min-width: 375px;
+  min-height: calc(667px - 60px);
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.tree-panel-container:hover {
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+  transition: all 0.3s ease;
+}
+
+.tree-panel-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 12px;
+  padding: 1px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: destination-out;
+  mask-composite: exclude;
+}
+
+/* 拖拽列表动画 */
+.flip-list-move {
+  transition: transform 0.3s ease;
+}
+
+.flip-list-enter-active,
+.flip-list-leave-active {
+  transition: all 0.3s ease;
+}
+
+.flip-list-enter-from,
+.flip-list-leave-to {
+  opacity: 0;
+  transform: translateX(30px);
+}
+
+/* 拖拽时的幽灵元素样式 */
+.dragging-ghost {
+  opacity: 0.6;
+  background: #f0f4f8;
+  border: 2px dashed #a0aec0;
+  border-radius: 8px;
+  transform: scale(0.98);
+}
+</style>

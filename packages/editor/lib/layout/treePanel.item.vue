@@ -4,7 +4,13 @@
     class="mpd-list-none tree-item"
     :class="[node.dragging && 'dragging']"
   >
-    <span :style="`margin-left: ${node.level * 20}px`">{{ node.name }}</span>
+    <span
+      :style="`margin-left: ${node.level * 20}px`"
+      class="tree-node-content"
+    >
+      <i class="node-icon">●</i>
+      {{ node.name }}
+    </span>
   </li>
   <div
     v-else
@@ -13,9 +19,13 @@
   >
     <ul
       :style="`margin-left: ${node.level * 20}px`"
+      class="tree-node-list"
     >
-      <li>
-        {{ node.name }}
+      <li class="tree-node-header">
+        <span class="tree-node-content">
+          <i class="node-icon folder-icon">📁</i>
+          {{ node.name }}
+        </span>
       </li>
       <Vuedraggable
         class="node-container"
@@ -75,7 +85,8 @@ function onInput(val: Node[]) {
     // 只处理同级同节点跨组件移动节点消失的情况
     if (wid === val[originIndex].wid) {
       val.splice(originIndex, 1)
-    } else {
+    }
+    else {
       val.splice(originIndex + 1, 1)
     }
     nextTick().then(() => {
@@ -99,31 +110,120 @@ function findExistWid(list: Node[]) {
 </script>
 
 <style lang="scss" scoped>
+.tree-node-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.tree-node-header {
+  padding: 6px 12px;
+  border-radius: 6px;
+  margin-bottom: 4px;
+  background: rgba(102, 126, 234, 0.08);
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(102, 126, 234, 0.15);
+  }
+}
+
+.tree-node-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #2d3748;
+  font-weight: 500;
+}
+
+.node-icon {
+  font-size: 12px;
+  opacity: 0.7;
+
+  &.folder-icon {
+    font-size: 16px;
+  }
+}
+
 .node-container.placeholder {
-  height: 64px;
+  min-height: 64px;
   line-height: 64px;
-  background: #ddd;
+  background: rgba(221, 221, 221, 0.3);
+  border-radius: 8px;
+  margin: 8px 0;
+  border: 1px dashed #cbd5e0;
+
   &::after {
     content: '放置子节点';
     display: block;
     font-size: 14px;
-    color: #222;
+    color: #718096;
     width: 100%;
     text-align: center;
+    font-style: italic;
   }
 }
+
 .tree-item {
-  height: 32px;
-  line-height: 32px;
+  height: 36px;
+  line-height: 36px;
+  padding: 0 12px;
+  border-radius: 6px;
+  margin-bottom: 2px;
+  transition: all 0.2s ease;
+  background: rgba(255, 255, 255, 0.7);
+
+  &:hover {
+    background: rgba(102, 126, 234, 0.1);
+    transform: translateX(2px);
+  }
+
+  .tree-node-content {
+    color: #4a5568;
+  }
 }
+
 .tree-wrap.dragging .placeholder::after {
   color: #fff;
   background: var(--mpd-color-primary);
 }
+
 .tree-item, .tree-wrap {
   &.dragging {
     color: #fff;
     background: var(--mpd-color-primary);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+
+    .tree-node-content {
+      color: #fff;
+    }
   }
+}
+
+// 拖拽列表动画
+.flip-list-move {
+  transition: transform 0.3s ease;
+}
+
+.flip-list-enter-active,
+.flip-list-leave-active {
+  transition: all 0.3s ease;
+}
+
+.flip-list-enter-from,
+.flip-list-leave-to {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+/* 拖拽时的幽灵元素样式 */
+.dragging-ghost {
+  opacity: 0.7;
+  background: #f0f4f8;
+  border: 2px dashed #a0aec0;
+  border-radius: 8px;
+  transform: scale(0.98);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 </style>
