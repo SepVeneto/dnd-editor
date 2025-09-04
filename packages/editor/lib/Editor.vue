@@ -12,10 +12,10 @@ import { useEventListener } from '@vueuse/core'
 import ElementPlus from 'element-plus'
 import { createPinia } from 'pinia'
 import * as Vue from 'vue'
-import { useTemplateRef } from 'vue'
+import { onMounted, useTemplateRef } from 'vue'
 import App from './App.ce.vue'
 import { editorProps } from './props'
-import { useApp, useEditor } from './store'
+import { useEditor } from './store'
 
 defineProps(editorProps)
 
@@ -64,19 +64,13 @@ window.__shadowdom_css_runtime__ = async (tagLink: HTMLLinkElement) => {
     tagLink.dispatchEvent(new Event('error'))
   }
 }
+
+const appRef = useTemplateRef('appRef')
 // 编辑器内不需要触发取消选中的已经通过click.stop屏蔽了
 useEventListener(editor.shadowRoot, 'click', () => {
   editor.selectNode()
 })
-// 应该不需要点击编辑外也要重置组件的选中状态
-// useEventListener(document, 'click', (e) => {
-//   const node = e.target as HTMLElement
-//   if (node.tagName !== 'MPD-EDITOR') {
-//     editor.selectNode()
-//   }
-// })
 
-const appRef = useTemplateRef('appRef')
 defineExpose({
   register(fn: (ctx: typeof editor) => { init: () => void }) {
     const editor = useEditor()

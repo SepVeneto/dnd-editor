@@ -21,6 +21,7 @@
 <script setup lang="ts">
 import type { IWidget } from '@sepveneto/dnde-core'
 import type { EditorInstance } from '@/main'
+import { schema, widget } from '@sepveneto/dnde-core/helper'
 // import { register } from '../dist/editor.js'
 import { onMounted, useTemplateRef } from 'vue'
 import { register } from '@/main'
@@ -63,46 +64,65 @@ onMounted(() => {
 
 const rootSchema = {
   props: [
-    { label: '标题', type: 'input', key: 'title', rules: [{ required: true, message: '请输入' }] },
-    { label: '数字', type: 'number', key: 'num' },
-    { label: '选择器', type: 'select', key: 'opts', options: [{ label: '选项1', value: 'option1' }, { label: '选项2', value: 'option2' }] },
+    schema.input({
+      label: '标题',
+      key: 'title',
+      required: true,
+    }),
+    schema.number({
+      label: '数字',
+      key: 'num',
+    }),
+    schema.select({
+      label: '选择器',
+      key: 'opts',
+      options: [{ label: '选项1', value: 'option1' }, { label: '选项2', value: 'option2' }],
+    }),
   ],
   style: [
-    { label: '标题', type: 'input', key: 'styles', rules: [{ required: true, message: '请输入' }] },
+    schema.input({
+      label: '标题',
+      key: 'title',
+      required: true,
+    }),
   ],
 }
 const widgets: IWidget<object>[] = [
-  {
-    _name: '栅格容器',
-    _view: 'containerGrid',
-    _icon: 'column',
-    container: true,
-    style: {},
-    schema: {
-      props: [
-        { type: 'input', label: '名称', key: 'title', rules: { required: true, message: '名称' } },
-      ],
-      style: [
-        { type: 'number', label: '高度', key: 'height' },
-      ],
-    },
-  },
-  {
-    _name: '菜单',
-    _view: 'menuItem',
-    style: {},
-    meta: {
-      draggable: true,
-    },
-    schema: {
-      props: [
-        { type: 'input', label: '名称', key: 'title', rules: { required: true, message: '名称' } },
-      ],
-      style: [
-        { type: 'number', label: '高度', key: 'height', rules: { required: true, message: '1' } },
-      ],
-    },
-  },
+  widget.columnContainer({
+    icon: 'column',
+    attributes: [
+      schema.input({
+        label: '标题',
+        key: 'title',
+        required: true,
+      }),
+    ],
+    stylesheet: [
+      schema.number({
+        label: '高度',
+        key: 'height',
+      }),
+    ],
+  }),
+  widget.create({
+    name: '菜单',
+    type: 'menuItem',
+    config: { draggable: true },
+    attributes: [
+      schema.input({
+        label: '标题',
+        key: 'title',
+        required: true,
+      }),
+    ],
+    stylesheet: [
+      schema.styleNumber({
+        label: '高度',
+        key: 'width',
+        required: '1',
+      }),
+    ],
+  }),
 ]
 
 function handleValid() {

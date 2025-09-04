@@ -26,6 +26,11 @@
       "types": "./dist/class/index.d.ts",
       "import": "./dist/class/index.js",
       "require": "./dist/class/index.cjs"
+    },
+    "./helper": {
+      "types": "./dist/helper/index.d.ts",
+      "import": "./dist/helper/index.js",
+      "require": "./dist/helper/index.cjs"
     }
   },
   "main": "./dist/index.cjs",

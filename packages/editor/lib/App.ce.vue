@@ -5,6 +5,7 @@
   >
     <div>{{ editor.selected }}</div>
     <div
+      ref="rootRef"
       class="mpd-editor mpd-flex mpd-gap-x-2"
     >
       <WidgetsMenu class="mpd-flex-shrink-0" />
@@ -73,7 +74,7 @@ import { editorContextKey, EventEmitter } from '@sepveneto/dnde-core'
 // import EditorOperate from '@/layout/EditorOperate.ce.vue'
 // @ts-expect-error: no def
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
-import { getCurrentInstance, provide, useTemplateRef } from 'vue'
+import { getCurrentInstance, onMounted, provide, useTemplateRef } from 'vue'
 import VueDraggable from 'vuedraggable'
 import NodeWrap from './components/NodeWrap.vue'
 import ConfigPanel from './layout/configPanel.vue'
@@ -91,6 +92,11 @@ const editor = useEditor()
 const inst = getCurrentInstance()
 const bus = new EventEmitter((event: string, ...args: any) => {
   inst?.parent?.emit(event, ...args)
+})
+
+const rootRef = useTemplateRef('rootRef')
+onMounted(() => {
+  editor.elementRoot = rootRef.value!
 })
 
 provide(editorContextKey, {

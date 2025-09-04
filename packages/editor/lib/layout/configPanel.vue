@@ -70,11 +70,12 @@ defineExpose({
     const propValid = await propRef.value?.validate()?.catch(() => {
       active.value = 'props'
     })
-    if (!propValid) return
+    if (!propValid)
+      return
 
     await styleRef.value?.validate()?.catch(() => {
       active.value = 'style'
     })
-  }
+  },
 })
 </script>

@@ -61,6 +61,7 @@ export const useEditor = defineStore('editor', () => {
   const app = useApp()
 
   const shadowRoot = shallowRef<ShadowRoot>()
+  const elementRoot = shallowRef<HTMLElement>()
   const isPreview = ref(false)
   const dragging = customRef<Node | null>((track, trigger) => {
     let draggingNode: Node | null
@@ -176,6 +177,7 @@ export const useEditor = defineStore('editor', () => {
   return {
     rootNode,
     shadowRoot,
+    elementRoot,
     selectNode,
     selected,
     hovering,

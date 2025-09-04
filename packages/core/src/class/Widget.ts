@@ -5,12 +5,22 @@ import Validator from 'async-validator'
 
 type Option = InstanceType<typeof ElOption>
 
-interface SchemaItemBase { rules?: FormItemRule | FormItemRule[] }
-interface ShcemaItemInput extends SchemaItemBase { label: string, key: string, type: 'input', attrs?: InputInstance['$props'] }
-interface SchemaItemSelect extends SchemaItemBase { label: string, key: string, type: 'select', options?: Option['$props'][], attrs?: SelectInstance['$props'] }
-interface SchemaItemNumber extends SchemaItemBase { label: string, key: string, type: 'number', attrs?: InputNumberInstance['$props'] }
+interface SchemaItemBase {
+  label: string
+  key: string
+  rules?: FormItemRule | FormItemRule[]
+}
+interface ShcemaItemInput extends SchemaItemBase { type: 'input', attrs?: InputInstance['$props'] }
+interface SchemaItemSelect extends SchemaItemBase { type: 'select', options?: Option['$props'][], attrs?: SelectInstance['$props'] }
+interface SchemaItemNumber extends SchemaItemBase { type: 'number', attrs?: InputNumberInstance['$props'] }
+interface SchemaItemStyleNumber extends SchemaItemBase {
+  type: 'styleNumber'
+}
 
-export type SchemaItem = ShcemaItemInput | SchemaItemSelect | SchemaItemNumber
+export type SchemaItem = ShcemaItemInput |
+  SchemaItemSelect |
+  SchemaItemNumber |
+  SchemaItemStyleNumber
 
 export class Widget {
   public name: string

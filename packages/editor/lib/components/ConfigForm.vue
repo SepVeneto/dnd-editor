@@ -13,6 +13,7 @@
     >
       <ConfigRender
         v-model="form[item.key]"
+        stylesheet
         :config="item"
       />
     </ElFormItem>

@@ -1,13 +1,11 @@
 <template>
-  <aside class="widgets-menu">
-    <ElTabs
-      v-if="needTabs"
-      class="widgets-tabs"
-    >
+  <aside
+    style="width: 300px;"
+  >
+    <ElTabs v-if="needTabs">
       <ElTabPane label="组件">
         <el-scrollbar
-          wrap-class="widgets-scrollbar"
-          wrap-style="max-height: calc(100vh - 120px);"
+          wrap-style="height: 700px;"
           noresize
         >
           <VueDraggable
@@ -16,22 +14,27 @@
             :clone="handleClone"
             :sort="false"
             item-key="name"
-            class="widgets-grid"
+            class="mpd-grid mpd-gap-4"
+            style="grid-template-columns: repeat(3, 90px);"
             @end="handleEnd"
           >
             <template #item="{ element }">
               <div
-                class="widget-item"
+                class="mpd-flex mpd-flex-col mpd-justify-center mpd-items-center mpd-py-2 mpd-cursor-grab mpd-text-sm hover:mpd-bg-slate-100"
+                style="height: 90px;"
               >
                 <component
                   :is="render"
+                  v-if="element.icon"
+                  class="mpd-size-7 mpd-mb-4"
                   scope="icons"
                   :type="element.icon"
-                  class="widget-icon"
                 />
-                <div class="widget-name">
-                  {{ element.name }}
-                </div>
+                <IconWidget
+                  v-else
+                  class="mpd-size-7 mpd-mb-4"
+                />
+                <div>{{ element.name }}</div>
               </div>
             </template>
           </VueDraggable>
@@ -52,14 +55,12 @@
     <ElCard
       v-else
       shadow="never"
-      class="widgets-card"
     >
       <template #header>
-        <span class="card-header">组件</span>
+        <span>组件</span>
       </template>
       <el-scrollbar
-        wrap-class="widgets-scrollbar"
-        wrap-style="max-height: calc(100vh - 120px);"
+        wrap-style="height: 700px;"
         noresize
       >
         <VueDraggable
@@ -68,12 +69,9 @@
           :clone="handleClone"
           :sort="false"
           item-key="name"
-          class="widgets-list"
         >
           <template #item="{ element }">
-            <div class="widget-item-simple">
-              {{ element.name }}
-            </div>
+            <div>{{ element.name }}</div>
           </template>
         </VueDraggable>
       </el-scrollbar>
@@ -86,6 +84,7 @@ import type { Widget } from '@sepveneto/dnde-core/class'
 import { Node } from '@sepveneto/dnde-core/class'
 import { computed, shallowRef, watchEffect } from 'vue'
 import VueDraggable from 'vuedraggable'
+import IconWidget from '@/assets/widget.vue'
 import { useEditor } from '@/store'
 import { useApp } from '@/store/app'
 import { loadFromRemote } from '@/utils'
@@ -119,9 +118,8 @@ watchEffect(() => {
 .widgets-menu {
   width: 300px;
   height: 100%;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
-  border-right: 1px solid #e0e6ed;
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
+  background-color: #ffffff;
+  border-right: 1px solid #ebeef5;
 
   .widgets-tabs {
     height: 100%;
@@ -129,23 +127,20 @@ watchEffect(() => {
     :deep(.el-tabs__header) {
       margin-bottom: 0;
       background: white;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-      z-index: 10;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 
       .el-tabs__nav-wrap::after {
-        background-color: transparent;
+        background-color: #e4e7ed;
       }
 
       .el-tabs__item {
-        font-weight: 500;
         color: #606266;
         transition: all 0.3s;
         position: relative;
-        padding: 0 24px;
+        padding: 0 20px;
 
         &.is-active {
           color: #409eff;
-          font-weight: 600;
         }
       }
     }
@@ -163,21 +158,20 @@ watchEffect(() => {
 
     :deep(.el-card__header) {
       background: white;
-      border-bottom: 1px solid #e0e6ed;
-      padding: 12px 20px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+      border-bottom: 1px solid #ebeef5;
+      padding: 15px 20px;
     }
 
     .card-header {
       font-size: 16px;
-      font-weight: 600;
+      font-weight: 500;
       color: #303133;
     }
   }
 
   .widgets-scrollbar {
     :deep(.el-scrollbar__bar) {
-      opacity: 0.7;
+      opacity: 0;
       transition: opacity 0.3s;
     }
 
@@ -189,12 +183,12 @@ watchEffect(() => {
   .widgets-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-    padding: 16px;
+    gap: 12px;
+    padding: 12px;
   }
 
   .widgets-list {
-    padding: 16px;
+    padding: 12px;
   }
 
   .widget-item {
@@ -203,24 +197,21 @@ watchEffect(() => {
     justify-content: center;
     align-items: center;
     background: white;
-    border-radius: 8px;
-    padding: 16px 8px;
+    border-radius: 4px;
+    padding: 12px 6px;
     cursor: grab;
-    transition: all 0.3s ease;
+    transition: all 0.3s;
     border: 1px solid #ebeef5;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
 
     &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(64, 158, 255, 0.2);
-      border-color: #c6e2ff;
-      background: #f0f8ff;
+      border-color: #409eff;
+      box-shadow: 0 0 6px rgba(64, 158, 255, 0.2);
     }
 
     .widget-icon {
-      font-size: 24px;
-      margin-bottom: 8px;
-      color: #409eff;
+      font-size: 20px;
+      margin-bottom: 6px;
+      color: #606266;
     }
 
     .widget-name {
@@ -232,19 +223,17 @@ watchEffect(() => {
   }
 
   .widget-item-simple {
-    padding: 12px 16px;
+    padding: 10px 12px;
     background: white;
-    border-radius: 6px;
-    margin-bottom: 8px;
+    border-radius: 4px;
+    margin-bottom: 6px;
     cursor: grab;
     transition: all 0.2s;
     border: 1px solid #ebeef5;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 
     &:hover {
-      background: #f0f8ff;
-      border-color: #c6e2ff;
-      transform: translateX(4px);
+      border-color: #409eff;
+      background: #ecf5ff;
     }
   }
 }
