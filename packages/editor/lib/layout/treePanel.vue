@@ -77,37 +77,16 @@ function findExistWid(list: Node[]) {
 .tree-panel-container {
   min-width: 375px;
   min-height: calc(667px - 60px);
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
-  border-radius: 12px;
+  background-color: #ffffff;
+  border-radius: 4px;
   padding: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  border: 1px solid #ebeef5;
+  box-sizing: border-box;
 }
 
 .tree-panel-container:hover {
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
-}
-
-.tree-panel-container::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  border-radius: 12px;
-  padding: 1px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: destination-out;
-  mask-composite: exclude;
 }
 
 /* 拖拽列表动画 */
@@ -128,10 +107,10 @@ function findExistWid(list: Node[]) {
 
 /* 拖拽时的幽灵元素样式 */
 .dragging-ghost {
-  opacity: 0.6;
-  background: #f0f4f8;
-  border: 2px dashed #a0aec0;
-  border-radius: 8px;
+  opacity: 0.7;
+  background-color: #f5f7fa;
+  border: 1px dashed #409eff;
+  border-radius: 4px;
   transform: scale(0.98);
 }
 </style>

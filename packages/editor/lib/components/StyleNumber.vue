@@ -1,29 +1,47 @@
 <template>
   <div>
-    <ElSelect
-      v-model="type"
-      :append-to="editor.elementRoot"
-    >
-      <ElOption
-        label="固定值"
-        value="constant"
-      />
-      <ElOption
-        label="自适应"
-        value="adaptive"
-      />
-    </ElSelect>
-
-    <ElInputNumber v-model="value" />
+    <ElInputNumber
+      v-model="value"
+      controls-position="right"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useEditor } from '@/store'
+import { customRef, watch } from 'vue'
 
-const model = defineModel()
-const type = ref('adaptive')
-const value = ref(0)
-const editor = useEditor()
+const props = defineProps<{ modelValue: string | number }>()
+const emit = defineEmits(['update:modelValue'])
+
+const value = customRef<string | number>((track, trigger) => {
+  let inner: number
+  let outer: number | string
+  return {
+    get() {
+      track()
+      if (!inner) {
+        return 0
+      }
+      else {
+        return inner
+      }
+    },
+    set(val) {
+      if (!val || typeof val === 'string') {
+        inner = 0
+        outer = '100%'
+      }
+      else {
+        inner = val
+        outer = val
+      }
+      emit('update:modelValue', outer)
+      trigger()
+    },
+  }
+})
+
+watch(() => props.modelValue, (val) => {
+  value.value = val
+}, { immediate: true })
 </script>

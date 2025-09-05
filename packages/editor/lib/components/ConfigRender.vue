@@ -20,6 +20,7 @@
   <ElInputNumber
     v-else-if="config.type === 'number'"
     v-model="model"
+    controls-position="right"
     v-bind="config.attrs"
   />
 

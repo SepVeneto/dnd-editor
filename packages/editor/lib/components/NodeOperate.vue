@@ -15,7 +15,10 @@
           class="mpd-flex mpd-items-center"
           style="color: #fff;"
         >
-          <ElIcon><IconWrap /></ElIcon>
+          <i class="icon-wrap">
+            <IconContainer v-if="node.isContainer" />
+            <IconItem v-else />
+          </i>
           <span>{{ node.name }}</span>
         </div>
         <template #dropdown>
@@ -25,6 +28,10 @@
               :key="item.wid"
               :command="item.wid"
             >
+              <i class="icon-wrap">
+                <IconContainer v-if="node.isContainer || node.level === 1" />
+                <IconItem v-else />
+              </i>
               <span>{{ item.name }}</span>
             </ElDropdownItem>
           </ElDropdownMenu>
@@ -39,8 +46,9 @@
 
 <script lang="ts" setup>
 import type { Node } from '@sepveneto/dnde-core/class'
-import { ScaleToOriginal as IconWrap } from '@element-plus/icons-vue'
 import { computed } from 'vue'
+import IconContainer from '@/assets/container.vue'
+import IconItem from '@/assets/puzzle.vue'
 import { useEditor } from '@/store'
 import NodePlugin from './NodePlugin.vue'
 
@@ -68,5 +76,6 @@ const nodes = computed(() => {
 }
 .icon-wrap {
   cursor: pointer;
+  margin-right: 4px;
 }
 </style>

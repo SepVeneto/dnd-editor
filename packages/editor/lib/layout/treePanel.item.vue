@@ -8,7 +8,7 @@
       :style="`margin-left: ${node.level * 20}px`"
       class="tree-node-content"
     >
-      <i class="node-icon">●</i>
+      <IconItem class="node-icon" />
       {{ node.name }}
     </span>
   </li>
@@ -17,13 +17,14 @@
     class="tree-wrap"
     :class="[node.dragging && 'dragging']"
   >
+    <div>{{ node }}</div>
     <ul
       :style="`margin-left: ${node.level * 20}px`"
       class="tree-node-list"
     >
       <li class="tree-node-header">
         <span class="tree-node-content">
-          <i class="node-icon folder-icon">📁</i>
+          <IconContainer class="node-icon folder-icon" />
           {{ node.name }}
         </span>
       </li>
@@ -58,6 +59,8 @@ import type { Node } from '@sepveneto/dnde-core/class'
 import type { DraggableEvt } from '@/type'
 import { nextTick } from 'vue'
 import Vuedraggable from 'vuedraggable'
+import IconContainer from '@/assets/container.vue'
+import IconItem from '@/assets/puzzle.vue'
 import { useEditor } from '@/store'
 // eslint-disable-next-line import/no-self-import
 import TreePanelItem from './treePanel.item.vue'
@@ -68,7 +71,6 @@ const editor = useEditor()
 function onAdd(evt: DraggableEvt) {
   const node = props.node.list[evt.newDraggableIndex]
   node && editor.addNode(node, props.node)
-  console.log('add')
 }
 
 function onInput(val: Node[]) {
@@ -118,13 +120,11 @@ function findExistWid(list: Node[]) {
 
 .tree-node-header {
   padding: 6px 12px;
-  border-radius: 6px;
+  border-radius: 4px;
   margin-bottom: 4px;
-  background: rgba(102, 126, 234, 0.08);
-  transition: all 0.2s ease;
 
   &:hover {
-    background: rgba(102, 126, 234, 0.15);
+    background-color: #e4e7ed;
   }
 }
 
@@ -133,7 +133,7 @@ function findExistWid(list: Node[]) {
   align-items: center;
   gap: 8px;
   font-size: 14px;
-  color: #2d3748;
+  color: #606266;
   font-weight: 500;
 }
 
@@ -149,16 +149,16 @@ function findExistWid(list: Node[]) {
 .node-container.placeholder {
   min-height: 64px;
   line-height: 64px;
-  background: rgba(221, 221, 221, 0.3);
-  border-radius: 8px;
+  background-color: #fafafa;
+  border-radius: 4px;
   margin: 8px 0;
-  border: 1px dashed #cbd5e0;
+  border: 1px dashed #dcdfe6;
 
   &::after {
     content: '放置子节点';
     display: block;
     font-size: 14px;
-    color: #718096;
+    color: #909399;
     width: 100%;
     text-align: center;
     font-style: italic;
@@ -169,34 +169,33 @@ function findExistWid(list: Node[]) {
   height: 36px;
   line-height: 36px;
   padding: 0 12px;
-  border-radius: 6px;
+  border-radius: 4px;
   margin-bottom: 2px;
   transition: all 0.2s ease;
-  background: rgba(255, 255, 255, 0.7);
+  background-color: #ffffff;
 
   &:hover {
-    background: rgba(102, 126, 234, 0.1);
-    transform: translateX(2px);
+    color: #409eff;
   }
 
   .tree-node-content {
-    color: #4a5568;
+    color: #606266;
   }
 }
 
 .tree-wrap.dragging .placeholder::after {
-  color: #fff;
-  background: var(--mpd-color-primary);
+  color: #ffffff;
+  background: #409eff;
 }
 
 .tree-item, .tree-wrap {
+  margin: 2px 0;
   &.dragging {
-    color: #fff;
-    background: var(--mpd-color-primary);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    color: #ffffff;
+    background: #409eff;
 
     .tree-node-content {
-      color: #fff;
+      color: #ffffff;
     }
   }
 }
@@ -220,10 +219,10 @@ function findExistWid(list: Node[]) {
 /* 拖拽时的幽灵元素样式 */
 .dragging-ghost {
   opacity: 0.7;
-  background: #f0f4f8;
-  border: 2px dashed #a0aec0;
-  border-radius: 8px;
+  background: #f5f7fa;
+  border: 1px dashed #409eff;
+  border-radius: 4px;
   transform: scale(0.98);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 </style>

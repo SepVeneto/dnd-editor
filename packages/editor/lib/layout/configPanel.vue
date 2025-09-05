@@ -7,7 +7,7 @@
           :key="item.wid"
           @click="editor.selected = item.wid"
         >
-          {{ item.name }}
+          <span class="mpd-cursor-pointer">{{ item.name }}</span>
         </ElBreadcrumbItem>
       </ElBreadcrumb>
 
