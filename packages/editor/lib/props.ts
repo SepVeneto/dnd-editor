@@ -11,7 +11,7 @@ export const editorProps = {
     default: () => ({}),
   },
   widgets: {
-    type: Array as PropType<EditorWidget[]>,
+    type: Array as PropType<EditorWidget[] | { name: string, list: EditorWidget[] }[]>,
     default: () => ([]),
   },
   routes: {

@@ -1,5 +1,10 @@
 import type { IWidget } from '@/types'
 
+export enum type {
+  WIDGET,
+  GROUP,
+}
+
 interface CWidget {
   name: IWidget['_name']
   type: IWidget['_view']
@@ -47,6 +52,13 @@ export const widget = {
         style: config.stylesheet,
       },
       style: config.defaultStyle,
+    }
+  },
+  group(name: string, list: IWidget[]) {
+    return {
+      type: type.GROUP,
+      name,
+      list,
     }
   },
 }

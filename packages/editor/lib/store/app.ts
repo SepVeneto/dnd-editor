@@ -6,7 +6,12 @@ import { shallowRef } from 'vue'
 export const useApp = defineStore('app', () => {
   const widgets = shallowRef<Widget[]>()
   const widgetMap = new Map<string, Widget>()
-  function setWidgets(data: IWidget[]) {
+
+  function isGroup(likeWidget: any) {
+    if ()
+  }
+
+  function setWidgets(data: IWidget[] | { name: string, list: IWidget[] }[]) {
     widgets.value = []
 
     data.forEach((widget) => {

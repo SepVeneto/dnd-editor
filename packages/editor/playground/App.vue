@@ -87,7 +87,7 @@ const rootSchema = {
     }),
   ],
 }
-const widgets: IWidget<object>[] = [
+const baseWidgets: IWidget<object>[] = [
   widget.columnContainer({
     icon: 'column',
     attributes: [
@@ -104,6 +104,8 @@ const widgets: IWidget<object>[] = [
       }),
     ],
   }),
+]
+const serviceWidgets: IWidget<object>[] = [
   widget.create({
     name: '菜单',
     type: 'menuItem',
@@ -123,6 +125,10 @@ const widgets: IWidget<object>[] = [
       }),
     ],
   }),
+]
+const widgets = [
+  widget.group('基础组件', baseWidgets),
+  widget.group('业务组件', serviceWidgets),
 ]
 
 function handleValid() {
