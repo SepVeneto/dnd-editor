@@ -13,7 +13,9 @@
     "build:editor": "pnpm -C packages/editor build",
     "bootstrap": "pnpm build:core && pnpm build:plugin",
     "dev": "pnpm -C packages/editor dev",
-    "docs:dev": "pnpm -C packages/docs dev"
+    "docs:dev": "pnpm -C packages/docs dev",
+    "release:core": "bumpp --tag core@",
+    "release:editor": "bumpp --tag editor@"
   },
   "dependencies": {
     "element-plus": "^2.9.11",
@@ -21,6 +23,7 @@
   },
   "devDependencies": {
     "@antfu/eslint-config": "^4.13.2",
+    "bumpp": "^10.2.3",
     "eslint": "^9.27.0",
     "typescript": "^5.8.3"
   }
