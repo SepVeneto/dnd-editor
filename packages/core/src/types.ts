@@ -10,7 +10,7 @@ export interface WidgetPos {
   height?: number
 }
 
-type Base<T = any> = {
+export interface Base {
   _uuid?: string
   _name: string
   _view: string
@@ -24,7 +24,7 @@ type Base<T = any> = {
     style?: SchemaItem[]
   }
   style?: CSSProperties & WidgetPos
-} & T
+}
 
 type BaseKey =
   '_inContainer'
@@ -35,7 +35,7 @@ type BaseKey =
   | '_uuid'
   | '_view'
 
-export type IWidget<T extends Base = any> = Base<T>
+export type IWidget = Base
 // endregion
 
 // region Schema
@@ -88,7 +88,7 @@ export interface SchemaBox {
   exclude?: BoxModel[]
 }
 
-export type ISchema<T extends Record<string, any> = any> = (SchemaOther<T> | SchemaBox)[]
+export type ISchema<T extends Base = any> = (SchemaOther<T> | SchemaBox)[]
 
 export function isBox(schema: ISchema<any>[number]): schema is SchemaBox {
   return schema.type === 'box'

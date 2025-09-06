@@ -25,10 +25,10 @@ export type SchemaItem = ShcemaItemInput |
 export class Widget {
   public name: string
   public view: string
-  public _data: IWidget<object>
-  public container: IWidget<object>['container']
+  public _data: IWidget
+  public container: IWidget['container']
 
-  constructor(widget: IWidget<object>) {
+  constructor(widget: IWidget) {
     this._data = JSON.parse(JSON.stringify(widget))
     this.name = widget._name
     this.view = widget._view

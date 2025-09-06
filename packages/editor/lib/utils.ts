@@ -1,13 +1,17 @@
 import type { AppContext, VNode } from 'vue'
+import {
+  WarningFilled as IconFailed,
+  Loading as IconLoading,
+} from '@element-plus/icons-vue'
 import { loadRemote } from '@module-federation/enhanced/runtime'
-import { ElTooltip } from 'element-plus'
+import { ElIcon, ElTooltip } from 'element-plus'
 import { createVNode, defineAsyncComponent, h, render } from 'vue'
 
 export function loadFromRemote(scope: string, module: string) {
   const renderer = defineAsyncComponent({
     loader: () => loadRemote(`${scope}/${module}`) as any,
-    loadingComponent: () => h('div', '加载中...'),
-    errorComponent: () => h('div', '加载失败!'),
+    loadingComponent: () => h(ElIcon, { size: 24, style: { animation: 'loading-rotate 2s linear infinite' } }, h(IconLoading)),
+    errorComponent: () => h(ElIcon, { size: 24, color: '#E6A23C' }, h(IconFailed)),
     onError(error, retry, fail) {
       console.error(error)
       fail()

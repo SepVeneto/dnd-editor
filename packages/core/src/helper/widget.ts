@@ -1,6 +1,7 @@
+import type { SchemaItem } from '@/class'
 import type { IWidget } from '@/types'
 
-export enum type {
+export enum widgetType {
   WIDGET,
   GROUP,
 }
@@ -12,8 +13,8 @@ interface CWidget {
   config?: IWidget['meta']
   isContainer?: IWidget['container']
   defaultStyle?: IWidget['style']
-  attributes?: IWidget['schema']['props']
-  stylesheet?: IWidget['schema']['style']
+  attributes?: SchemaItem[]
+  stylesheet?: SchemaItem[]
 }
 
 interface ColumnContainerWidget {
@@ -21,8 +22,8 @@ interface ColumnContainerWidget {
   icon?: IWidget['_icon']
   config?: IWidget['meta']
   defaultStyle?: IWidget['style']
-  attributes?: IWidget['schema']['props']
-  stylesheet?: IWidget['schema']['style']
+  attributes?: SchemaItem[]
+  stylesheet?: SchemaItem[]
 }
 
 export const widget = {
@@ -56,7 +57,7 @@ export const widget = {
   },
   group(name: string, list: IWidget[]) {
     return {
-      type: type.GROUP,
+      type: widgetType.GROUP,
       name,
       list,
     }

@@ -8,7 +8,50 @@
           wrap-style="height: 700px;"
           noresize
         >
+          <ElCollapse
+            v-if="hasGroup(app.widgets)"
+            :model-value="app.widgets?.map(item => item.name)"
+          >
+            <ElCollapseItem
+              v-for="(item, index) in app.widgets"
+              :key="index"
+              :name="item.name"
+              :title="item.name"
+            >
+              <VueDraggable
+                v-model="item.list"
+                :group="{ name: 'editor', pull: 'clone', put: false }"
+                :clone="handleClone"
+                :sort="false"
+                item-key="name"
+                class="mpd-grid mpd-gap-4"
+                style="grid-template-columns: repeat(3, 90px);"
+                @end="handleEnd"
+              >
+                <template #item="{ element }">
+                  <div
+                    class="mpd-flex mpd-flex-col mpd-justify-center mpd-items-center mpd-py-2 mpd-cursor-grab mpd-text-sm hover:mpd-bg-slate-100"
+                    style="height: 90px;"
+                  >
+                    <component
+                      :is="render"
+                      v-if="element.icon"
+                      class="mpd-size-7 mpd-mb-4"
+                      scope="icons"
+                      :type="element.icon"
+                    />
+                    <IconWidget
+                      v-else
+                      class="mpd-size-7 mpd-mb-4"
+                    />
+                    <div>{{ element.name }}</div>
+                  </div>
+                </template>
+              </VueDraggable>
+            </ElCollapseItem>
+          </ElCollapse>
           <VueDraggable
+            v-else
             v-model="app.widgets"
             :group="{ name: 'editor', pull: 'clone', put: false }"
             :clone="handleClone"
@@ -80,8 +123,8 @@
 </template>
 
 <script lang="ts" setup>
-import type { Widget } from '@sepveneto/dnde-core/class'
-import { Node } from '@sepveneto/dnde-core/class'
+import type { WidgetGroup } from '@/store/app'
+import { Node, Widget } from '@sepveneto/dnde-core/class'
 import { computed, shallowRef, watchEffect } from 'vue'
 import VueDraggable from 'vuedraggable'
 import IconWidget from '@/assets/widget.vue'
@@ -91,6 +134,13 @@ import { loadFromRemote } from '@/utils'
 
 const app = useApp()
 const editor = useEditor()
+
+function hasGroup(list?: (Widget | WidgetGroup)[]): list is WidgetGroup[] {
+  if (!list)
+    return false
+
+  return list.some(item => !(item instanceof Widget))
+}
 
 function handleClone(original: Widget) {
   const node = new Node(original)
