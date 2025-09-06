@@ -13,6 +13,7 @@ interface CWidget {
   config?: IWidget['meta']
   isContainer?: IWidget['container']
   defaultStyle?: IWidget['style']
+  defaultData?: Record<string, any>
   attributes?: SchemaItem[]
   stylesheet?: SchemaItem[]
 }
@@ -53,6 +54,7 @@ export const widget = {
         style: config.stylesheet,
       },
       style: config.defaultStyle,
+      ...config.defaultData,
     }
   },
   group(name: string, list: IWidget[]) {

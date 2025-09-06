@@ -7,7 +7,7 @@ export type EditorInstance = InstanceType<typeof Main>
 // export const Editor = createElementInstance()
 
 export function register() {
-  if (customElements.getName(Editor))
+  if (customElements.get('mpd-editor'))
     return
   customElements.define('mpd-editor', Editor)
 }

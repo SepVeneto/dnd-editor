@@ -35,13 +35,13 @@ export default defineConfig({
       entry: 'lib/main.ts',
       fileName: 'editor',
     },
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          'stable-vendor': ['vue-router', 'vue', 'pinia', 'vuedraggable', 'lodash-es'],
-        },
-      },
-    },
+    // rollupOptions: {
+    //   output: {
+    //     manualChunks: {
+    //       'stable-vendor': ['vue-router', 'vue', 'pinia', 'vuedraggable', 'lodash-es'],
+    //     },
+    //   },
+    // },
     emptyOutDir: true,
   },
 })

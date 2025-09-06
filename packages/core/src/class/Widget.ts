@@ -1,5 +1,5 @@
 import type { Rule } from 'async-validator'
-import type { ElOption, FormItemRule, InputInstance, InputNumberInstance, SelectInstance } from 'element-plus'
+import type { ElOption, FormItemRule, ImageInstance, InputInstance, InputNumberInstance, SelectInstance, SwitchInstance } from 'element-plus'
 import type { IWidget } from '@/types'
 import Validator from 'async-validator'
 
@@ -13,6 +13,9 @@ interface SchemaItemBase {
 interface ShcemaItemInput extends SchemaItemBase { type: 'input', attrs?: InputInstance['$props'] }
 interface SchemaItemSelect extends SchemaItemBase { type: 'select', options?: Option['$props'][], attrs?: SelectInstance['$props'] }
 interface SchemaItemNumber extends SchemaItemBase { type: 'number', attrs?: InputNumberInstance['$props'] }
+interface SchemaItemSwitch extends SchemaItemBase { type: 'switch', attrs?: SwitchInstance['$props'] }
+interface SchemaItemImage extends SchemaItemBase { type: 'image', attrs?: ImageInstance['$props'] }
+interface SchemaItemCustom extends SchemaItemBase { type: 'custom' }
 interface SchemaItemStyleNumber extends SchemaItemBase {
   type: 'styleNumber'
 }
@@ -20,6 +23,9 @@ interface SchemaItemStyleNumber extends SchemaItemBase {
 export type SchemaItem = ShcemaItemInput |
   SchemaItemSelect |
   SchemaItemNumber |
+  SchemaItemSwitch |
+  SchemaItemImage |
+  SchemaItemCustom |
   SchemaItemStyleNumber
 
 export class Widget {

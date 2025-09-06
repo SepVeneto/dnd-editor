@@ -65,7 +65,7 @@ window.__shadowdom_css_runtime__ = async (tagLink: HTMLLinkElement) => {
   }
 }
 
-const appRef = useTemplateRef('appRef')
+const refApp = useTemplateRef('appRef')
 // 编辑器内不需要触发取消选中的已经通过click.stop屏蔽了
 useEventListener(editor.shadowRoot, 'click', () => {
   editor.selectNode()
@@ -82,7 +82,7 @@ defineExpose({
     if (invalidNode) {
       editor.selectNode(invalidNode)
       await Vue.nextTick()
-      appRef.value?.validate()
+      refApp.value?.validate()
     }
   },
   getData() {

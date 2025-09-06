@@ -1,4 +1,4 @@
-import type { ElOption, InputInstance, InputNumberInstance, SelectInstance } from 'element-plus'
+import type { ElOption, ImageInstance, InputInstance, InputNumberInstance, SelectInstance, SwitchInstance } from 'element-plus'
 import type { SchemaItem } from '@/class'
 import { likeArray } from '@/utils'
 
@@ -6,6 +6,7 @@ type Option = InstanceType<typeof ElOption>
 interface BaseConfig {
   label: SchemaItem['label']
   key: SchemaItem['key']
+  tips?: string
   required?: boolean | string
   rules?: SchemaItem['rules']
 }
@@ -40,6 +41,24 @@ export const schema = {
       attrs: config.attrs,
       rules: normalizeRules(config),
       options: config.options,
+    }
+  },
+  switch(config: BaseConfig & { attrs?: SwitchInstance['$props'] }): SchemaItem {
+    return {
+      label: config.label,
+      key: config.key,
+      type: 'switch',
+      attrs: config.attrs,
+      rules: normalizeRules(config),
+    }
+  },
+  image(config: BaseConfig & { attrs?: ImageInstance['$props'] }): SchemaItem {
+    return {
+      label: config.label,
+      key: config.key,
+      type: 'image',
+      attrs: config.attrs,
+      rules: normalizeRules(config),
     }
   },
 

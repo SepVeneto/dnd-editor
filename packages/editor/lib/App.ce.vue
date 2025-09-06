@@ -94,9 +94,9 @@ const bus = new EventEmitter((event: string, ...args: any) => {
   inst?.parent?.emit(event, ...args)
 })
 
-const rootRef = useTemplateRef('rootRef')
+const refRoot = useTemplateRef('rootRef')
 onMounted(() => {
-  editor.elementRoot = rootRef.value!
+  editor.elementRoot = refRoot.value!
 })
 
 provide(editorContextKey, {
@@ -126,17 +126,17 @@ registerRemotes([
   },
   // TODO: 重构后需要重新验证
   // 必须开启，否则从其它页面切换回编辑器会导致渲染异常
-], { force: true })
+])
 
 const ViewRender = loadFromRemote('widgets', 'viewRender')
 
 editor.setSchema(props.root)
 app.setWidgets(props.widgets)
 
-const configPanelRef = useTemplateRef('configPanelRef')
+const refConfigPanel = useTemplateRef('configPanelRef')
 defineExpose({
   validate() {
-    return configPanelRef.value?.validate()
+    return refConfigPanel.value?.validate()
   },
 })
 </script>

@@ -28,9 +28,9 @@ import ConfigRender from './ConfigRender.vue'
 defineProps<{ list: SchemaItem[] }>()
 const form = defineModel<Record<string, any>>({ required: true })
 
-const formRef = useTemplateRef('formRef')
+const refForm = useTemplateRef('formRef')
 defineExpose({
-  validate: () => formRef.value?.validate(),
-  clearValidate: () => formRef.value?.clearValidate(),
+  validate: () => refForm.value?.validate(),
+  clearValidate: () => refForm.value?.clearValidate(),
 })
 </script>

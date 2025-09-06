@@ -52,28 +52,28 @@ const list = computed(() => {
 const styleSchema = computed(() => editor.selectedNode?.widget.style)
 const propSchema = computed(() => editor.selectedNode?.widget.props)
 
-const propRef = useTemplateRef('propRef')
-const styleRef = useTemplateRef('styleRef')
+const refProp = useTemplateRef('propRef')
+const refStyle = useTemplateRef('styleRef')
 
 const active = ref<'props' | 'style'>('props')
 
 watch(() => editor.selected, () => {
   active.value = 'props'
   nextTick().then(() => {
-    propRef.value?.clearValidate()
-    styleRef.value?.clearValidate()
+    refProp.value?.clearValidate()
+    refStyle.value?.clearValidate()
   })
 })
 
 defineExpose({
   async validate() {
-    const propValid = await propRef.value?.validate()?.catch(() => {
+    const propValid = await refProp.value?.validate()?.catch(() => {
       active.value = 'props'
     })
     if (!propValid)
       return
 
-    await styleRef.value?.validate()?.catch(() => {
+    await refStyle.value?.validate()?.catch(() => {
       active.value = 'style'
     })
   },
