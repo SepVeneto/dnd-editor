@@ -1,7 +1,7 @@
 {
   "name": "@sepveneto/dnde",
   "type": "module",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "",
   "author": "",
   "license": "ISC",
@@ -12,6 +12,9 @@
     }
   },
   "main": "index.js",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "vite build",
