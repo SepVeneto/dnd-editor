@@ -15,7 +15,8 @@
     "dev": "pnpm -C packages/editor dev",
     "docs:dev": "pnpm -C packages/docs dev",
     "release:core": "cd packages/core && bumpp --tag core@",
-    "release:editor": "cd packages/editor && bumpp --tag editor@"
+    "release:editor": "cd packages/editor && bumpp --tag editor@",
+    "release:plugin": "cd packages/plugin && bumpp --tag plugin@"
   },
   "dependencies": {
     "element-plus": "^2.9.11",
