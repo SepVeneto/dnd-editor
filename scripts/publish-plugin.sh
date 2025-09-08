@@ -4,7 +4,7 @@ set -e
 
 pnpm i --frozen-lockfile --registry=https://registry.npmmirror.com
 
-cd packages/plugin
+cd packages/plugins
 
 sed -i "s/\"version\": \"0.0.1\",/\"version\": \"$TAG_VERSION\",/" package.json
 
