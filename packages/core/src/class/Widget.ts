@@ -15,7 +15,7 @@ interface SchemaItemSelect extends SchemaItemBase { type: 'select', options?: Op
 interface SchemaItemNumber extends SchemaItemBase { type: 'number', attrs?: InputNumberInstance['$props'] }
 interface SchemaItemSwitch extends SchemaItemBase { type: 'switch', attrs?: SwitchInstance['$props'] }
 interface SchemaItemImage extends SchemaItemBase { type: 'image', attrs?: ImageInstance['$props'] }
-interface SchemaItemCustom extends SchemaItemBase { type: 'custom' }
+interface SchemaItemCustom extends SchemaItemBase { type: string, attrs?: Record<string, any> }
 interface SchemaItemStyleNumber extends SchemaItemBase {
   type: 'styleNumber'
 }

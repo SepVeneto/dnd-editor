@@ -10,8 +10,12 @@ import { createVNode, defineAsyncComponent, h, render } from 'vue'
 export function loadFromRemote(scope: string, module: string) {
   const renderer = defineAsyncComponent({
     loader: () => loadRemote(`${scope}/${module}`) as any,
-    loadingComponent: () => h(ElIcon, { size: 24, style: { animation: 'loading-rotate 2s linear infinite' } }, h(IconLoading)),
-    errorComponent: () => h(ElIcon, { size: 24, color: '#E6A23C' }, h(IconFailed)),
+    loadingComponent: () => h(
+      'div',
+      { class: ['mpd-flex', 'mpd-flex-center', 'mpd-items-center', 'mpd-justify-center'] },
+      h(ElIcon, { size: 24, style: { animation: 'loading-rotate 2s linear infinite' } }, () => h(IconLoading)),
+    ),
+    errorComponent: () => h('div', { class: ['mpd-flex', 'mpd-flex-center', 'mpd-items-center', 'mpd-justify-center'] }, h(ElIcon, { size: 24, color: '#E6A23C' }, () => h(IconFailed))),
     onError(error, retry, fail) {
       console.error(error)
       fail()

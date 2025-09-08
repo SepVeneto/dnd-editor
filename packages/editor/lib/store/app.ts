@@ -5,7 +5,7 @@ import { defineStore } from 'pinia'
 import { shallowRef } from 'vue'
 
 export interface WidgetGroup { name: string, list: Widget[] }
-type LikeWidget = IWidget | { name: string, list: IWidget[], type: widgetType }
+export type LikeWidget = IWidget | { name: string, list: IWidget[], type: widgetType }
 
 export const useApp = defineStore('app', () => {
   const widgets = shallowRef<(Widget | WidgetGroup)[]>()

@@ -61,6 +61,15 @@ export const schema = {
       rules: normalizeRules(config),
     }
   },
+  custom(config: BaseConfig & { attrs?: Record<string, any>, type: string }): SchemaItem {
+    return {
+      label: config.label,
+      key: config.key,
+      type: config.type,
+      attrs: config.attrs,
+      rules: normalizeRules(config),
+    }
+  },
 
   styleNumber(
     config: BaseConfig,

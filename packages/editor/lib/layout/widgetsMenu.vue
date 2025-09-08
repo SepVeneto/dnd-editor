@@ -1,167 +1,155 @@
-<template>
-  <aside
-    style="width: 300px;"
-  >
-    <ElTabs v-if="needTabs">
-      <ElTabPane label="组件">
-        <el-scrollbar
-          wrap-style="height: 700px;"
-          noresize
-        >
-          <ElCollapse
-            v-if="hasGroup(app.widgets)"
-            :model-value="app.widgets?.map(item => item.name)"
-          >
-            <ElCollapseItem
-              v-for="(item, index) in app.widgets"
-              :key="index"
-              :name="item.name"
-              :title="item.name"
-            >
-              <VueDraggable
-                v-model="item.list"
-                :group="{ name: 'editor', pull: 'clone', put: false }"
-                :clone="handleClone"
-                :sort="false"
-                item-key="name"
-                class="mpd-grid mpd-gap-4"
-                style="grid-template-columns: repeat(3, 90px);"
-                @end="handleEnd"
-              >
-                <template #item="{ element }">
-                  <div
-                    class="mpd-flex mpd-flex-col mpd-justify-center mpd-items-center mpd-py-2 mpd-cursor-grab mpd-text-sm hover:mpd-bg-slate-100"
-                    style="height: 90px;"
-                  >
-                    <component
-                      :is="render"
-                      v-if="element.icon"
-                      class="mpd-size-7 mpd-mb-4"
-                      scope="icons"
-                      :type="element.icon"
-                    />
-                    <IconWidget
-                      v-else
-                      class="mpd-size-7 mpd-mb-4"
-                    />
-                    <div>{{ element.name }}</div>
-                  </div>
-                </template>
-              </VueDraggable>
-            </ElCollapseItem>
-          </ElCollapse>
-          <VueDraggable
-            v-else
-            v-model="app.widgets"
-            :group="{ name: 'editor', pull: 'clone', put: false }"
-            :clone="handleClone"
-            :sort="false"
-            item-key="name"
-            class="mpd-grid mpd-gap-4"
-            style="grid-template-columns: repeat(3, 90px);"
-            @end="handleEnd"
-          >
-            <template #item="{ element }">
-              <div
-                class="mpd-flex mpd-flex-col mpd-justify-center mpd-items-center mpd-py-2 mpd-cursor-grab mpd-text-sm hover:mpd-bg-slate-100"
-                style="height: 90px;"
-              >
-                <component
-                  :is="render"
-                  v-if="element.icon"
-                  class="mpd-size-7 mpd-mb-4"
-                  scope="icons"
-                  :type="element.icon"
-                />
-                <IconWidget
-                  v-else
-                  class="mpd-size-7 mpd-mb-4"
-                />
-                <div>{{ element.name }}</div>
-              </div>
-            </template>
-          </VueDraggable>
-        </el-scrollbar>
-      </ElTabPane>
-      <ElTabPane
-        v-for="item in editor.plugins.widget.list"
-        :key="item.name"
-        :label="item.label"
-      >
-        <component
-          :is="render"
-          scope="skeleton"
-          :type="item.name"
-        />
-      </ElTabPane>
-    </ElTabs>
-    <ElCard
-      v-else
-      shadow="never"
-    >
-      <template #header>
-        <span>组件</span>
-      </template>
-      <el-scrollbar
-        wrap-style="height: 700px;"
-        noresize
-      >
-        <VueDraggable
-          v-model="app.widgets"
-          :group="{ name: 'editor', pull: 'clone', put: false }"
-          :clone="handleClone"
-          :sort="false"
-          item-key="name"
-        >
-          <template #item="{ element }">
-            <div>{{ element.name }}</div>
-          </template>
-        </VueDraggable>
-      </el-scrollbar>
-    </ElCard>
-  </aside>
-</template>
-
-<script lang="ts" setup>
+<script lang="ts">
 import type { WidgetGroup } from '@/store/app'
 import { Node, Widget } from '@sepveneto/dnde-core/class'
-import { computed, shallowRef, watchEffect } from 'vue'
+import { ElCard, ElCollapse, ElCollapseItem, ElScrollbar, ElTabPane, ElTabs } from 'element-plus'
+import { computed, h, shallowRef, watchEffect } from 'vue'
 import VueDraggable from 'vuedraggable'
 import IconWidget from '@/assets/widget.vue'
 import { useEditor } from '@/store'
 import { useApp } from '@/store/app'
 import { loadFromRemote } from '@/utils'
 
-const app = useApp()
-const editor = useEditor()
+export default {
+  setup() {
+    const app = useApp()
+    const editor = useEditor()
 
-function hasGroup(list?: (Widget | WidgetGroup)[]): list is WidgetGroup[] {
-  if (!list)
-    return false
+    function hasGroup(list?: (Widget | WidgetGroup)[]): list is WidgetGroup[] {
+      if (!list)
+        return false
 
-  return list.some(item => !(item instanceof Widget))
+      return list.some(item => !(item instanceof Widget))
+    }
+
+    function handleClone(original: Widget) {
+      const node = new Node(original)
+      editor.dragging = node
+      return node
+    }
+    function handleEnd() {
+      editor.dragging = null
+    }
+
+    const render = shallowRef()
+
+    const needTabs = computed(() => {
+      return editor.plugins.widget.list.length > 0
+    })
+
+    watchEffect(() => {
+      if (needTabs.value) {
+        render.value = loadFromRemote('widgets', 'remote')
+      }
+    })
+
+    const widgetRenderer = (element: any) => (
+      h(
+        'div',
+        {
+          class: 'mpd-flex mpd-flex-col mpd-justify-center mpd-items-center mpd-py-2 mpd-cursor-grab mpd-text-sm hover:mpd-bg-slate-100',
+          style: 'height: 90px;',
+        },
+        [element.icon && render.value
+          ? h(render.value, {
+              class: 'mpd-size-7 mpd-mb-4',
+              scope: 'icons',
+              type: element.icon,
+            })
+          : h(IconWidget, { class: 'mpd-size-7 mpd-mb-4' }), h('div', element.name)],
+      )
+    )
+
+    const singleRenderer = (inTab: boolean) => {
+      const render = () => h(VueDraggable, {
+        'modelValue': app.widgets,
+        'group': { name: 'editor', pull: 'clone', put: false },
+        'clone': handleClone,
+        'sort': false,
+        'itemKey': 'name',
+        'class': 'mpd-grid mpd-gap-4',
+        'style': 'grid-template-columns: repeat(3, 90px);',
+        'onUpdate:modelValue': (val: Widget[]) => app.widgets = val,
+        'onEnd': handleEnd,
+      }, {
+        item: ({ element }: { element: Widget }) => widgetRenderer(element),
+      })
+
+      if (inTab) {
+        return render()
+      }
+      else {
+        return h(ElCard, { shadow: 'never' }, {
+          header: () => h('span', '组件'),
+          default: () => h(
+            ElScrollbar,
+            { wrapStyle: 'height: 700px', noresize: true },
+            render,
+          ),
+        })
+      }
+    }
+    const groupRenderer = () => {
+      const list = app.widgets as WidgetGroup[]
+      return h(
+        ElCollapse,
+        { modelValue: list?.map(item => item.name) },
+        () => list?.map(item => h(
+          ElCollapseItem,
+          { name: item.name, title: item.name },
+          () => h(VueDraggable, {
+            'modelValue': item.list,
+            'group': { name: 'editor', pull: 'clone', put: false },
+            'clone': handleClone,
+            'sort': false,
+            'itemKey': 'name',
+            'class': 'mpd-grid mpd-gap-4',
+            'style': 'grid-template-columns: repeat(3, 90px);',
+            'onUpdate:modelValue': (val: Widget[]) => item.list = val,
+            'onEnd': handleEnd,
+          }, {
+            item: ({ element }: { element: Widget }) => widgetRenderer(element),
+          }),
+        )),
+      )
+    }
+    const tabRenderer = () => (
+      h(ElTabs, () => [
+        h(
+          ElTabPane,
+          { label: '组件' },
+          () => h(
+            ElScrollbar,
+            { wrapStyle: 'height: 700px;', noresize: true },
+            () => hasGroup(app.widgets) ? groupRenderer() : singleRenderer(true),
+          ),
+        ),
+        editor.plugins.widget.list.map(item => h(
+          ElTabPane,
+          { label: item.label },
+          () => h(render.value, { scope: 'skeleton', type: item.name }),
+        )),
+      ])
+    )
+    const notabRenderer = () => hasGroup(app.widgets) ? groupRenderer() : singleRenderer(false)
+
+    return {
+      app,
+      needTabs,
+      hasGroup,
+      handleClone,
+      handleEnd,
+      tabRenderer,
+      notabRenderer,
+    }
+  },
+  render() {
+    return h(
+      'aside',
+      { style: 'width: 300px' },
+      this.needTabs ? this.tabRenderer() : this.notabRenderer(),
+    )
+  },
 }
-
-function handleClone(original: Widget) {
-  const node = new Node(original)
-  editor.dragging = node
-  return node
-}
-function handleEnd() {
-  editor.dragging = null
-}
-
-const render = shallowRef()
-
-const needTabs = computed(() => {
-  return editor.plugins.widget.list.length > 0
-})
-
-watchEffect(() => {
-  if (needTabs.value) {
-    render.value = loadFromRemote('widgets', 'remote')
-  }
-})
 </script>
 
 <style lang="scss" scoped>

@@ -28,7 +28,7 @@
             item-key="wid"
             @start="handelStart"
             @add="onAdd"
-            @end="editor.dragging = null"
+            @end="onEnd"
           >
             <template #item="{ element }">
               <NodeWrap
@@ -109,6 +109,9 @@ provide(editorContextKey, {
 //   nodeList: editor.rootNode,
 // }))
 
+function onEnd() {
+  editor.dragging = null
+}
 function handelStart(evt: DraggableEvt) {
   const nodeId = evt.item.dataset.id
   const draggingNode = editor.rootNode.list.find(node => node.wid === nodeId)!

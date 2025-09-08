@@ -1,5 +1,6 @@
-import type { EditorRoute, EditorSchema, EditorSettings, EditorWidget } from '@sepveneto/dnde-core'
+import type { EditorRoute, EditorSchema, EditorSettings } from '@sepveneto/dnde-core'
 import type { PropType } from 'vue'
+import type { LikeWidget } from './store'
 
 export const editorProps = {
   remoteUrl: {
@@ -11,7 +12,7 @@ export const editorProps = {
     default: () => ({}),
   },
   widgets: {
-    type: Array as PropType<EditorWidget[] | { name: string, list: EditorWidget[] }[]>,
+    type: Array as PropType<LikeWidget[]>,
     default: () => ([]),
   },
   routes: {
