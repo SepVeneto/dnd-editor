@@ -7,6 +7,7 @@
       class="node-wrap"
       :class="[isActive && 'selected', isDraggable && 'draggable', isHover && 'hover']"
       :data-name="node.name"
+      :style="normalizeStyle(node.style)"
       @mouseenter.stop="editor.hovering = node.wid"
       @mouseleave.stop="editor.hovering = undefined"
       @click.stop="editor.selected = node.wid"
@@ -30,6 +31,7 @@
 import type { Node } from '@sepveneto/dnde-core/class'
 import { computed } from 'vue'
 import { useEditor } from '@/store'
+import { normalizeStyle } from '@/utils'
 import NodeContainer from './NodeContainer.vue'
 import NodeOperate from './NodeOperate.vue'
 

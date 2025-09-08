@@ -16,7 +16,8 @@ const props = defineProps({
 })
 const compView = shallowRef()
 watch(() => props.type, (val) => {
-  if (!val) return
+  if (!val)
+    return
   compView.value = defineAsyncComponent(() => import(`@/widgets/${val}.view.vue`))
 }, { immediate: true })
 </script>

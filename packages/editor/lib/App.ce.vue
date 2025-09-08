@@ -13,13 +13,14 @@
         <img src="./assets/iPhone13.png">
         <ElScrollbar
           height="714px"
-          class=" phone-body"
+          class=" phone-body mpd-scale-100"
+          :style="normalizeStyle(editor.rootNode.style)"
           noresize
         >
           <VueDraggable
             v-model="editor.rootNode.list"
             :group="{ name: 'editor', pull: true, put: true }"
-            class="mpd-relative mpd-bg-gray-100"
+            class="mpd-relative mpd-bg-gray-100  mpd-flex mpd-flex-col mpd-items-center"
             style="width: 375px; min-height: 714px;"
             :component-data="{ type: 'transition-group', name: 'flip-list' }"
             :animation="200"
@@ -36,8 +37,7 @@
               >
                 <ViewRender
                   :type="element.type"
-                  :config="element.data"
-                  :style="element.style"
+                  :config="element.info"
                 />
               </NodeWrap>
             </template>
@@ -83,7 +83,7 @@ import WidgetsMenu from './layout/widgetsMenu.vue'
 import { editorProps } from './props'
 import { useEditor } from './store'
 import { useApp } from './store/app'
-import { loadFromRemote } from './utils'
+import { loadFromRemote, normalizeStyle } from './utils'
 
 const props = defineProps(editorProps)
 

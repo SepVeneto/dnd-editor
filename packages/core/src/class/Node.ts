@@ -20,6 +20,13 @@ export class Node {
     this.style = info?.style || {}
   }
 
+  get info() {
+    return {
+      style: this.style,
+      ...this.data,
+    }
+  }
+
   get isContainer() {
     return !!this.widget.container
   }

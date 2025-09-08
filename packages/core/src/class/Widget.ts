@@ -57,6 +57,14 @@ export class Widget {
     return this._data.schema?.style || []
   }
 
+  get defaultStyle() {
+    return this._data.style
+  }
+
+  get defaultData() {
+    return this._data.data
+  }
+
   get draggable() {
     return this._data.meta?.draggable ?? true
   }

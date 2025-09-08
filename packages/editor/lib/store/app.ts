@@ -16,13 +16,11 @@ export const useApp = defineStore('app', () => {
 
     data.forEach((widget: LikeWidget) => {
       if (isGroup(widget)) {
-        const group: Widget[] = []
-        widget.list.forEach((item) => {
+        widgets.value?.push({ name: widget.name, list: widget.list.map((item) => {
           const inst = new Widget(item)
           widgetMap.set(inst.view, inst)
-          group.push(inst)
-          widgets.value?.push({ name: widget.name, list: group })
-        })
+          return inst
+        }) })
       }
       else {
         const inst = new Widget(widget)

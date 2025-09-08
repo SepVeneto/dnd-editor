@@ -1,4 +1,4 @@
-import type { AppContext, VNode } from 'vue'
+import type { AppContext, CSSProperties, VNode } from 'vue'
 import {
   WarningFilled as IconFailed,
   Loading as IconLoading,
@@ -66,4 +66,47 @@ export function createPopper(
 
   removePopper.trigger = trigger
   removePopper.vm = vm
+}
+
+type Style = Partial<Record<keyof CSSProperties, string | number>>
+export function format(style: Style, excludes: string[] = []) {
+  return Object.entries(style).reduce<Partial<CSSProperties>>(
+    (obj, _style) => {
+      const [key, value] = _style
+      if (excludes.includes(key))
+        return obj
+      if (typeof value === 'number') {
+        // @ts-expect-error: value is not a number
+        obj[key] = key === 'zIndex' ? value : `${value}px`
+      }
+      else if (value?.startsWith('http')) {
+        // @ts-expect-error: value is not a number
+        obj[key] = `url(${value})`
+      }
+      else {
+        // @ts-expect-error: value is not a number
+        obj[key] = value
+      }
+      return obj
+    },
+    {} as Partial<CSSProperties>,
+  )
+}
+
+export function normalizeStyle(customStyle: Record<string, any>, mode: 'grid' | 'free' = 'grid') {
+  const { x, y, ..._style } = customStyle
+  const style = format(_style)
+  const image = style.backgroundImage || style.background
+  if (typeof image === 'string' && image.startsWith('url(')) {
+    style.backgroundSize = '100%'
+    style.backgroundRepeat = 'no-repeat'
+  }
+
+  if (mode === 'free') {
+    style.transform = `translate(${x}px, ${y}px)`
+    style.position = 'absolute'
+    style.top = '0px'
+    style.left = '0px'
+  }
+  return style
 }

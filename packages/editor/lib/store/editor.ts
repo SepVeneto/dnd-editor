@@ -1,6 +1,7 @@
 import type { IWidget } from '@sepveneto/dnde-core'
 import type { Raw } from 'vue'
 import type { HelperAction } from '@/type'
+import { widget } from '@sepveneto/dnde-core'
 import { Node, Widget } from '@sepveneto/dnde-core/class'
 import { defineStore } from 'pinia'
 import { computed, customRef, reactive, ref, shallowRef } from 'vue'
@@ -83,13 +84,13 @@ export const useEditor = defineStore('editor', () => {
       },
     }
   })
-  const defaultPage: IWidget = app.widgetMap.get('page') || {
+  const defaultPage = app.widgetMap.get('page') as Widget || new Widget(widget.create({
     name: '页面',
-    view: 'page',
-    schema: [],
-  }
+    type: 'page',
+    defaultData: { list: [] },
+  }))
   // 防止类型实例化过于深并且可能无限错误
-  const rootNode = reactive<Raw<Node>>(new Node(new Widget(defaultPage)))
+  const rootNode = reactive<Raw<Node>>(new Node(defaultPage))
   const selected = ref<string>(rootNode.wid)
   // TODO: hover栈
   const hovering = ref<string>()

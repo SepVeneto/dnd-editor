@@ -24,6 +24,7 @@ export interface Base {
     style?: SchemaItem[]
   }
   style?: CSSProperties & WidgetPos
+  data?: Record<string, any> | any[]
 }
 
 type BaseKey =

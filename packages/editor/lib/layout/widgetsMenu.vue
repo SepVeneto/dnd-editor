@@ -22,7 +22,7 @@ export default {
     }
 
     function handleClone(original: Widget) {
-      const node = new Node(original)
+      const node = new Node(original, { props: original.defaultData, style: original.defaultStyle })
       editor.dragging = node
       return node
     }
@@ -90,6 +90,7 @@ export default {
     }
     const groupRenderer = () => {
       const list = app.widgets as WidgetGroup[]
+      console.log('group', list)
       return h(
         ElCollapse,
         { modelValue: list?.map(item => item.name) },

@@ -54,7 +54,7 @@ export const widget = {
         style: config.stylesheet,
       },
       style: config.defaultStyle,
-      ...config.defaultData,
+      data: config.defaultData,
     }
   },
   group(name: string, list: IWidget[]) {
