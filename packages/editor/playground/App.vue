@@ -104,12 +104,17 @@ const baseWidgets: IWidget<object>[] = [
       }),
     ],
   }),
+  widget.create({
+    name: '顶部',
+    type: 'header',
+    config: { draggable: false, fixed: true },
+    defaultStyle: { width: 375, height: 44 },
+  }),
 ]
 const serviceWidgets: IWidget<object>[] = [
   widget.create({
     name: '菜单',
     type: 'menuItem',
-    config: { draggable: true },
     attributes: [
       schema.input({
         label: '标题',

@@ -1,6 +1,8 @@
 import type { Node } from '@sepveneto/dnde-core/class'
 
 export interface DraggableEvt {
+  to: HTMLElement
+  from: HTMLElement
   oldDraggableIndex: number
   oldIndex: number
   newIndex: number

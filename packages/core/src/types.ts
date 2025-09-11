@@ -16,8 +16,12 @@ export interface Base {
   _view: string
   _icon?: string
   container?: boolean
+  isShow?: boolean
   meta?: {
     draggable?: boolean
+    visible?: boolean
+    // 一般与draggable配合使用，达到类似header之类的效果
+    fixed?: boolean
   }
   schema?: {
     props?: SchemaItem[]

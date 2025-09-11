@@ -4,6 +4,7 @@ import {
   Loading as IconLoading,
 } from '@element-plus/icons-vue'
 import { loadRemote } from '@module-federation/enhanced/runtime'
+import debug from 'debug'
 import { ElIcon, ElTooltip } from 'element-plus'
 import { createVNode, defineAsyncComponent, h, render } from 'vue'
 
@@ -109,4 +110,8 @@ export function normalizeStyle(customStyle: Record<string, any>, mode: 'grid' | 
     style.left = '0px'
   }
   return style
+}
+
+export function createDebug(namespace: string) {
+  return debug(`mpd:${namespace}`)
 }

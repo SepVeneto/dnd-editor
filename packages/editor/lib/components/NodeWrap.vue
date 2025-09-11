@@ -2,18 +2,19 @@
   <div
     class="mpd-node mpd-relative"
     :data-id="node.wid"
+    :style="normalizeStyle(node.style)"
   >
     <div
       class="node-wrap"
       :class="[isActive && 'selected', isDraggable && 'draggable', isHover && 'hover']"
       :data-name="node.name"
-      :style="normalizeStyle(node.style)"
       @mouseenter.stop="editor.hovering = node.wid"
       @mouseleave.stop="editor.hovering = undefined"
       @click.stop="editor.selected = node.wid"
     >
       <NodeContainer
         v-if="node.type === 'containerGrid'"
+        :data-id="node.wid"
         :node="node"
       />
       <slot v-else>
@@ -24,11 +25,22 @@
       v-if="isActive"
       :node="node"
     />
+
+    <div
+      v-if="node.visible === false"
+      class="hidden-mask mpd-absolute mpd-left-0 mpd-top-0 mpd-right-0 mpd-bottom-0 mpd-pointer-events-none mpd-flex mpd-justify-center mpd-items-center"
+      style="background: #33333333"
+    >
+      <ElIcon :size="48">
+        <IconHide />
+      </ElIcon>
+    </div>
   </div>
 </template>
 
 <script lang="ts" setup>
 import type { Node } from '@sepveneto/dnde-core/class'
+import { Hide as IconHide } from '@element-plus/icons-vue'
 import { computed } from 'vue'
 import { useEditor } from '@/store'
 import { normalizeStyle } from '@/utils'
@@ -51,6 +63,8 @@ const isDraggable = computed(() => props.node.widget?.draggable)
 <style lang="scss" scoped>
 .node-wrap {
   position: relative;
+  width: 100%;
+  height: 100%;
   cursor: default;
   &.draggable {
     cursor: grab;
@@ -74,6 +88,7 @@ const isDraggable = computed(() => props.node.widget?.draggable)
     color: #fff;
     background: #4089Ef;
     padding: 4px;
+    z-index: 1;
   }
   &::after {
     content: '';
@@ -84,6 +99,7 @@ const isDraggable = computed(() => props.node.widget?.draggable)
     bottom: 0;
     right: 0;
     pointer-events: none;
+    z-index: 1;
   }
   // &.mask::after {
   //   pointer-events: auto;

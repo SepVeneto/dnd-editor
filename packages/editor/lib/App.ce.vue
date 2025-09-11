@@ -6,7 +6,7 @@
     <div>{{ editor.selected }}</div>
     <div
       ref="rootRef"
-      class="mpd-editor mpd-flex mpd-gap-x-2"
+      class="mpd-editor mpd-flex mpd-gap-x-2 mpd-justify-between"
     >
       <WidgetsMenu class="mpd-flex-shrink-0" />
       <div class="phone-wrap mpd-relative">
@@ -27,6 +27,7 @@
             ghost-class="dragging-ghost"
             handle=".node-wrap.draggable"
             item-key="wid"
+            :move="handleMove"
             @start="handelStart"
             @add="onAdd"
             @end="onEnd"
@@ -45,12 +46,14 @@
         </ElScrollbar>
       </div>
 
-      <ConfigPanel
-        v-if="!editor.dragging"
-        ref="configPanelRef"
-        @click.stop
-      />
-      <TreePanel v-else />
+      <aside style="width: 500px;">
+        <ConfigPanel
+          v-if="!editor.dragging"
+          ref="configPanelRef"
+          @click.stop
+        />
+        <TreePanel v-else />
+      </aside>
     </div>
   </ElConfigProvider>
 </template>
@@ -74,7 +77,7 @@ import { editorContextKey, EventEmitter } from '@sepveneto/dnde-core'
 // import EditorOperate from '@/layout/EditorOperate.ce.vue'
 // @ts-expect-error: no def
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
-import { getCurrentInstance, onMounted, provide, useTemplateRef } from 'vue'
+import { getCurrentInstance, nextTick, onMounted, provide, useTemplateRef } from 'vue'
 import VueDraggable from 'vuedraggable'
 import NodeWrap from './components/NodeWrap.vue'
 import ConfigPanel from './layout/configPanel.vue'
@@ -112,12 +115,34 @@ provide(editorContextKey, {
 function onEnd() {
   editor.dragging = null
 }
+function handleMove(evt: any) {
+  console.log('move', evt)
+  // 如果该元素是跨容器拖动，交给目标容器的add事件处理
+  if (evt.from !== evt.to)
+    return
+
+  const nextNode = editor.rootNode.list[evt.draggedContext.futureIndex]
+  if (nextNode && nextNode.widget.isFixed) {
+    return false
+  }
+}
 function handelStart(evt: DraggableEvt) {
   const nodeId = evt.item.dataset.id
   const draggingNode = editor.rootNode.list.find(node => node.wid === nodeId)!
   editor.dragging = draggingNode as Node
 }
 function onAdd(evt: DraggableEvt) {
+  const nextNode = editor.rootNode.list[evt.newIndex + 1]
+  if (nextNode && nextNode.widget.isFixed) {
+    const deletedNode = editor.rootNode.list.splice(0, 1)[0]
+
+    // 跨容器移动触发fixed时需要手动还原到旧容器中
+    if (evt.to !== evt.from) {
+      const oldContainer = editor.nodeMap.get(evt.from.dataset.id!)!
+      ;(oldContainer.list as Node[]).splice(evt.oldIndex, 0, deletedNode)
+    }
+    return
+  }
   const node = editor.rootNode.list[evt.newDraggableIndex] as Node
   editor.addNode(node)
 }

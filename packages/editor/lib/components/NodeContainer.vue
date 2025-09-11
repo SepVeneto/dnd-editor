@@ -9,7 +9,7 @@
     handle=".node-wrap.draggable"
     ghost-class="dragging-ghost"
     item-key="wid"
-    @update:model-value="(list: any) => node.setList(list)"
+    @update:model-value="onInput"
     @start="handleStart"
     @add="onAdd"
     @end="editor.dragging = null"
@@ -46,7 +46,24 @@ function handleStart(evt: DraggableEvt) {
   const draggingNode = props.node.list.find(node => node.wid === nodeId)!
   editor.dragging = draggingNode
 }
+function onInput(list: Node[]) {
+  props.node.setList(list)
+}
 function onAdd(evt: DraggableEvt) {
+  const list = [...props.node.list]
+  const nextNode = list[evt.newIndex + 1]
+  if (nextNode && nextNode.widget.isFixed) {
+    const deletedNode = list.splice(0, 1)[0]
+
+    // 跨容器移动触发fixed时需要手动还原到旧容器中
+    if (evt.to !== evt.from) {
+      const oldContainer = editor.nodeMap.get(evt.from.dataset.id!)!
+      ;(oldContainer.list as Node[]).splice(evt.oldIndex, 0, deletedNode)
+    }
+
+    onInput(list)
+    return
+  }
   const node = props.node.list[evt.newDraggableIndex]
   editor.addNode(node, props.node)
 }

@@ -19,11 +19,13 @@
     "release:plugin": "cd packages/plugins && bumpp --tag plugin@"
   },
   "dependencies": {
+    "debug": "^4.4.1",
     "element-plus": "^2.9.11",
     "vue": "^3.5.15"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^4.13.2",
+    "@types/debug": "^4.1.12",
     "bumpp": "^10.2.3",
     "eslint": "^9.27.0",
     "typescript": "^5.8.3"

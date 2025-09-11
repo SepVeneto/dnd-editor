@@ -17,7 +17,6 @@
     class="tree-wrap"
     :class="[node.dragging && 'dragging']"
   >
-    <div>{{ node }}</div>
     <ul
       :style="`margin-left: ${node.level * 20}px`"
       class="tree-node-list"
@@ -69,6 +68,20 @@ const props = defineProps<{ node: Node }>()
 
 const editor = useEditor()
 function onAdd(evt: DraggableEvt) {
+  const list = [...props.node.list]
+  const nextNode = list[evt.newIndex + 1]
+  if (nextNode && nextNode.widget.isFixed) {
+    const deletedNode = list.splice(0, 1)[0]
+
+    // 跨容器移动触发fixed时需要手动还原到旧容器中
+    if (evt.to !== evt.from) {
+      const oldContainer = editor.nodeMap.get(evt.from.dataset.id!)!
+      ;(oldContainer.list as Node[]).splice(evt.oldIndex, 0, deletedNode)
+    }
+
+    onInput(list)
+    return
+  }
   const node = props.node.list[evt.newDraggableIndex]
   node && editor.addNode(node, props.node)
 }

@@ -28,6 +28,18 @@ import TreePanelItem from './treePanel.item.vue'
 
 const editor = useEditor()
 function onAdd(evt: DraggableEvt) {
+  const nextNode = editor.rootNode.list[evt.newIndex + 1]
+  if (nextNode && nextNode.widget.isFixed) {
+    const deletedNode = editor.rootNode.list.splice(0, 1)[0]
+
+    // 跨容器移动触发fixed时需要手动还原到旧容器中
+    if (evt.to !== evt.from) {
+      const oldContainer = editor.nodeMap.get(evt.from.dataset.id!)!
+      ;(oldContainer.list as Node[]).splice(evt.oldIndex, 0, deletedNode)
+    }
+
+    return
+  }
   const node = editor.rootNode.list[evt.newDraggableIndex]
   node && editor.addNode(node)
 }

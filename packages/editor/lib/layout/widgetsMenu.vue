@@ -61,7 +61,7 @@ export default {
 
     const singleRenderer = (inTab: boolean) => {
       const render = () => h(VueDraggable, {
-        'modelValue': app.widgets,
+        'modelValue': (app.widgets as Widget[])?.filter(item => item.visible),
         'group': { name: 'editor', pull: 'clone', put: false },
         'clone': handleClone,
         'sort': false,
@@ -88,17 +88,17 @@ export default {
         })
       }
     }
+
     const groupRenderer = () => {
       const list = app.widgets as WidgetGroup[]
-      console.log('group', list)
       return h(
         ElCollapse,
         { modelValue: list?.map(item => item.name) },
-        () => list?.map(item => h(
+        () => list?.filter(item => isGroupVisible(item.list)).map(item => h(
           ElCollapseItem,
           { name: item.name, title: item.name },
           () => h(VueDraggable, {
-            'modelValue': item.list,
+            'modelValue': item.list.filter(item => item.visible),
             'group': { name: 'editor', pull: 'clone', put: false },
             'clone': handleClone,
             'sort': false,
@@ -132,6 +132,10 @@ export default {
       ])
     )
     const notabRenderer = () => hasGroup(app.widgets) ? groupRenderer() : singleRenderer(false)
+
+    function isGroupVisible(list: Widget[]) {
+      return list.some(item => item.visible)
+    }
 
     return {
       app,

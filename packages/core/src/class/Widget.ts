@@ -69,6 +69,14 @@ export class Widget {
     return this._data.meta?.draggable ?? true
   }
 
+  get isFixed() {
+    return this._data.meta?.fixed
+  }
+
+  get visible() {
+    return this._data.meta?.visible ?? true
+  }
+
   get validatorProps() {
     const _rules = this._data.schema?.props?.reduce<Record<string, Rule>>((all, curr) => {
       all[curr.key] = curr.rules || []

@@ -5,8 +5,10 @@ import { widget } from '@sepveneto/dnde-core'
 import { Node, Widget } from '@sepveneto/dnde-core/class'
 import { defineStore } from 'pinia'
 import { computed, customRef, reactive, ref, shallowRef } from 'vue'
-import { removePopper } from '@/utils'
+import { createDebug, removePopper } from '@/utils'
 import { useApp } from './app'
+
+const debug = createDebug('store/editor')
 
 class HelperPlugin {
   public list: HelperAction[] = []
@@ -106,6 +108,7 @@ export const useEditor = defineStore('editor', () => {
     if (!node) {
       throw new Error('cannot find node')
     }
+    debug('selected node', node)
     return node
   })
   const selectedNodes = computed(() => {
@@ -160,7 +163,7 @@ export const useEditor = defineStore('editor', () => {
       if (!widget)
         return
 
-      const { _uuid, _name, _view, style, isShow, list, ...props } = item
+      const { _uuid, _name, _view, style, list, ...props } = item
       const info = {
         props,
         style,
@@ -177,6 +180,7 @@ export const useEditor = defineStore('editor', () => {
 
   return {
     rootNode,
+    nodeMap,
     shadowRoot,
     elementRoot,
     selectNode,

@@ -47,6 +47,11 @@ export class Node {
     return this.widget?.name || '页面'
   }
 
+  get visible() {
+    if ('isShow' in this.data)
+      return Boolean(this.data.isShow)
+  }
+
   async validate(only = false): Promise<string | undefined> {
     const valid = await Promise.all([
       this.widget.validatorProps.validate(this.data),
