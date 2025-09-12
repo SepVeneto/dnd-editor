@@ -10,6 +10,9 @@
     "./global": {
       "types": "./global.d.ts"
     },
+    "./editor": {
+      "types": "./dist/Editor.vue.d.ts"
+    },
     ".": {
       "types": "./dist/main.d.ts",
       "imports": "./dist/main.js"
