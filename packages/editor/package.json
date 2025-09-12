@@ -16,7 +16,8 @@
     "./core": {
       "types": "./dist/main.d.ts",
       "imports": "./dist/editor.js",
-      "require": "./dist/editor.js"
+      "require": "./dist/editor.js",
+      "default": "./dist/editor.js"
     },
     ".": {
       "types": "./dist/main.d.ts",

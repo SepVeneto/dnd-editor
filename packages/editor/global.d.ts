@@ -1,6 +1,8 @@
+import type Editor from '@sepveneto/dnde/editor'
+
 declare module 'vue' {
   export interface GlobalComponents {
-    MpdEditor: typeof import('@sepveneto/dnde/editor')
+    MpdEditor: Editor
   }
 }
 
