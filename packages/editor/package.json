@@ -15,10 +15,12 @@
     },
     ".": {
       "types": "./dist/main.d.ts",
-      "imports": "./dist/main.js"
+      "imports": "./dist/editor.js",
+      "require": "./dist/editor.js"
     }
   },
-  "main": "index.js",
+  "main": "./dist/editor.js",
+  "module": "./dist/editor.js",
   "files": [
     "dist",
     "global.d.ts"
