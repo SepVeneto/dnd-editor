@@ -77,7 +77,7 @@ import { editorContextKey, EventEmitter } from '@sepveneto/dnde-core'
 // import EditorOperate from '@/layout/EditorOperate.ce.vue'
 // @ts-expect-error: no def
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
-import { getCurrentInstance, nextTick, onMounted, provide, useTemplateRef } from 'vue'
+import { getCurrentInstance, onMounted, provide, useTemplateRef } from 'vue'
 import VueDraggable from 'vuedraggable'
 import NodeWrap from './components/NodeWrap.vue'
 import ConfigPanel from './layout/configPanel.vue'
@@ -116,7 +116,6 @@ function onEnd() {
   editor.dragging = null
 }
 function handleMove(evt: any) {
-  console.log('move', evt)
   // 如果该元素是跨容器拖动，交给目标容器的add事件处理
   if (evt.from !== evt.to)
     return
@@ -158,7 +157,7 @@ registerRemotes([
 
 const ViewRender = loadFromRemote('widgets', 'viewRender')
 
-editor.setSchema(props.root)
+// editor.setSchema(props.root)
 app.setWidgets(props.widgets)
 
 const refConfigPanel = useTemplateRef('configPanelRef')

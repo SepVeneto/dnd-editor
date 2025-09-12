@@ -50,7 +50,7 @@ import type { SchemaItem } from '@sepveneto/dnde-core/class'
 import { loadFromRemote } from '@/utils'
 import StyleNumber from './StyleNumber.vue'
 
-defineProps<{ config: SchemaItem, stylesheet: boolean }>()
+defineProps<{ config: SchemaItem & { attrs?: any, options?: any[] }, stylesheet: boolean }>()
 const model = defineModel<any>({ required: true })
 
 const configRender = loadFromRemote('widgets', 'configRender')

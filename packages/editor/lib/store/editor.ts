@@ -45,7 +45,7 @@ class HelperPlugin {
   }
 }
 
-interface PanelInfo {
+export interface PanelInfo {
   label: string
   name: string
 }
