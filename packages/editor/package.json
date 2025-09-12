@@ -13,6 +13,11 @@
     "./editor": {
       "types": "./dist/Editor.vue.d.ts"
     },
+    "./core": {
+      "types": "./dist/main.d.ts",
+      "imports": "./dist/editor.js",
+      "require": "./dist/editor.js"
+    },
     ".": {
       "types": "./dist/main.d.ts",
       "imports": "./dist/editor.js",
