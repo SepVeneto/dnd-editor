@@ -23,6 +23,7 @@
           />
         </ElTabPane>
         <ElTabPane
+          v-if="styleSchema.length > 0"
           label="样式"
           name="style"
         >

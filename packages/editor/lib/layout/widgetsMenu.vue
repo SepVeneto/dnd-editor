@@ -131,27 +131,23 @@ export default {
         )),
       ])
     )
-    const notabRenderer = () => hasGroup(app.widgets) ? groupRenderer() : singleRenderer(false)
-
     function isGroupVisible(list: Widget[]) {
       return list.some(item => item.visible)
     }
 
     return {
       app,
-      needTabs,
       hasGroup,
       handleClone,
       handleEnd,
       tabRenderer,
-      notabRenderer,
     }
   },
   render() {
     return h(
       'aside',
       { style: 'width: 300px' },
-      this.needTabs ? this.tabRenderer() : this.notabRenderer(),
+      this.tabRenderer(),
     )
   },
 }

@@ -1,4 +1,4 @@
-import type { EditorRoute, EditorSchema, EditorSettings } from '@sepveneto/dnde-core'
+import type { EditorSchema, EditorSettings } from '@sepveneto/dnde-core'
 import type { PropType } from 'vue'
 import type { LikeWidget } from './store'
 
@@ -14,10 +14,6 @@ export const editorProps = {
   widgets: {
     type: Array as PropType<LikeWidget[]>,
     default: () => ([]),
-  },
-  routes: {
-    type: Array as PropType<EditorRoute[]>,
-    default: () => ([{ name: 'Home', path: '/' }]),
   },
   settings: {
     type: Object as PropType<EditorSettings>,
