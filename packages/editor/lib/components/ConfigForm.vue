@@ -27,7 +27,7 @@ import type { SchemaItem } from '@sepveneto/dnde-core/class'
 import { ref, useTemplateRef, watch } from 'vue'
 import ConfigRender from './ConfigRender.vue'
 
-const props = defineProps<{ list: SchemaItem[], modelValue: Record<string, any> }>()
+const props = defineProps<{ list: SchemaItem[], modelValue: Record<string, any> | undefined }>()
 const emit = defineEmits(['update:modelValue'])
 
 const refForm = useTemplateRef('formRef')
@@ -36,7 +36,7 @@ defineExpose({
   clearValidate: () => refForm.value?.clearValidate(),
 })
 
-const form = ref<Record<string, any>>({})
+const form = ref<Record<string, any> | undefined>({})
 watch(() => props.modelValue, () => {
   form.value = props.modelValue
 }, { immediate: true })
@@ -44,16 +44,24 @@ watch(() => props.modelValue, () => {
 function updateData(key: string, val: unknown) {
   const path = key.split('.')
   const _path = path.slice(0, -1)
-  const parent = path.length === 1
+  const parent = (path.length === 1
     ? form.value
     : _path.reduce((obj, curr) => {
+        if (!obj) {
+          obj = {}
+        }
         return obj[curr]
-      }, form.value)
+      }, form.value)) || {}
   parent[path.slice(-1)[0]] = val
+  debugger
   emit('update:modelValue', form.value)
 }
-function getData(data: Record<string, any>, key: string): any {
+function getData(data: Record<string, any> | undefined, key: string): any {
+  if (!data)
+    return null
+
   const path = key.split('.')
+
   if (path.length === 1) {
     return data[key]
   }
@@ -64,6 +72,6 @@ function getData(data: Record<string, any>, key: string): any {
     }
     return obj[curr] == null ? '' : obj[curr]
   }, data)
-  return res
+  return res || null
 }
 </script>

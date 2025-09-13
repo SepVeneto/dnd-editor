@@ -38,6 +38,21 @@ onMounted(() => {
     // helper: 节点的操作菜单
     // widget: 组件菜单
     init() {
+      ctx.plugins.config.addPanel({
+        label: '弹窗',
+        name: 'dialog',
+        attributes: [
+          schema.input({
+            label: '标题',
+            key: 'dialog.title',
+            required: true,
+          }),
+          schema.number({
+            label: '数字',
+            key: 'dialog.num',
+          }),
+        ],
+      })
       // const copy = createCopy(ctx)
       // const del = createDelete(ctx)
       ctx.plugins.helper.addBuiltin({

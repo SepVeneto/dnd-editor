@@ -11,7 +11,28 @@
         </ElBreadcrumbItem>
       </ElBreadcrumb>
 
-      <ElTabs v-model="active">
+      <ElTabs
+        v-if="editor.selected === editor.rootNode.wid"
+        v-model="pageActive"
+      >
+        <ElTabPane
+          v-for="pane in editor.plugins.config.list"
+          :key="pane.name"
+          :label="pane.label"
+          :name="pane.name"
+        >
+          <ConfigForm
+            ref="pageConfigRef"
+            v-model="editor.selectedNode.data[pane.name]"
+            :list="pane.attributes"
+          />
+        </ElTabPane>
+      </ElTabs>
+
+      <ElTabs
+        v-else
+        v-model="active"
+      >
         <ElTabPane
           label="属性"
           name="props"
@@ -40,6 +61,7 @@
 
 <script lang="ts" setup>
 import { ArrowRight } from '@element-plus/icons-vue'
+import { watchOnce } from '@vueuse/core'
 import { computed, nextTick, ref, useTemplateRef, watch } from 'vue'
 import ConfigForm from '@/components/ConfigForm.vue'
 import { useEditor } from '@/store'
@@ -55,12 +77,22 @@ const propSchema = computed(() => editor.selectedNode?.widget.props)
 
 const refProp = useTemplateRef('propRef')
 const refStyle = useTemplateRef('styleRef')
+const refPageConfig = useTemplateRef('pageConfigRef')
 
+const pageActive = ref()
 const active = ref<'props' | 'style'>('props')
 
+watchOnce(() => editor.plugins.config.defaultPane, (name) => {
+  pageActive.value = name
+})
+
 watch(() => editor.selected, () => {
+  pageActive.value = editor.plugins.config.defaultPane
   active.value = 'props'
   nextTick().then(() => {
+    refPageConfig.value?.forEach((item) => {
+      item?.clearValidate()
+    })
     refProp.value?.clearValidate()
     refStyle.value?.clearValidate()
   })

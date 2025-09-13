@@ -1,4 +1,5 @@
 import type { IWidget } from '@sepveneto/dnde-core'
+import type { SchemaItem } from '@sepveneto/dnde-core/class'
 import type { Raw } from 'vue'
 import type { HelperAction } from '@/type'
 import { widget } from '@sepveneto/dnde-core'
@@ -60,6 +61,29 @@ class WidgetPlugin {
   }
 }
 
+export interface ConfigPanel {
+  label: string
+  name: string
+  attributes: SchemaItem[]
+}
+class ConfigPlugin {
+  public list: ConfigPanel[] = []
+  constructor(_ctx?: any) {
+
+  }
+
+  get defaultPane() {
+    if (!this.list.length)
+      return ''
+
+    return this.list[0].name
+  }
+
+  addPanel(panel: ConfigPanel) {
+    this.list.push(panel)
+  }
+}
+
 export const useEditor = defineStore('editor', () => {
   const app = useApp()
 
@@ -102,6 +126,7 @@ export const useEditor = defineStore('editor', () => {
   const plugins = {
     helper: new HelperPlugin({ addNode, delNode }),
     widget: new WidgetPlugin({ addPanel }),
+    config: new ConfigPlugin(),
   }
   const selectedNode = computed(() => {
     const node = nodeMap.get(selected.value)
