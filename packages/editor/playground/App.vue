@@ -38,18 +38,51 @@ onMounted(() => {
     // helper: 节点的操作菜单
     // widget: 组件菜单
     init() {
+      // ctx.plugins.config.addPanel({
+      //   label: '弹窗',
+      //   name: 'dialog',
+      //   attributes: [
+      //     schema.input({
+      //       label: '标题',
+      //       key: 'dialog.title',
+      //       required: true,
+      //     }),
+      //     schema.number({
+      //       label: '数字',
+      //       key: 'dialog.num',
+      //     }),
+      //   ],
+      // })
       ctx.plugins.config.addPanel({
-        label: '弹窗',
-        name: 'dialog',
+        label: '弹窗1',
+        name: 'dialog1',
         attributes: [
+          schema.switch({
+            label: '启用',
+            key: 'enable',
+          }),
+
           schema.input({
             label: '标题',
-            key: 'dialog.title',
-            required: true,
+            key: 'title',
+            rules: { required: true, validator: (rule, value, cb) => {
+              const data = editorRef.value!.getData()
+              if (data.dialog1?.enable) {
+                if (!value) {
+                  cb(new Error('必填'))
+                }
+                else {
+                  cb()
+                }
+              }
+              else {
+                cb()
+              }
+            } },
           }),
           schema.number({
             label: '数字',
-            key: 'dialog.num',
+            key: 'num',
           }),
         ],
       })

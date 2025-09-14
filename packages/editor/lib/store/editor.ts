@@ -1,9 +1,11 @@
 import type { IWidget } from '@sepveneto/dnde-core'
 import type { SchemaItem } from '@sepveneto/dnde-core/class'
+import type { Rule } from 'async-validator'
 import type { Raw } from 'vue'
 import type { HelperAction } from '@/type'
 import { widget } from '@sepveneto/dnde-core'
 import { Node, Widget } from '@sepveneto/dnde-core/class'
+import Validator from 'async-validator'
 import { defineStore } from 'pinia'
 import { computed, customRef, reactive, ref, shallowRef } from 'vue'
 import { createDebug, removePopper } from '@/utils'
@@ -81,6 +83,28 @@ class ConfigPlugin {
 
   addPanel(panel: ConfigPanel) {
     this.list.push(panel)
+  }
+
+  async validate(data: any) {
+    for (const pane of this.list) {
+      if (!data[pane.name])
+        continue
+
+      const _rules = pane.attributes.reduce<Record<string, Rule>>((all, curr) => {
+        all[curr.key] = curr.rules || []
+        return all
+      }, {}) || {}
+      // TODO: 拖拽后全局配置不渲染
+      // TODO: 全局配置的validator不生效
+      const valid = await new Validator(_rules).validate(data[pane.name]).catch(() => {
+        return true
+      })
+      console.log('valid', valid)
+
+      if (!valid) {
+        return true
+      }
+    }
   }
 }
 

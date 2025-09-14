@@ -44,6 +44,7 @@
     "@sepveneto/dnde-core": "workspace: *",
     "@sepveneto/free-dom": "^0.14.7",
     "@vueuse/core": "^13.3.0",
+    "async-validator": "^4.2.5",
     "element-plus": "^2.9.11",
     "lodash-es": "^4.17.21",
     "pinia": "^3.0.2",

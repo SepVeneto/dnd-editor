@@ -38,7 +38,7 @@ defineExpose({
 
 const form = ref<Record<string, any> | undefined>({})
 watch(() => props.modelValue, () => {
-  form.value = props.modelValue
+  form.value = props.modelValue || {}
 }, { immediate: true })
 
 function updateData(key: string, val: unknown) {
@@ -53,7 +53,6 @@ function updateData(key: string, val: unknown) {
         return obj[curr]
       }, form.value)) || {}
   parent[path.slice(-1)[0]] = val
-  debugger
   emit('update:modelValue', form.value)
 }
 function getData(data: Record<string, any> | undefined, key: string): any {

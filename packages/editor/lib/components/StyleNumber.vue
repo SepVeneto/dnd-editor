@@ -10,7 +10,7 @@
 <script setup lang="ts">
 import { customRef, watch } from 'vue'
 
-const props = defineProps<{ modelValue: string | number }>()
+const props = defineProps<{ modelValue: string | number | undefined }>()
 const emit = defineEmits(['update:modelValue'])
 
 const value = customRef<string | number>((track, trigger) => {
@@ -42,6 +42,6 @@ const value = customRef<string | number>((track, trigger) => {
 })
 
 watch(() => props.modelValue, (val) => {
-  value.value = val
+  value.value = val || ''
 }, { immediate: true })
 </script>

@@ -22,7 +22,7 @@
           :name="pane.name"
         >
           <ConfigForm
-            ref="pageConfigRef"
+            :ref="(ref: any) => refPageConfig.push({ ref, name: pane.name })"
             v-model="editor.selectedNode.data[pane.name]"
             :list="pane.attributes"
           />
@@ -60,9 +60,10 @@
 </template>
 
 <script lang="ts" setup>
+import type { FormInstance } from 'element-plus'
 import { ArrowRight } from '@element-plus/icons-vue'
 import { watchOnce } from '@vueuse/core'
-import { computed, nextTick, ref, useTemplateRef, watch } from 'vue'
+import { computed, nextTick, ref, shallowRef, useTemplateRef, watch } from 'vue'
 import ConfigForm from '@/components/ConfigForm.vue'
 import { useEditor } from '@/store'
 
@@ -77,7 +78,8 @@ const propSchema = computed(() => editor.selectedNode?.widget.props)
 
 const refProp = useTemplateRef('propRef')
 const refStyle = useTemplateRef('styleRef')
-const refPageConfig = useTemplateRef('pageConfigRef')
+type PaneInstance = InstanceType<typeof ConfigForm>
+const refPageConfig = shallowRef<{ ref: PaneInstance, name: string }[]>([])
 
 const pageActive = ref()
 const active = ref<'props' | 'style'>('props')
@@ -91,7 +93,7 @@ watch(() => editor.selected, () => {
   active.value = 'props'
   nextTick().then(() => {
     refPageConfig.value?.forEach((item) => {
-      item?.clearValidate()
+      item?.ref?.clearValidate()
     })
     refProp.value?.clearValidate()
     refStyle.value?.clearValidate()
@@ -100,6 +102,13 @@ watch(() => editor.selected, () => {
 
 defineExpose({
   async validate() {
+    if (refPageConfig.value) {
+      for (const pane of refPageConfig.value) {
+        await pane.ref.validate()?.catch(() => {
+          pageActive.value = pane.name
+        })
+      }
+    }
     const propValid = await refProp.value?.validate()?.catch(() => {
       active.value = 'props'
     })
