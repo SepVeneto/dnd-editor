@@ -78,9 +78,8 @@ defineExpose({
     pluginConstructor.init()
   },
   async validate() {
-    const invalidConfig = await editor.plugins.config.validate(editor.rootNode.data)
-    console.log(invalidConfig)
-    if (invalidConfig) {
+    const validConfig = await editor.plugins.config.validate(editor.rootNode.data)
+    if (!validConfig) {
       editor.selectNode()
       await Vue.nextTick()
       refApp.value?.validate()

@@ -94,16 +94,10 @@ class ConfigPlugin {
         all[curr.key] = curr.rules || []
         return all
       }, {}) || {}
-      // TODO: 拖拽后全局配置不渲染
-      // TODO: 全局配置的validator不生效
       const valid = await new Validator(_rules).validate(data[pane.name]).catch(() => {
-        return true
+        return false
       })
-      console.log('valid', valid)
-
-      if (!valid) {
-        return true
-      }
+      return !!valid
     }
   }
 }

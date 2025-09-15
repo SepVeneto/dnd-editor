@@ -48,11 +48,11 @@
 
       <aside style="width: 500px;">
         <ConfigPanel
-          v-if="!editor.dragging"
+          v-show="!editor.dragging"
           ref="configPanelRef"
           @click.stop
         />
-        <TreePanel v-else />
+        <TreePanel v-show="editor.dragging" />
       </aside>
     </div>
   </ElConfigProvider>
