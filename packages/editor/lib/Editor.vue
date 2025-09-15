@@ -95,7 +95,7 @@ defineExpose({
   getData() {
     return editor.getData()
   },
-  setData(data: any[]) {
+  setData(data: { _view: 'page', list: any[] }) {
     editor.setData(data)
   },
 })

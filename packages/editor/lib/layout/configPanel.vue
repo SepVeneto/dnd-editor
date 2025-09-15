@@ -1,62 +1,60 @@
 <template>
-  <aside>
-    <ElCard shadow="never">
-      <ElBreadcrumb :separator-icon="ArrowRight">
-        <ElBreadcrumbItem
-          v-for="item in list"
-          :key="item.wid"
-          @click="editor.selected = item.wid"
-        >
-          <span class="mpd-cursor-pointer">{{ item.name }}</span>
-        </ElBreadcrumbItem>
-      </ElBreadcrumb>
-
-      <ElTabs
-        v-if="editor.selected === editor.rootNode.wid"
-        v-model="pageActive"
+  <div>
+    <ElBreadcrumb :separator-icon="ArrowRight">
+      <ElBreadcrumbItem
+        v-for="item in list"
+        :key="item.wid"
+        @click="editor.selected = item.wid"
       >
-        <ElTabPane
-          v-for="pane in editor.plugins.config.list"
-          :key="pane.name"
-          :label="pane.label"
-          :name="pane.name"
-        >
-          <ConfigForm
-            :ref="(ref: any) => refPageConfig.push({ ref, name: pane.name })"
-            v-model="editor.selectedNode.data[pane.name]"
-            :list="pane.attributes"
-          />
-        </ElTabPane>
-      </ElTabs>
+        <span class="mpd-cursor-pointer">{{ item.name }}</span>
+      </ElBreadcrumbItem>
+    </ElBreadcrumb>
 
-      <ElTabs
-        v-else
-        v-model="active"
+    <ElTabs
+      v-if="editor.selected === editor.rootNode.wid"
+      v-model="pageActive"
+    >
+      <ElTabPane
+        v-for="pane in editor.plugins.config.list"
+        :key="pane.name"
+        :label="pane.label"
+        :name="pane.name"
       >
-        <ElTabPane
-          label="属性"
-          name="props"
-        >
-          <ConfigForm
-            ref="propRef"
-            v-model="editor.selectedNode.data"
-            :list="propSchema"
-          />
-        </ElTabPane>
-        <ElTabPane
-          v-if="styleSchema.length > 0"
-          label="样式"
-          name="style"
-        >
-          <ConfigForm
-            ref="styleRef"
-            v-model="editor.selectedNode.style"
-            :list="styleSchema"
-          />
-        </ElTabPane>
-      </ElTabs>
-    </ElCard>
-  </aside>
+        <ConfigForm
+          :ref="(ref: any) => refPageConfig.push({ ref, name: pane.name })"
+          v-model="editor.selectedNode.data[pane.name]"
+          :list="pane.attributes"
+        />
+      </ElTabPane>
+    </ElTabs>
+
+    <ElTabs
+      v-else
+      v-model="active"
+    >
+      <ElTabPane
+        label="属性"
+        name="props"
+      >
+        <ConfigForm
+          ref="propRef"
+          v-model="editor.selectedNode.data"
+          :list="propSchema"
+        />
+      </ElTabPane>
+      <ElTabPane
+        v-if="styleSchema.length > 0"
+        label="样式"
+        name="style"
+      >
+        <ConfigForm
+          ref="styleRef"
+          v-model="editor.selectedNode.style"
+          :list="styleSchema"
+        />
+      </ElTabPane>
+    </ElTabs>
+  </div>
 </template>
 
 <script lang="ts" setup>

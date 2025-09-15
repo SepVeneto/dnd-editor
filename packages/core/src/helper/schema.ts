@@ -1,4 +1,12 @@
-import type { ElOption, ImageInstance, InputInstance, InputNumberInstance, SelectInstance, SwitchInstance } from 'element-plus'
+import type {
+  DatePickerInstance,
+  ElOption,
+  ImageInstance,
+  InputInstance,
+  InputNumberInstance,
+  SelectInstance,
+  SwitchInstance,
+} from 'element-plus'
 import type { SchemaItem } from '@/class'
 import { likeArray } from '@/utils'
 
@@ -57,6 +65,15 @@ export const schema = {
       label: config.label,
       key: config.key,
       type: 'image',
+      attrs: config.attrs,
+      rules: normalizeRules(config),
+    }
+  },
+  time(config: BaseConfig & { attrs?: Partial<DatePickerInstance['$props']> }): SchemaItem {
+    return {
+      label: config.label,
+      key: config.key,
+      type: 'datetimePicker',
       attrs: config.attrs,
       rules: normalizeRules(config),
     }

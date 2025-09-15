@@ -6,6 +6,7 @@ export interface EditorContext {
   node?: Node
   plugins?: any
   bus: EventEmitter
+  extra: Record<string, any>
 }
 
 // 会分别导入，不能使用symbol

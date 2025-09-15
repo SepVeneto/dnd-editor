@@ -87,12 +87,7 @@ function findExistWid(list: Node[]) {
 
 <style scoped>
 .tree-panel-container {
-  min-width: 375px;
-  min-height: calc(667px - 60px);
-  background-color: #ffffff;
-  border-radius: 4px;
-  padding: 20px;
-  border: 1px solid #ebeef5;
+  min-height: 500px;
   box-sizing: border-box;
 }
 

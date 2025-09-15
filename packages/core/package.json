@@ -17,11 +17,6 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./vue": {
-      "types": "./dist/vue/index.d.ts",
-      "import": "./dist/vue/index.js",
-      "require": "./dist/vue/index.cjs"
-    },
     "./class": {
       "types": "./dist/class/index.d.ts",
       "import": "./dist/class/index.js",

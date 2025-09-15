@@ -8,6 +8,7 @@
   <ElSelect
     v-else-if="config.type === 'select'"
     v-model="model"
+    :append-to="appendTo"
     v-bind="config.attrs"
   >
     <ElOption
@@ -35,6 +36,13 @@
     v-bind="config.attrs"
   />
 
+  <ElDatePicker
+    v-else-if="config.type === 'datetimePicker'"
+    v-model="model"
+    :append-to="appendTo"
+    v-bind="config.attrs"
+  />
+
   <component
     :is="configRender"
     v-else
@@ -47,6 +55,8 @@
 
 <script lang="ts" setup>
 import type { SchemaItem } from '@sepveneto/dnde-core/class'
+import { onMounted, shallowRef } from 'vue'
+import { useEditor } from '@/store'
 import { loadFromRemote } from '@/utils'
 import StyleNumber from './StyleNumber.vue'
 
@@ -54,4 +64,11 @@ defineProps<{ config: SchemaItem & { attrs?: any, options?: any[] }, stylesheet:
 const model = defineModel<any>({ required: true })
 
 const configRender = loadFromRemote('widgets', 'configRender')
+
+const editor = useEditor()
+const appendTo = shallowRef<HTMLElement>()
+onMounted(() => {
+  const parent: HTMLElement = editor.shadowRoot!.querySelector('.mpd-editor')!
+  appendTo.value = parent
+})
 </script>

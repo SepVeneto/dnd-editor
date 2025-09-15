@@ -146,7 +146,9 @@ export default {
   render() {
     return h(
       'aside',
-      { style: 'width: 300px' },
+      {
+        style: { padding: '1rem', border: '1px solid var(--mpd-border-color)' },
+      },
       this.tabRenderer(),
     )
   },

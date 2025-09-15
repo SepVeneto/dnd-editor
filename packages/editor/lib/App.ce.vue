@@ -3,7 +3,6 @@
     :locale="zhCn"
     namespace="mpd"
   >
-    <div>{{ editor.selected }}</div>
     <div
       ref="rootRef"
       class="mpd-editor mpd-flex mpd-gap-x-2 mpd-justify-between"
@@ -46,13 +45,18 @@
         </ElScrollbar>
       </div>
 
-      <aside style="width: 500px;">
-        <ConfigPanel
-          v-show="!editor.dragging"
-          ref="configPanelRef"
-          @click.stop
-        />
-        <TreePanel v-show="editor.dragging" />
+      <aside style="width: 500px; border: 1px solid var(--mpd-border-color); padding: 1rem;">
+        <ElScrollbar
+          wrap-style="height: 700px;"
+          noresize
+        >
+          <ConfigPanel
+            v-show="!editor.dragging"
+            ref="configPanelRef"
+            @click.stop
+          />
+          <TreePanel v-show="editor.dragging" />
+        </ElScrollbar>
       </aside>
     </div>
   </ElConfigProvider>
@@ -106,6 +110,7 @@ provide(editorContextKey, {
   node: editor.selectedNode,
   plugins: editor.plugins,
   bus,
+  extra: props.extra || {},
 })
 
 // provide(EditorContext, reactive({

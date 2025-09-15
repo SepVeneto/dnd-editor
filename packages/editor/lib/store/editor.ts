@@ -7,7 +7,7 @@ import { widget } from '@sepveneto/dnde-core'
 import { Node, Widget } from '@sepveneto/dnde-core/class'
 import Validator from 'async-validator'
 import { defineStore } from 'pinia'
-import { computed, customRef, reactive, ref, shallowRef } from 'vue'
+import { computed, customRef, ref, shallowRef } from 'vue'
 import { createDebug, removePopper } from '@/utils'
 import { useApp } from './app'
 
@@ -134,12 +134,12 @@ export const useEditor = defineStore('editor', () => {
     defaultData: { list: [] },
   }))
   // 防止类型实例化过于深并且可能无限错误
-  const rootNode = reactive<Raw<Node>>(new Node(defaultPage))
-  const selected = ref<string>(rootNode.wid)
+  const rootNode = ref<Raw<Node>>(new Node(defaultPage))
   // TODO: hover栈
   const hovering = ref<string>()
   const nodeMap = new Map<string, Node>()
-  nodeMap.set(rootNode.wid, rootNode)
+  nodeMap.set(rootNode.value.wid, rootNode.value)
+  const selected = ref<string>(rootNode.value.wid)
 
   const plugins = {
     helper: new HelperPlugin({ addNode, delNode }),
@@ -175,7 +175,7 @@ export const useEditor = defineStore('editor', () => {
 
   }
 
-  function addNode(node: Node, pNode: Node = rootNode as Node, manual = false) {
+  function addNode(node: Node, pNode: Node = rootNode.value as Node, manual = false) {
     node.level = pNode.level + 1
     nodeMap.set(node.wid, node)
     node.parent = pNode
@@ -189,18 +189,18 @@ export const useEditor = defineStore('editor', () => {
     }
     node?.parent?.list.splice(index, 1)
     nodeMap.delete(wid)
-    selected.value = rootNode.wid
+    selected.value = rootNode.value.wid
   }
 
   function selectNode(wid?: string) {
-    selected.value = wid || rootNode.wid
+    selected.value = wid || rootNode.value.wid
   }
 
   function getData() {
-    return rootNode.parse()
+    return rootNode.value.parse()
   }
 
-  function setData(data: any[], parent = rootNode as Node) {
+  function createNodes(data: any[], parent = rootNode.value) {
     data.forEach((item) => {
       const widget = app.widgetMap.get(item._view) as Widget
       if (!widget)
@@ -214,11 +214,31 @@ export const useEditor = defineStore('editor', () => {
       }
       const node = new Node(widget, info)
       addNode(node, parent, true)
+      if (list && list.length > 0) {
+        createNodes(list, node)
+      }
     })
+  }
+  function setData(data: any) {
+    const widget = app.widgetMap.get(data._view) as Widget || defaultPage
+
+    const { _uuid, _name, _view, style, list, ...props } = data
+    const info = {
+      props,
+      style,
+      list: [],
+    }
+    rootNode.value = new Node(widget, info)
+
+    nodeMap.delete(selected.value)
+    selected.value = rootNode.value.wid
+    nodeMap.set(rootNode.value.wid, rootNode.value)
+
+    createNodes(list)
   }
 
   function setSchema(schema: IWidget['schema']) {
-    rootNode.widget._data.schema = schema
+    rootNode.value.widget._data.schema = schema
   }
 
   return {

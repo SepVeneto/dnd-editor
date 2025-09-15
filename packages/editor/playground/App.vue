@@ -44,12 +44,13 @@ onMounted(() => {
         attributes: [
           schema.input({
             label: '标题',
-            key: 'dialog.title',
+            key: 'title',
             required: true,
           }),
+          schema.time({ label: '时间', key: 'time' }),
           schema.number({
             label: '数字',
-            key: 'dialog.num',
+            key: 'num',
           }),
         ],
       })
@@ -80,10 +81,11 @@ onMounted(() => {
               }
             } },
           }),
-          schema.number({
-            label: '数字',
-            key: 'num',
-          }),
+          // schema.select({
+          //   label: '数字',
+          //   key: 'num',
+          //   options: [1, 2, 3],
+          // }),
         ],
       })
       // const copy = createCopy(ctx)
@@ -188,11 +190,11 @@ function handleValid() {
   editorRef.value?.validate()
 }
 function handleSet() {
-  editorRef.value?.setData([{
+  editorRef.value?.setData({ _view: 'page', list: [{
     _uuid: 1,
-    _view: 'container',
+    _view: 'menuItem',
     title: 'manual',
-  }])
+  }] })
 }
 function handleGet() {
   const res = editorRef.value?.getData()
