@@ -1,13 +1,15 @@
 import type { IWidget } from '@sepveneto/dnde-core'
 import { widgetType } from '@sepveneto/dnde-core'
-import { Widget } from '@sepveneto/dnde-core/class'
+import { Node, Widget } from '@sepveneto/dnde-core/class'
 import { defineStore } from 'pinia'
 import { shallowRef } from 'vue'
+import { useEditor } from './editor'
 
 export interface WidgetGroup { name: string, list: Widget[] }
 export type LikeWidget = IWidget | { name: string, list: IWidget[], type: widgetType }
 
 export const useApp = defineStore('app', () => {
+  const editor = useEditor()
   const widgets = shallowRef<(Widget | WidgetGroup)[]>()
   const widgetMap = new Map<string, Widget>()
 
@@ -28,6 +30,10 @@ export const useApp = defineStore('app', () => {
         widgets.value?.push(inst)
       }
     })
+
+    if (widgetMap.has('page')) {
+      editor.rootNode = new Node(widgetMap.get('page')!)
+    }
   }
 
   function isGroup(data: LikeWidget & { type?: widgetType }): data is { name: string, list: IWidget[], type: widgetType } {

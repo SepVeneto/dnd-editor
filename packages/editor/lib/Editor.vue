@@ -83,8 +83,8 @@ defineExpose({
       editor.selectNode()
       await Vue.nextTick()
       refApp.value?.validate()
-      return
     }
+
     const invalidNode = await editor.rootNode.validate()
     if (invalidNode) {
       editor.selectNode(invalidNode)

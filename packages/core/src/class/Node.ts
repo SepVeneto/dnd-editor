@@ -124,17 +124,4 @@ export class RootNode {
     this.data = info?.props || {}
     this.style = info?.style || {}
   }
-
-  async validate(only = false) {
-    if (only || !this.list) {
-      return
-    }
-
-    for (const item of this.list) {
-      const invalid = await item.validate()
-      if (invalid) {
-        return invalid
-      }
-    }
-  }
 }

@@ -11,25 +11,6 @@
     </ElBreadcrumb>
 
     <ElTabs
-      v-if="editor.selected === editor.rootNode.wid"
-      v-model="pageActive"
-    >
-      <ElTabPane
-        v-for="pane in editor.plugins.config.list"
-        :key="pane.name"
-        :label="pane.label"
-        :name="pane.name"
-      >
-        <ConfigForm
-          :ref="(ref: any) => refPageConfig.push({ ref, name: pane.name })"
-          v-model="editor.selectedNode.data[pane.name]"
-          :list="pane.attributes"
-        />
-      </ElTabPane>
-    </ElTabs>
-
-    <ElTabs
-      v-else
       v-model="active"
     >
       <ElTabPane
@@ -53,6 +34,20 @@
           :list="styleSchema"
         />
       </ElTabPane>
+      <template v-if="isSelectRoot">
+        <ElTabPane
+          v-for="pane in editor.plugins.config.list"
+          :key="pane.name"
+          :label="pane.label"
+          :name="pane.name"
+        >
+          <ConfigForm
+            :ref="(ref: any) => refPageConfig.push({ ref, name: pane.name })"
+            v-model="editor.selectedNode.data[pane.name]"
+            :list="pane.attributes"
+          />
+        </ElTabPane>
+      </template>
     </ElTabs>
   </div>
 </template>
@@ -79,18 +74,23 @@ const refStyle = useTemplateRef('styleRef')
 type PaneInstance = InstanceType<typeof ConfigForm>
 const refPageConfig = shallowRef<{ ref: Raw<PaneInstance>, name: string }[]>([])
 
-const pageActive = ref()
-const active = ref<'props' | 'style'>('props')
+const active = ref<string>('props')
 
 watchOnce(() => editor.plugins.config.defaultPane, (name) => {
-  pageActive.value = name
+  active.value = propSchema.value.length > 0 ? 'props' : name
 })
+
+const isSelectRoot = computed(() => editor.selectedNode.wid === editor.rootNode.wid)
 
 watch(() => editor.selected, () => {
   refPageConfig.value = []
 
-  pageActive.value = editor.plugins.config.defaultPane
-  active.value = 'props'
+  if (isSelectRoot.value) {
+    active.value = propSchema.value.length > 0 ? 'props' : editor.plugins.config.defaultPane
+  }
+  else {
+    active.value = 'props'
+  }
   nextTick().then(() => {
     refPageConfig.value?.forEach((item) => {
       item?.ref?.clearValidate()
@@ -102,18 +102,22 @@ watch(() => editor.selected, () => {
 
 defineExpose({
   async validate() {
-    if (refPageConfig.value) {
-      for (const pane of refPageConfig.value) {
-        await pane.ref.validate()?.catch(() => {
-          pageActive.value = pane.name
-        })
-      }
-    }
     const propValid = await refProp.value?.validate()?.catch(() => {
       active.value = 'props'
     })
     if (!propValid)
       return
+
+    if (refPageConfig.value) {
+      for (const pane of refPageConfig.value) {
+        const valid = await pane.ref.validate()?.catch(() => {
+          active.value = pane.name
+          return false
+        })
+        if (!valid)
+          return
+      }
+    }
 
     await refStyle.value?.validate()?.catch(() => {
       active.value = 'style'

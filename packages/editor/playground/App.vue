@@ -138,6 +138,20 @@ const rootSchema = {
   ],
 }
 const baseWidgets: IWidget<object>[] = [
+  widget.create({
+    name: '活动设置',
+    type: 'page',
+    config: {
+      visible: false,
+    },
+    attributes: [
+      schema.input({
+        label: '标题',
+        key: 'title',
+        required: true,
+      }),
+    ],
+  }),
   widget.columnContainer({
     icon: 'column',
     attributes: [

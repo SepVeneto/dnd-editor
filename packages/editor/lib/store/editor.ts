@@ -7,7 +7,7 @@ import { widget } from '@sepveneto/dnde-core'
 import { Node, Widget } from '@sepveneto/dnde-core/class'
 import Validator from 'async-validator'
 import { defineStore } from 'pinia'
-import { computed, customRef, ref, shallowRef } from 'vue'
+import { computed, customRef, ref, shallowRef, watchEffect } from 'vue'
 import { createDebug, removePopper } from '@/utils'
 import { useApp } from './app'
 
@@ -97,7 +97,10 @@ class ConfigPlugin {
       const valid = await new Validator(_rules).validate(data[pane.name]).catch(() => {
         return false
       })
-      return !!valid
+      if (valid) {
+        continue
+      }
+      return false
     }
   }
 }
@@ -140,6 +143,12 @@ export const useEditor = defineStore('editor', () => {
   const nodeMap = new Map<string, Node>()
   nodeMap.set(rootNode.value.wid, rootNode.value)
   const selected = ref<string>(rootNode.value.wid)
+
+  watchEffect(() => {
+    nodeMap.delete(rootNode.value.wid)
+    selected.value = rootNode.value.wid
+    nodeMap.set(rootNode.value.wid, rootNode.value)
+  })
 
   const plugins = {
     helper: new HelperPlugin({ addNode, delNode }),
