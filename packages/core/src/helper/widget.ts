@@ -18,6 +18,14 @@ interface CWidget {
   stylesheet?: SchemaItem[]
 }
 
+interface RootWidget {
+  name?: IWidget['_name']
+  defaultData?: IWidget['data']
+  defaultStyle?: IWidget['style']
+  attributes?: SchemaItem[]
+  stylesheet?: SchemaItem[]
+}
+
 interface ColumnContainerWidget {
   name?: IWidget['_name']
   icon?: IWidget['_icon']
@@ -63,5 +71,24 @@ export const widget = {
       name,
       list,
     }
+  },
+
+  widget(name: string, list: IWidget[]) {
+    return {
+      type: widgetType.WIDGET,
+      name,
+      list,
+    }
+  },
+  root(config: RootWidget) {
+    return this.create({
+      name: config.name || '页面',
+      type: 'page',
+      config: { visible: false },
+      defaultData: config.defaultData,
+      defaultStyle: config.defaultStyle,
+      attributes: config.attributes,
+      stylesheet: config.stylesheet,
+    })
   },
 }

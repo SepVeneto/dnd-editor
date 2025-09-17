@@ -34,6 +34,7 @@
   ],
   "scripts": {
     "dev": "vite",
+    "build:dev": "vite build",
     "build": "vite build && pnpm run gen",
     "gen": "vue-tsc -p tsconfig.build.json",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -46,7 +47,6 @@
     "@sepveneto/free-dom": "^0.14.7",
     "@vueuse/core": "^13.3.0",
     "async-validator": "^4.2.5",
-    "element-plus": "^2.9.11",
     "lodash-es": "^4.17.21",
     "pinia": "^3.0.2",
     "sass-embedded": "^1.89.0",

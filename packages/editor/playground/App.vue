@@ -138,16 +138,12 @@ const rootSchema = {
   ],
 }
 const baseWidgets: IWidget<object>[] = [
-  widget.create({
+  widget.root({
     name: '活动设置',
-    type: 'page',
-    config: {
-      visible: false,
-    },
     attributes: [
-      schema.input({
-        label: '标题',
-        key: 'title',
+      schema.color({
+        label: '主题',
+        key: 'theme',
         required: true,
       }),
     ],
@@ -183,6 +179,11 @@ const serviceWidgets: IWidget<object>[] = [
       schema.input({
         label: '标题',
         key: 'title',
+        required: true,
+      }),
+      schema.color({
+        label: '主题',
+        key: 'theme',
         required: true,
       }),
     ],

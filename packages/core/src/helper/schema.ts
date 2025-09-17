@@ -1,4 +1,5 @@
 import type {
+  ColorPickerInstance,
   DatePickerInstance,
   ElOption,
   ImageInstance,
@@ -74,6 +75,15 @@ export const schema = {
       label: config.label,
       key: config.key,
       type: 'datetimePicker',
+      attrs: config.attrs,
+      rules: normalizeRules(config),
+    }
+  },
+  color(config: BaseConfig & { attrs?: ColorPickerInstance['$props'] }): SchemaItem {
+    return {
+      label: config.label,
+      key: config.key,
+      type: 'colorPicker',
       attrs: config.attrs,
       rules: normalizeRules(config),
     }

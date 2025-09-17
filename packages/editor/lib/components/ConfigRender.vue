@@ -43,6 +43,13 @@
     v-bind="config.attrs"
   />
 
+  <ColorPicker
+    v-else-if="config.type === 'colorPicker'"
+    v-model="model"
+    :append-to="appendTo"
+    v-bind="config.attrs"
+  />
+
   <component
     :is="configRender"
     v-else
@@ -58,6 +65,7 @@ import type { SchemaItem } from '@sepveneto/dnde-core/class'
 import { onMounted, shallowRef } from 'vue'
 import { useEditor } from '@/store'
 import { loadFromRemote } from '@/utils'
+import ColorPicker from './ColorPicker.vue'
 import StyleNumber from './StyleNumber.vue'
 
 defineProps<{ config: SchemaItem & { attrs?: any, options?: any[] }, stylesheet: boolean }>()
