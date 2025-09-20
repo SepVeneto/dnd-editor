@@ -99,7 +99,7 @@ export class Node {
       _view: this.type,
       // TODO
       isShow: true,
-      ...this.data,
+      data: this.data,
       style: this.style,
       list: this.list?.map(item => item.parse()),
     }
