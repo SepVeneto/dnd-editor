@@ -37,7 +37,7 @@
               >
                 <ViewRender
                   :type="element.type"
-                  :config="element.info"
+                  :config="element"
                 />
               </NodeWrap>
             </template>
