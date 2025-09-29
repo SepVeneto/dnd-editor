@@ -132,7 +132,7 @@ function handleMove(evt: any) {
 }
 function handelStart(evt: DraggableEvt) {
   const nodeId = evt.item.dataset.id
-  const draggingNode = editor.rootNode.list.find(node => node.wid === nodeId)!
+  const draggingNode = editor.rootNode.list.find((node: any) => node.wid === nodeId)!
   editor.dragging = draggingNode as Node
 }
 function onAdd(evt: DraggableEvt) {

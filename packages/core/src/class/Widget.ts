@@ -1,32 +1,46 @@
 import type { Rule } from 'async-validator'
-import type { ElOption, FormItemRule, ImageInstance, InputInstance, InputNumberInstance, SelectInstance, SwitchInstance } from 'element-plus'
+import type { ColorPickerInstance, DatePickerInstance, ElOption, ElRadio, ElRadioButton, FormItemRule, ImageInstance, InputInstance, InputNumberInstance, RadioGroupInstance, SelectInstance, SwitchInstance } from 'element-plus'
 import type { IWidget } from '@/types'
 import Validator from 'async-validator'
 
-type Option = InstanceType<typeof ElOption>
+export type Option = InstanceType<typeof ElOption>
+export type RadioOption = InstanceType<typeof ElRadio>
+export type RadioButtonOption = InstanceType<typeof ElRadioButton>
 
 interface SchemaItemBase {
   label: string
   key: string
   rules?: FormItemRule | FormItemRule[]
 }
-interface ShcemaItemInput extends SchemaItemBase { type: 'input', attrs?: InputInstance['$props'] }
+interface SchemaItemInput extends SchemaItemBase { type: 'input', attrs?: InputInstance['$props'] }
 interface SchemaItemSelect extends SchemaItemBase { type: 'select', options?: Option['$props'][], attrs?: SelectInstance['$props'] }
 interface SchemaItemNumber extends SchemaItemBase { type: 'number', attrs?: InputNumberInstance['$props'] }
 interface SchemaItemSwitch extends SchemaItemBase { type: 'switch', attrs?: SwitchInstance['$props'] }
 interface SchemaItemImage extends SchemaItemBase { type: 'image', attrs?: ImageInstance['$props'] }
-interface SchemaItemCustom extends SchemaItemBase { type: string, attrs?: Record<string, any> }
+interface SchemaItemDatetimePicker extends SchemaItemBase { type: 'datetimePicker', attrs?: Partial<DatePickerInstance['$props']> }
+interface SchemaItemColorPicker extends SchemaItemBase { type: 'colorPicker', attrs?: ColorPickerInstance['$props'] }
+interface SchemaItemCustom extends SchemaItemBase {
+  type: 'custom'
+  name: string
+  attrs?: Record<string, any>
+}
 interface SchemaItemStyleNumber extends SchemaItemBase {
   type: 'styleNumber'
 }
+interface SchemaItemRadio extends SchemaItemBase { type: 'radio', attrs?: RadioGroupInstance['$props'], options?: RadioOption['$props'][] }
+interface SchemaItemRadioButton extends SchemaItemBase { type: 'radioButton', attrs?: RadioGroupInstance['$props'], options?: RadioButtonOption['$props'][] }
 
-export type SchemaItem = ShcemaItemInput |
+export type SchemaItem = SchemaItemInput |
   SchemaItemSelect |
   SchemaItemNumber |
   SchemaItemSwitch |
   SchemaItemImage |
   SchemaItemCustom |
-  SchemaItemStyleNumber
+  SchemaItemStyleNumber |
+  SchemaItemRadio |
+  SchemaItemRadioButton |
+  SchemaItemDatetimePicker |
+  SchemaItemColorPicker
 
 export class Widget {
   public name: string

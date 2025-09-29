@@ -18,6 +18,27 @@
     />
   </ElSelect>
 
+  <ElRadioGroup
+    v-else-if="config.type === 'radio' || config.type === 'radioButton'"
+    v-model="model"
+    v-bind="config.attrs"
+  >
+    <template v-if="config.type === 'radio'">
+      <ElRadio
+        v-for="item in config.options"
+        :key="String(item.value)"
+        v-bind="item"
+      />
+    </template>
+    <template v-else-if="config.type === 'radioButton'">
+      <ElRadioButton
+        v-for="item in config.options"
+        :key="String(item.value)"
+        v-bind="item"
+      />
+    </template>
+  </ElRadioGroup>
+
   <ElInputNumber
     v-else-if="config.type === 'number'"
     v-model="model"
@@ -46,8 +67,8 @@
   <ColorPicker
     v-else-if="config.type === 'colorPicker'"
     v-model="model"
-    :append-to="appendTo"
     v-bind="config.attrs"
+    :append-to="appendTo"
   />
 
   <component
@@ -68,13 +89,14 @@ import { loadFromRemote } from '@/utils'
 import ColorPicker from './ColorPicker.vue'
 import StyleNumber from './StyleNumber.vue'
 
-defineProps<{ config: SchemaItem & { attrs?: any, options?: any[] }, stylesheet: boolean }>()
+defineProps<{ config: SchemaItem, stylesheet: boolean }>()
 const model = defineModel<any>({ required: true })
 
 const configRender = loadFromRemote('widgets', 'configRender')
 
 const editor = useEditor()
 const appendTo = shallowRef<HTMLElement>()
+
 onMounted(() => {
   const parent: HTMLElement = editor.shadowRoot!.querySelector('.mpd-editor')!
   appendTo.value = parent

@@ -19,6 +19,7 @@
     "release:plugin": "cd packages/plugins && bumpp --tag plugin@"
   },
   "dependencies": {
+    "@element-plus/icons-vue": "^2.3.1",
     "debug": "^4.4.1",
     "element-plus": "^2.11.2",
     "vue": "^3.5.15"

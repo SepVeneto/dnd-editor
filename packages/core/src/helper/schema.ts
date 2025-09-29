@@ -1,17 +1,16 @@
 import type {
   ColorPickerInstance,
   DatePickerInstance,
-  ElOption,
   ImageInstance,
   InputInstance,
   InputNumberInstance,
+  RadioInstance,
   SelectInstance,
   SwitchInstance,
 } from 'element-plus'
-import type { SchemaItem } from '@/class'
+import type { Option, RadioButtonOption, RadioOption, SchemaItem } from '@/class'
 import { likeArray } from '@/utils'
 
-type Option = InstanceType<typeof ElOption>
 interface BaseConfig {
   label: SchemaItem['label']
   key: SchemaItem['key']
@@ -51,6 +50,28 @@ export const schema = {
       rules: normalizeRules(config),
       options: config.options,
     }
+  },
+  radio(config: BaseConfig & { attrs?: RadioInstance['$props'], options?: RadioOption[] }): SchemaItem {
+    const base: SchemaItem = {
+      label: config.label,
+      key: config.key,
+      type: 'radio' as const,
+      rules: normalizeRules(config),
+      attrs: config.attrs,
+      options: config.options,
+    }
+    return base
+  },
+  radioButton(config: BaseConfig & { attrs?: RadioInstance['$props'], options?: RadioButtonOption[] }): SchemaItem {
+    const base: SchemaItem = {
+      label: config.label,
+      key: config.key,
+      type: 'radioButton' as const,
+      rules: normalizeRules(config),
+      attrs: config.attrs,
+      options: config.options,
+    }
+    return base
   },
   switch(config: BaseConfig & { attrs?: SwitchInstance['$props'] }): SchemaItem {
     return {
@@ -92,7 +113,8 @@ export const schema = {
     return {
       label: config.label,
       key: config.key,
-      type: config.type,
+      name: config.type,
+      type: 'custom',
       attrs: config.attrs,
       rules: normalizeRules(config),
     }
