@@ -156,9 +156,8 @@ registerRemotes([
     name: 'widgets',
     entry: `${props.remoteUrl}/mf-manifest.json`,
   },
-  // TODO: 重构后需要重新验证
   // 必须开启，否则从其它页面切换回编辑器会导致渲染异常
-])
+], { force: true })
 
 const ViewRender = loadFromRemote('widgets', 'viewRender')
 
