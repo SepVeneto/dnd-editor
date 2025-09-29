@@ -151,10 +151,6 @@ importers:
         version: 3.0.6(typescript@5.8.3)
 
   packages/plugins:
-    dependencies:
-      '@sepveneto/dnde':
-        specifier: 'workspace: *'
-        version: link:../editor
     devDependencies:
       '@rsbuild/core':
         specifier: ^1.4.15
