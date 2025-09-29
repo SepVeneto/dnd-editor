@@ -9,12 +9,13 @@
   <button @click="handleGet">
     get config
   </button>
+  <pre>config: {{ config }}</pre>
   <mpd-editor
     ref="editorRef"
     remote-url="http://localhost:8090"
     :root="rootSchema"
     :widgets="widgets"
-    @choose="onChoose"
+    @change="onUpdate"
   />
 </template>
 
@@ -23,18 +24,25 @@ import type { IWidget } from '@sepveneto/dnde-core'
 import type { EditorInstance } from '@/main'
 import { schema, widget } from '@sepveneto/dnde-core/helper'
 // import { register } from '../dist/editor.js'
-import { onMounted, useTemplateRef } from 'vue'
+import { onMounted, ref, useTemplateRef, watchEffect } from 'vue'
 import { register } from '@/main'
 
+const config = ref({})
+function onUpdate(val: CustomEvent) {
+  config.value = val.detail[0]
+}
 function onChoose() {
   alert('choose')
 }
+watchEffect(() => {
+  console.log(config.value)
+})
 
-const editorRef = useTemplateRef<EditorInstance>('editorRef')
+const refEditor = useTemplateRef<EditorInstance>('editorRef')
 register()
 
 onMounted(() => {
-  editorRef.value?.register(ctx => ({
+  refEditor.value?.register(ctx => ({
     // helper: 节点的操作菜单
     // widget: 组件菜单
     init() {
@@ -175,7 +183,18 @@ const serviceWidgets: IWidget<object>[] = [
   widget.create({
     name: '菜单',
     type: 'menuItem',
+    defaultData: {
+      isShow: 1,
+    },
     attributes: [
+      schema.switch({
+        label: '是否显示',
+        key: 'isShow',
+        attrs: {
+          activeValue: 1,
+          inactiveValue: 0,
+        },
+      }),
       schema.input({
         label: '标题',
         key: 'title',
@@ -202,17 +221,17 @@ const widgets = [
 ]
 
 function handleValid() {
-  editorRef.value?.validate()
+  refEditor.value?.validate()
 }
 function handleSet() {
-  editorRef.value?.setData({ _view: 'page', list: [{
+  refEditor.value?.setData({ _view: 'page', list: [{
     _uuid: 1,
     _view: 'menuItem',
     title: 'manual',
   }] })
 }
 function handleGet() {
-  const res = editorRef.value?.getData()
+  const res = refEditor.value?.getData()
   console.log(res)
 }
 </script>

@@ -231,7 +231,7 @@ export const useEditor = defineStore('editor', () => {
   function setData(data: any) {
     const widget = app.widgetMap.get(data._view) as Widget || defaultPage
 
-    const { style, list, data: props } = data
+    const { style, list = [], data: props } = data
     const info = {
       props,
       style,

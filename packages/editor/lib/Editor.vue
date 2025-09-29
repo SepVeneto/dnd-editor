@@ -8,7 +8,7 @@
 <script lang="ts" setup>
 import { init } from '@module-federation/enhanced/runtime'
 import BasicComp from '@sepveneto/basic-comp'
-import { useEventListener } from '@vueuse/core'
+import { useDebounceFn, useEventListener } from '@vueuse/core'
 import ElementPlus from 'element-plus'
 import { createPinia } from 'pinia'
 import * as Vue from 'vue'
@@ -18,6 +18,7 @@ import { editorProps } from './props'
 import { useEditor } from './store'
 
 defineProps(editorProps)
+const emit = defineEmits(['change'])
 
 init({
   name: 'editor',
@@ -46,6 +47,13 @@ if (inst) {
 }
 const editor = useEditor()
 editor.shadowRoot = Vue.useShadowRoot()!
+const updateModelValue = useDebounceFn(() => {
+  const data = editor.getData()
+  emit('change', data)
+}, 1000)
+Vue.watch(() => editor.rootNode, () => {
+  updateModelValue()
+}, { deep: true })
 // 让动态组件的样式加载在shadow dom中，而不是宿主环境中
 // @ts-expect-error: ignore
 window.__shadowdom_css_runtime__ = async (tagLink: HTMLLinkElement) => {
