@@ -1,7 +1,7 @@
 import type {
   ColorPickerInstance,
   DatePickerInstance,
-  ImageInstance,
+  // ImageInstance,
   InputInstance,
   InputNumberInstance,
   RadioInstance,
@@ -82,15 +82,15 @@ export const schema = {
       rules: normalizeRules(config),
     }
   },
-  image(config: BaseConfig & { attrs?: ImageInstance['$props'] }): SchemaItem {
-    return {
-      label: config.label,
-      key: config.key,
-      type: 'image',
-      attrs: config.attrs,
-      rules: normalizeRules(config),
-    }
-  },
+  // image(config: BaseConfig & { attrs?: ImageInstance['$props'] }): SchemaItem {
+  //   return {
+  //     label: config.label,
+  //     key: config.key,
+  //     type: 'image',
+  //     attrs: config.attrs,
+  //     rules: normalizeRules(config),
+  //   }
+  // },
   time(config: BaseConfig & { attrs?: Partial<DatePickerInstance['$props']> }): SchemaItem {
     return {
       label: config.label,
