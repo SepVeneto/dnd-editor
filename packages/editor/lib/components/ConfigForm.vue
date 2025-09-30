@@ -15,7 +15,7 @@
       <ConfigRender
         :model-value="getData(form, item.key)"
         stylesheet
-        :config="item"
+        :config="form"
         @update:model-value="updateData(item.key, $event)"
       />
     </ElFormItem>
@@ -36,7 +36,7 @@ defineExpose({
   clearValidate: () => refForm.value?.clearValidate(),
 })
 
-const form = ref<Record<string, any> | undefined>({})
+const form = ref<Record<string, any>>({})
 watch(() => props.modelValue, () => {
   form.value = props.modelValue || {}
 }, { immediate: true })

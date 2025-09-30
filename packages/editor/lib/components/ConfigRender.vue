@@ -75,7 +75,7 @@
     :is="configRender"
     v-else-if="config.type === 'custom'"
     v-model="model"
-    :config="model"
+    :config="config"
     :type="config.name"
     v-bind="config.attrs"
   />
@@ -86,14 +86,13 @@
 </template>
 
 <script lang="ts" setup>
-import type { SchemaItem } from '@sepveneto/dnde-core/class'
 import { onMounted, shallowRef } from 'vue'
 import { useEditor } from '@/store'
 import { loadFromRemote } from '@/utils'
 import ColorPicker from './ColorPicker.vue'
 import StyleNumber from './StyleNumber.vue'
 
-defineProps<{ config: SchemaItem, stylesheet: boolean }>()
+defineProps<{ config: Record<string, any>, stylesheet: boolean }>()
 const model = defineModel<any>({ required: true })
 
 const configRender = loadFromRemote('widgets', 'configRender')
