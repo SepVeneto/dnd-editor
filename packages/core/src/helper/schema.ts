@@ -51,7 +51,7 @@ export const schema = {
       options: config.options,
     }
   },
-  radio(config: BaseConfig & { attrs?: RadioInstance['$props'], options?: RadioOption[] }): SchemaItem {
+  radio(config: BaseConfig & { attrs?: RadioInstance['$props'], options?: RadioOption['$props'][] }): SchemaItem {
     const base: SchemaItem = {
       label: config.label,
       key: config.key,
@@ -62,7 +62,7 @@ export const schema = {
     }
     return base
   },
-  radioButton(config: BaseConfig & { attrs?: RadioInstance['$props'], options?: RadioButtonOption[] }): SchemaItem {
+  radioButton(config: BaseConfig & { attrs?: RadioInstance['$props'], options?: RadioButtonOption['$props'][] }): SchemaItem {
     const base: SchemaItem = {
       label: config.label,
       key: config.key,

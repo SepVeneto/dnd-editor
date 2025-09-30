@@ -60,6 +60,10 @@ onMounted(() => {
             label: '数字',
             key: 'num',
           }),
+          schema.radioButton({ label: '单选', key: 'radio', options: [
+            { label: '选项1', value: '1' },
+            { label: '选项2', value: '2' },
+          ] }),
         ],
       })
       ctx.plugins.config.addPanel({
