@@ -73,12 +73,16 @@
 
   <component
     :is="configRender"
-    v-else
+    v-else-if="config.type === 'custom'"
     v-model="model"
     :config="model"
-    :type="config.type"
+    :type="config.name"
     v-bind="config.attrs"
   />
+
+  <div v-else>
+    unknown type: {{ config.type }}
+  </div>
 </template>
 
 <script lang="ts" setup>
