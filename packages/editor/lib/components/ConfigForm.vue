@@ -15,7 +15,8 @@
       <ConfigRender
         :model-value="getData(form, item.key)"
         stylesheet
-        :config="form"
+        :config="item"
+        :data="form"
         @update:model-value="updateData(item.key, $event)"
       />
     </ElFormItem>
