@@ -3,11 +3,11 @@
     class="mpd-node mpd-relative"
     :data-id="node.wid"
     :style="normalizeStyle(node.style)"
+    :data-name="node.name"
+    :class="[isActive && 'selected', isDraggable && 'draggable', isHover && 'hover']"
   >
     <div
       class="node-wrap"
-      :class="[isActive && 'selected', isDraggable && 'draggable', isHover && 'hover']"
-      :data-name="node.name"
       @mouseenter.stop="editor.hovering = node.wid"
       @mouseleave.stop="editor.hovering = undefined"
       @click.stop="editor.selected = node.wid"
@@ -61,12 +61,7 @@ const isDraggable = computed(() => props.node.widget?.draggable)
 </script>
 
 <style lang="scss" scoped>
-.node-wrap {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  min-height: inherit;
-  cursor: default;
+.mpd-node {
   &.draggable {
     cursor: grab;
     &:active {
@@ -102,6 +97,13 @@ const isDraggable = computed(() => props.node.widget?.draggable)
     pointer-events: none;
     z-index: 1;
   }
+}
+.node-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: inherit;
+  cursor: default;
   // &.mask::after {
   //   pointer-events: auto;
   // }
