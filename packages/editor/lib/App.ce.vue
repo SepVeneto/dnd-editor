@@ -13,7 +13,6 @@
         <ElScrollbar
           height="714px"
           class=" phone-body mpd-scale-100"
-          :style="normalizeStyle(editor.rootNode.style)"
           noresize
         >
           <VueDraggable
@@ -21,6 +20,7 @@
             :group="{ name: 'editor', pull: true, put: true }"
             class="mpd-relative mpd-bg-gray-100  mpd-flex mpd-flex-col mpd-items-center"
             style="width: 375px; min-height: 714px;"
+            :style="normalizeStyle(editor.rootNode.style)"
             :component-data="{ type: 'transition-group', name: 'flip-list' }"
             :animation="200"
             ghost-class="dragging-ghost"
