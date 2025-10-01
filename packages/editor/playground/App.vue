@@ -75,24 +75,24 @@ onMounted(() => {
             key: 'enable',
           }),
 
-          schema.input({
-            label: '标题',
-            key: 'title',
-            rules: { required: true, validator: (rule, value, cb) => {
-              const data = editorRef.value!.getData()
-              if (data.dialog1?.enable) {
-                if (!value) {
-                  return cb(new Error('必填'))
-                }
-                else {
-                  cb()
-                }
-              }
-              else {
-                cb()
-              }
-            } },
-          }),
+          // schema.input({
+          //   label: '标题',
+          //   key: 'title',
+          //   rules: { validator: (rule, value, cb) => {
+          //     const data = editorRef.value!.getData()
+          //     if (data.dialog1?.enable) {
+          //       if (!value) {
+          //         return cb(new Error('必填'))
+          //       }
+          //       else {
+          //         cb()
+          //       }
+          //     }
+          //     else {
+          //       cb()
+          //     }
+          //   } },
+          // }),
           // schema.select({
           //   label: '数字',
           //   key: 'num',
@@ -126,11 +126,6 @@ onMounted(() => {
 
 const rootSchema = {
   props: [
-    schema.input({
-      label: '标题',
-      key: 'title',
-      required: true,
-    }),
     schema.number({
       label: '数字',
       key: 'num',
@@ -145,7 +140,6 @@ const rootSchema = {
     schema.input({
       label: '标题',
       key: 'title',
-      required: true,
     }),
   ],
 }
@@ -153,10 +147,16 @@ const baseWidgets: IWidget<object>[] = [
   widget.root({
     name: '活动设置',
     attributes: [
+      schema.input({
+        label: '标题',
+        key: 'title',
+        // required: true,
+      }),
+    ],
+    stylesheet: [
       schema.color({
-        label: '主题',
-        key: 'theme',
-        required: true,
+        label: '背景色',
+        key: 'backgroundColor',
       }),
     ],
   }),
@@ -166,7 +166,6 @@ const baseWidgets: IWidget<object>[] = [
       schema.input({
         label: '标题',
         key: 'title',
-        required: true,
       }),
     ],
     stylesheet: [
@@ -207,14 +206,12 @@ const serviceWidgets: IWidget<object>[] = [
       schema.color({
         label: '主题',
         key: 'theme',
-        required: true,
       }),
     ],
     stylesheet: [
       schema.styleNumber({
         label: '高度',
         key: 'width',
-        required: '1',
       }),
     ],
   }),

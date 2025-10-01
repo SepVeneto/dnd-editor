@@ -87,14 +87,11 @@ class ConfigPlugin {
 
   async validate(data: any) {
     for (const pane of this.list) {
-      if (!data[pane.name])
-        continue
-
       const _rules = pane.attributes.reduce<Record<string, Rule>>((all, curr) => {
         all[curr.key] = curr.rules || []
         return all
       }, {}) || {}
-      const valid = await new Validator(_rules).validate(data[pane.name]).catch(() => {
+      const valid = await new Validator(_rules).validate(data[pane.name] || {}).catch(() => {
         return false
       })
       if (valid) {
@@ -102,6 +99,7 @@ class ConfigPlugin {
       }
       return false
     }
+    return true
   }
 }
 
