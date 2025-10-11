@@ -12,9 +12,9 @@ export class Node {
   public style: CSSProperties = {}
   public hovering: boolean = false
   public dragging: boolean = false
-  constructor(widget: Widget, info?: { props?: Node['data'], style?: Node['style'], list?: Node['list'] }) {
+  constructor(widget: Widget, info?: { uuid?: string, props?: Node['data'], style?: Node['style'], list?: Node['list'] }) {
     this.widget = widget
-    this.wid = v4()
+    this.wid = info?.uuid || v4()
     this.list = info?.list || []
     this.data = info?.props || {}
     this.style = info?.style || {}
