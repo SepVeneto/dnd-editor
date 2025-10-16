@@ -10,7 +10,7 @@
       :label="item.label"
       :prop="item.key"
       :rules="item.rules"
-      :label-width="item.label ? '' : '0px'"
+      v-bind="item.formItem"
     >
       <ConfigRender
         :model-value="getData(form, item.key)"

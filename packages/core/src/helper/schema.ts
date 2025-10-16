@@ -1,6 +1,7 @@
 import type {
   ColorPickerInstance,
   DatePickerInstance,
+  FormItemProps,
   // ImageInstance,
   InputInstance,
   InputNumberInstance,
@@ -15,120 +16,57 @@ interface BaseConfig {
   label: SchemaItem['label']
   key: SchemaItem['key']
   tips?: string
+  formItem?: Partial<FormItemProps>
   required?: boolean | string
   rules?: SchemaItem['rules']
 }
 
 export const schema = {
-  input(config: BaseConfig & { attrs?: InputInstance['$props'] }): SchemaItem {
+  _create(type: any, config: BaseConfig & { attrs?: any }): SchemaItem {
     const base: SchemaItem = {
       label: config.label,
       key: config.key,
-      type: 'input' as const,
+      type,
+      formItem: config.formItem,
       rules: normalizeRules(config),
       attrs: config.attrs,
     }
     return base
   },
+  input(config: BaseConfig & { attrs?: InputInstance['$props'] }): SchemaItem {
+    return this._create('input', config)
+  },
   number(config: BaseConfig & { attrs?: InputNumberInstance['$props'] }): SchemaItem {
-    return {
-      label: config.label,
-      key: config.key,
-      type: 'number',
-      rules: normalizeRules(config),
-      attrs: config.attrs,
-    }
+    return this._create('number', config)
   },
   select(
     config: BaseConfig & { attrs?: SelectInstance['$props'], options?: Option['$props'][] },
   ): SchemaItem {
-    return {
-      label: config.label,
-      key: config.key,
-      type: 'select',
-      attrs: config.attrs,
-      rules: normalizeRules(config),
-      options: config.options,
-    }
+    return this._create('select', config)
   },
   radio(config: BaseConfig & { attrs?: RadioInstance['$props'], options?: RadioOption['$props'][] }): SchemaItem {
-    const base: SchemaItem = {
-      label: config.label,
-      key: config.key,
-      type: 'radio' as const,
-      rules: normalizeRules(config),
-      attrs: config.attrs,
-      options: config.options,
-    }
-    return base
+    return this._create('radio', config)
   },
   radioButton(config: BaseConfig & { attrs?: RadioInstance['$props'], options?: RadioButtonOption['$props'][] }): SchemaItem {
-    const base: SchemaItem = {
-      label: config.label,
-      key: config.key,
-      type: 'radioButton' as const,
-      rules: normalizeRules(config),
-      attrs: config.attrs,
-      options: config.options,
-    }
-    return base
+    return this._create('radioButton', config)
   },
   switch(config: BaseConfig & { attrs?: SwitchInstance['$props'] }): SchemaItem {
-    return {
-      label: config.label,
-      key: config.key,
-      type: 'switch',
-      attrs: config.attrs,
-      rules: normalizeRules(config),
-    }
+    return this._create('switch', config)
   },
-  // image(config: BaseConfig & { attrs?: ImageInstance['$props'] }): SchemaItem {
-  //   return {
-  //     label: config.label,
-  //     key: config.key,
-  //     type: 'image',
-  //     attrs: config.attrs,
-  //     rules: normalizeRules(config),
-  //   }
-  // },
   time(config: BaseConfig & { attrs?: Partial<DatePickerInstance['$props']> }): SchemaItem {
-    return {
-      label: config.label,
-      key: config.key,
-      type: 'datetimePicker',
-      attrs: config.attrs,
-      rules: normalizeRules(config),
-    }
+    return this._create('datetimePicker', config)
   },
   color(config: BaseConfig & { attrs?: ColorPickerInstance['$props'] }): SchemaItem {
-    return {
-      label: config.label,
-      key: config.key,
-      type: 'colorPicker',
-      attrs: config.attrs,
-      rules: normalizeRules(config),
-    }
+    return this._create('colorPicker', config)
   },
   custom(config: BaseConfig & { attrs?: Record<string, any>, type: string }): SchemaItem {
-    return {
-      label: config.label,
-      key: config.key,
-      name: config.type,
-      type: 'custom',
-      attrs: config.attrs,
-      rules: normalizeRules(config),
-    }
+    return this._create('custom', config)
   },
 
   styleNumber(
     config: BaseConfig,
   ): SchemaItem {
-    return {
-      label: config.label,
-      key: config.key,
-      type: 'styleNumber' as const,
-      rules: normalizeRules(config),
-    }
+    return this._create('styleNumber', config)
   },
 }
 

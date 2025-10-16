@@ -150,6 +150,7 @@ const baseWidgets: IWidget<object>[] = [
       schema.input({
         label: '标题',
         key: 'title',
+        formItem: { labelWidth: '160px' },
         // required: true,
       }),
     ],

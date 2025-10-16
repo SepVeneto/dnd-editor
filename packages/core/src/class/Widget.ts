@@ -1,5 +1,5 @@
 import type { Rule } from 'async-validator'
-import type { ColorPickerInstance, DatePickerInstance, ElOption, ElRadio, ElRadioButton, FormItemRule, ImageInstance, InputInstance, InputNumberInstance, RadioGroupInstance, SelectInstance, SwitchInstance } from 'element-plus'
+import type { ColorPickerInstance, DatePickerInstance, ElOption, ElRadio, ElRadioButton, FormItemProps, FormItemRule, ImageInstance, InputInstance, InputNumberInstance, RadioGroupInstance, SelectInstance, SwitchInstance } from 'element-plus'
 import type { IWidget } from '@/types'
 import Validator from 'async-validator'
 
@@ -10,6 +10,7 @@ export type RadioButtonOption = InstanceType<typeof ElRadioButton>
 interface SchemaItemBase {
   label: string
   key: string
+  formItem?: Partial<FormItemProps>
   rules?: FormItemRule | FormItemRule[]
 }
 interface SchemaItemInput extends SchemaItemBase { type: 'input', attrs?: InputInstance['$props'] }
