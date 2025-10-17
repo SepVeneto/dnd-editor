@@ -20,7 +20,7 @@ interface SchemaItemSwitch extends SchemaItemBase { type: 'switch', attrs?: Swit
 interface SchemaItemImage extends SchemaItemBase { type: 'image', attrs?: ImageInstance['$props'] }
 interface SchemaItemDatetimePicker extends SchemaItemBase { type: 'datetimePicker', attrs?: Partial<DatePickerInstance['$props']> }
 interface SchemaItemColorPicker extends SchemaItemBase { type: 'colorPicker', attrs?: ColorPickerInstance['$props'] }
-interface SchemaItemCustom extends SchemaItemBase {
+export interface SchemaItemCustom extends SchemaItemBase {
   type: 'custom'
   name: string
   attrs?: Record<string, any>

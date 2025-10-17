@@ -9,7 +9,7 @@ import type {
   SelectInstance,
   SwitchInstance,
 } from 'element-plus'
-import type { Option, RadioButtonOption, RadioOption, SchemaItem } from '@/class'
+import type { Option, RadioButtonOption, RadioOption, SchemaItem, SchemaItemCustom } from '@/class'
 import { likeArray } from '@/utils'
 
 interface BaseConfig {
@@ -60,7 +60,12 @@ export const schema = {
     return this._create('colorPicker', config)
   },
   custom(config: BaseConfig & { attrs?: Record<string, any>, type: string }): SchemaItem {
-    return this._create('custom', config)
+    const res: SchemaItemCustom = {
+      ...this._create('custom', config),
+      type: 'custom',
+      name: config.type,
+    }
+    return res
   },
 
   styleNumber(
