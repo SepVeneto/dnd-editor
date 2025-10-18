@@ -91,6 +91,7 @@ defineExpose({
       editor.selectNode()
       await Vue.nextTick()
       refApp.value?.validate()
+      throw new Error('验证未通过')
     }
 
     const invalidNode = await editor.rootNode.validate()
@@ -98,6 +99,7 @@ defineExpose({
       editor.selectNode(invalidNode)
       await Vue.nextTick()
       refApp.value?.validate()
+      throw new Error('验证未通过')
     }
   },
   getData() {

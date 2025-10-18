@@ -222,8 +222,9 @@ const widgets = [
   widget.group('业务组件', serviceWidgets),
 ]
 
-function handleValid() {
-  refEditor.value?.validate()
+async function handleValid() {
+  await refEditor.value?.validate()
+  console.log('valid')
 }
 function handleSet() {
   refEditor.value?.setData({ _view: 'page', list: [{
