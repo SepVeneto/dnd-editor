@@ -22,7 +22,7 @@ interface BaseConfig {
 }
 
 export const schema = {
-  _create(type: any, config: BaseConfig & { attrs?: any }): SchemaItem {
+  _create(type: any, config: BaseConfig & { attrs?: any, options?: any }): SchemaItem {
     const base: SchemaItem = {
       label: config.label,
       key: config.key,
@@ -31,7 +31,14 @@ export const schema = {
       rules: normalizeRules(config),
       attrs: config.attrs,
     }
-    return base
+    switch (type) {
+      case 'select':
+      case 'radio':
+      case 'radioButton':
+        return { ...base, type, options: config.options }
+      default:
+        return base
+    }
   },
   input(config: BaseConfig & { attrs?: InputInstance['$props'] }): SchemaItem {
     return this._create('input', config)
