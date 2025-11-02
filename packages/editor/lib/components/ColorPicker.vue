@@ -15,6 +15,7 @@
       <ElColorPickerPanel
         v-model="color"
         :border="false"
+        @click.stop
       >
         <template #footer>
           <div>
