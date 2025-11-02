@@ -163,6 +163,7 @@ const baseWidgets: IWidget<object>[] = [
   }),
   widget.columnContainer({
     icon: 'column',
+    defaultStyle: { width: 375, height: 100 },
     attributes: [
       schema.input({
         label: '标题',

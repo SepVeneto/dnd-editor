@@ -47,8 +47,8 @@
 
       <aside style="width: 500px; border: 1px solid var(--mpd-border-color); padding: 1rem;">
         <ElScrollbar
-          wrap-style="height: 700px;"
           noresize
+          @click.stop
         >
           <ConfigPanel
             v-show="!editor.dragging"
@@ -65,20 +65,8 @@
 <script lang="ts" setup>
 import type { Node } from '@sepveneto/dnde-core/class'
 import type { DraggableEvt } from './type'
-// import SettingGlobal from './layout/Setting.global.ce.vue'
-// import SettingWidget from './layout/Setting.widget.ce.vue'
-// import { useConfig } from './hooks'
 import { registerRemotes } from '@module-federation/enhanced/runtime'
 import { editorContextKey, EventEmitter } from '@sepveneto/dnde-core'
-// import Editor from '@/layout/editor.ce.vue'
-// import widgetWrap from '@/layout/widgetWrap.ce.vue'
-// import { tabbarPreview } from '@/layout/tabbar'
-// import { computed, onMounted, ref } from 'vue'
-// import { useApp } from '@/store'
-// import { useRoute, useRouter } from 'vue-router'
-// import { ArrowLeftBold } from '@element-plus/icons-vue'
-// import type { Mode } from '@/layout/EditorOperate.ce.vue'
-// import EditorOperate from '@/layout/EditorOperate.ce.vue'
 // @ts-expect-error: no def
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
 import { getCurrentInstance, onMounted, provide, useTemplateRef } from 'vue'
@@ -112,10 +100,6 @@ provide(editorContextKey, {
   bus,
   extra: props.extra || {},
 })
-
-// provide(EditorContext, reactive({
-//   nodeList: editor.rootNode,
-// }))
 
 function onEnd() {
   editor.dragging = null
@@ -161,7 +145,6 @@ registerRemotes([
 
 const ViewRender = loadFromRemote('widgets', 'viewRender')
 
-// editor.setSchema(props.root)
 app.setWidgets(props.widgets)
 
 const refConfigPanel = useTemplateRef('configPanelRef')
