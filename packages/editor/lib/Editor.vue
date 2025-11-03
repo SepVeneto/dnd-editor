@@ -6,6 +6,7 @@
 </template>
 
 <script lang="ts" setup>
+import { init } from '@module-federation/enhanced/runtime'
 import BasicComp from '@sepveneto/basic-comp'
 import { useDebounceFn, useEventListener } from '@vueuse/core'
 import ElementPlus from 'element-plus'
@@ -20,7 +21,22 @@ import { initMf } from './utils'
 const props = defineProps(editorProps)
 const emit = defineEmits(['change'])
 
-initMf(props.remoteUrl)
+init({
+  name: 'editor',
+  remotes: [],
+  shared: {
+    vue: {
+      version: '3.5.15',
+      lib: () => Vue,
+      shareConfig: {
+        singleton: true,
+        requiredVersion: '^3.5.15',
+      },
+    },
+  },
+})
+
+// initMf(props.remoteUrl)
 
 const app = Vue.createApp(App)
 const store = createPinia()
@@ -44,6 +60,7 @@ Vue.watch(() => editor.rootNode, () => {
 // 让动态组件的样式加载在shadow dom中，而不是宿主环境中
 // @ts-expect-error: ignore
 window.__shadowdom_css_runtime__ = async (tagLink: HTMLLinkElement) => {
+  debugger
   try {
     const res = await fetch(tagLink.href)
     const stylecontent = await res.text()
@@ -60,6 +77,7 @@ window.__shadowdom_css_runtime__ = async (tagLink: HTMLLinkElement) => {
   }
 }
 
+console.log('foo??')
 const refApp = useTemplateRef('appRef')
 // 编辑器内不需要触发取消选中的已经通过click.stop屏蔽了
 useEventListener(editor.shadowRoot, 'click', () => {

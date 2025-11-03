@@ -4,7 +4,7 @@ import {
   WarningFilled as IconFailed,
   Loading as IconLoading,
 } from '@element-plus/icons-vue'
-import { createInstance } from '@module-federation/enhanced/runtime'
+import { createInstance, loadRemote } from '@module-federation/enhanced/runtime'
 import debug from 'debug'
 import { ElIcon, ElTooltip } from 'element-plus'
 import * as Vue from 'vue'
@@ -15,7 +15,13 @@ let mf: ModuleFederation
 export function initMf(url: string) {
   mf = createInstance({
     name: 'editor',
-    remotes: [],
+    remotes: [
+      // 没有实际意义，只是为了触发registerRemotes的force属性
+      {
+        name: 'widgets',
+        entry: `${url}/mf-manifest.json`,
+      },
+    ],
     shared: {
       vue: {
         version: '3.5.15',
@@ -27,6 +33,7 @@ export function initMf(url: string) {
       },
     },
   })
+
   mf.registerRemotes([
     {
       name: 'widgets',
@@ -38,7 +45,8 @@ export function initMf(url: string) {
 
 export function loadFromRemote(scope: string, module: string) {
   const renderer = defineAsyncComponent({
-    loader: () => mf.loadRemote(`${scope}/${module}`) as any,
+    // loader: () => mf.loadRemote(`${scope}/${module}`) as any,
+    loader: () => loadRemote(`${scope}/${module}`) as any,
     loadingComponent: () => h(
       'div',
       { class: ['mpd-flex', 'mpd-flex-center', 'mpd-items-center', 'mpd-justify-center'] },
