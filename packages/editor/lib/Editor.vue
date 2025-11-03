@@ -24,7 +24,6 @@ initMf(props.remoteUrl)
 
 const app = Vue.createApp(App)
 const store = createPinia()
-// @ts-expect-error: ignore
 app.use(ElementPlus, { namespace: 'mpd' })
 app.use(BasicComp, {})
 app.use(store)
