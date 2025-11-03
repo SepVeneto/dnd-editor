@@ -6,7 +6,6 @@
 </template>
 
 <script lang="ts" setup>
-import { init } from '@module-federation/enhanced/runtime'
 import BasicComp from '@sepveneto/basic-comp'
 import { useDebounceFn, useEventListener } from '@vueuse/core'
 import ElementPlus from 'element-plus'
@@ -16,27 +15,16 @@ import { useTemplateRef } from 'vue'
 import App from './App.ce.vue'
 import { editorProps } from './props'
 import { useEditor } from './store'
+import { initMf } from './utils'
 
-defineProps(editorProps)
+const props = defineProps(editorProps)
 const emit = defineEmits(['change'])
 
-init({
-  name: 'editor',
-  remotes: [],
-  shared: {
-    vue: {
-      version: '3.5.15',
-      lib: () => Vue,
-      shareConfig: {
-        singleton: true,
-        requiredVersion: '^3.5.15',
-      },
-    },
-  },
-})
+initMf(props.remoteUrl)
 
 const app = Vue.createApp(App)
 const store = createPinia()
+// @ts-expect-error: ignore
 app.use(ElementPlus, { namespace: 'mpd' })
 app.use(BasicComp, {})
 app.use(store)

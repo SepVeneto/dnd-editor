@@ -82,13 +82,13 @@ const props = withDefaults(defineProps<{
   showAlpha?: boolean
   showPanelColor?: boolean
   appendTo?: HTMLElement
-}>(), { showPanelColor: true, modelValue: '' })
+}>(), { modelValue: '' })
 const emit = defineEmits(['update:modelValue'])
 const color = ref()
 const visible = ref(false)
 
 const displayedColor = computed(() => {
-  if (!props.modelValue && !props.showPanelColor) {
+  if (!props.modelValue) {
     return 'transparent'
   }
   return props.modelValue

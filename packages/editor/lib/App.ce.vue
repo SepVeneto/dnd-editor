@@ -65,7 +65,6 @@
 <script lang="ts" setup>
 import type { Node } from '@sepveneto/dnde-core/class'
 import type { DraggableEvt } from './type'
-import { registerRemotes } from '@module-federation/enhanced/runtime'
 import { editorContextKey, EventEmitter } from '@sepveneto/dnde-core'
 // @ts-expect-error: no def
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
@@ -134,14 +133,6 @@ function onAdd(evt: DraggableEvt) {
   const node = editor.rootNode.list[evt.newDraggableIndex] as Node
   editor.addNode(node)
 }
-
-registerRemotes([
-  {
-    name: 'widgets',
-    entry: `${props.remoteUrl}/mf-manifest.json`,
-  },
-  // 必须开启，否则从其它页面切换回编辑器会导致渲染异常
-], { force: true })
 
 const ViewRender = loadFromRemote('widgets', 'viewRender')
 

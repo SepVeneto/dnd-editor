@@ -67,8 +67,8 @@
   <ColorPicker
     v-else-if="config.type === 'colorPicker'"
     v-model="model"
-    v-bind="config.attrs"
     :append-to="appendTo"
+    :show-alpha="config.attrs?.showAlpha"
   />
 
   <component
