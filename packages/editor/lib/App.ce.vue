@@ -68,7 +68,7 @@ import type { DraggableEvt } from './type'
 import { editorContextKey, EventEmitter } from '@sepveneto/dnde-core'
 // @ts-expect-error: no def
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
-import { getCurrentInstance, onMounted, provide, useTemplateRef } from 'vue'
+import { getCurrentInstance, onMounted, onUnmounted, provide, useTemplateRef } from 'vue'
 import VueDraggable from 'vuedraggable'
 import NodeWrap from './components/NodeWrap.vue'
 import ConfigPanel from './layout/configPanel.vue'
@@ -91,6 +91,21 @@ const bus = new EventEmitter((event: string, ...args: any) => {
 const refRoot = useTemplateRef('rootRef')
 onMounted(() => {
   editor.elementRoot = refRoot.value!
+})
+
+// TODO: 需要优化
+// 目前由于mf在引入时force对于web components在不重新导入的情况下没办法再次加载，导致从其它页面切换回来时不会重新加载样式
+// 针对常规项目，样式第一次加载时会被挂载到dom上，所以不需要处理重复打开的情况
+// 但是 web components中，样式会被挂载到shadow dom中，而重复打开会重新创建shdow dom
+// 导致样式丢失
+// 未来要么mf兼容web components，要么提供手动清除缓存的方式
+// 或者可以从根本上解决，即考虑其它样式加载的方式
+onUnmounted(() => {
+  Object.keys(window.__GLOBAL_LOADING_REMOTE_ENTRY__).forEach((key) => {
+    delete window.__GLOBAL_LOADING_REMOTE_ENTRY__[key]
+  })
+  // @ts-expect-error: ignore
+  delete window.EDITOR_WIDGETS
 })
 
 provide(editorContextKey, {

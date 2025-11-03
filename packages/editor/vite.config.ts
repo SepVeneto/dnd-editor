@@ -18,6 +18,9 @@ export default defineConfig({
   })],
   server: {
     port: 8082,
+    fs: {
+      allow: ['..', '/node_modules/'],
+    },
   },
   resolve: {
     alias: {
