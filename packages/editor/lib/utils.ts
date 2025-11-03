@@ -1,16 +1,44 @@
+import type { ModuleFederation } from '@module-federation/enhanced/runtime'
 import type { AppContext, CSSProperties, VNode } from 'vue'
 import {
   WarningFilled as IconFailed,
   Loading as IconLoading,
 } from '@element-plus/icons-vue'
-import { loadRemote } from '@module-federation/enhanced/runtime'
+import { createInstance } from '@module-federation/enhanced/runtime'
 import debug from 'debug'
 import { ElIcon, ElTooltip } from 'element-plus'
+import * as Vue from 'vue'
 import { createVNode, defineAsyncComponent, h, render } from 'vue'
+
+let mf: ModuleFederation
+
+export function initMf(url: string) {
+  mf = createInstance({
+    name: 'editor',
+    remotes: [],
+    shared: {
+      vue: {
+        version: '3.5.15',
+        lib: () => Vue,
+        shareConfig: {
+          singleton: true,
+          requiredVersion: '^3.5.15',
+        },
+      },
+    },
+  })
+  mf.registerRemotes([
+    {
+      name: 'widgets',
+      entry: `${url}/mf-manifest.json`,
+    },
+  // 必须开启，否则从其它页面切换回编辑器会导致渲染异常
+  ], { force: true })
+}
 
 export function loadFromRemote(scope: string, module: string) {
   const renderer = defineAsyncComponent({
-    loader: () => loadRemote(`${scope}/${module}`) as any,
+    loader: () => mf.loadRemote(`${scope}/${module}`) as any,
     loadingComponent: () => h(
       'div',
       { class: ['mpd-flex', 'mpd-flex-center', 'mpd-items-center', 'mpd-justify-center'] },
