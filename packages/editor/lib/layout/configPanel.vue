@@ -17,22 +17,32 @@
         label="属性"
         name="props"
       >
-        <ConfigForm
-          ref="propRef"
-          v-model="editor.selectedNode.data"
-          :list="propSchema"
-        />
+        <ElScrollbar
+          height="700px"
+          wrap-style="padding-right: 20px;"
+        >
+          <ConfigForm
+            ref="propRef"
+            v-model="editor.selectedNode.data"
+            :list="propSchema"
+          />
+        </ElScrollbar>
       </ElTabPane>
       <ElTabPane
         v-if="styleSchema.length > 0"
         label="样式"
         name="style"
       >
-        <ConfigForm
-          ref="styleRef"
-          v-model="editor.selectedNode.style"
-          :list="styleSchema"
-        />
+        <ElScrollbar
+          height="700px"
+          wrap-style="padding-right: 20px;"
+        >
+          <ConfigForm
+            ref="styleRef"
+            v-model="editor.selectedNode.style"
+            :list="styleSchema"
+          />
+        </ElScrollbar>
       </ElTabPane>
       <template v-if="isSelectRoot">
         <ElTabPane
@@ -41,11 +51,16 @@
           :label="pane.label"
           :name="pane.name"
         >
-          <ConfigForm
-            :ref="(ref: any) => refPageConfig.push({ ref, name: pane.name })"
-            v-model="editor.selectedNode.data[pane.name]"
-            :list="pane.attributes"
-          />
+          <ElScrollbar
+            height="700px"
+            wrap-style="padding-right: 20px;"
+          >
+            <ConfigForm
+              :ref="(ref: any) => refPageConfig.push({ ref, name: pane.name })"
+              v-model="editor.selectedNode.data[pane.name]"
+              :list="pane.attributes"
+            />
+          </ElScrollbar>
         </ElTabPane>
       </template>
     </ElTabs>
