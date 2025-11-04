@@ -27,10 +27,11 @@ export default defineConfig({
   },
   dev: {
     hmr: false,
+    lazyCompilation: false,
   },
   server: {
     // server: 'https',
-    compress: true,
+    // compress: true,
     port: 8090,
     headers: {
       'Access-Control-Allow-Origin': '*',
@@ -38,6 +39,7 @@ export default defineConfig({
   },
   output: {
     target: 'web',
+    // module: true,
     // assetPrefix: 'auto',
   },
   plugins: [
@@ -49,7 +51,8 @@ export default defineConfig({
       name: 'widgets',
       filename: 'remoteEntry.js',
       library: {
-        type: 'umd',
+        // type: 'module',
+        type: 'global',
         name: 'widgets',
       },
       exposes: {

@@ -6,6 +6,10 @@ export const editorProps = {
     type: String,
     required: true,
   },
+  name: {
+    type: String,
+    default: 'widgets',
+  },
   widgets: {
     type: Array as PropType<LikeWidget[]>,
     default: () => ([]),

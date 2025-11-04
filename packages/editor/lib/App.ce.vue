@@ -105,7 +105,7 @@ onUnmounted(() => {
     delete window.__GLOBAL_LOADING_REMOTE_ENTRY__[key]
   })
   // @ts-expect-error: ignore
-  delete window.EDITOR_WIDGETS
+  delete window[props.name]
 })
 
 provide(editorContextKey, {
