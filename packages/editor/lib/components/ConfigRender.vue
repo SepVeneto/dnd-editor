@@ -76,7 +76,8 @@
     v-else-if="config.type === 'custom'"
     v-model="model"
     :config="config"
-    :type="config.name"
+    scope="config"
+    :type="`${config.name}.config`"
     :data="data"
     v-bind="config.attrs"
   />
@@ -97,7 +98,7 @@ import StyleNumber from './StyleNumber.vue'
 defineProps<{ data: Record<string, any>, config: SchemaItem, stylesheet: boolean }>()
 const model = defineModel<any>({ required: true })
 
-const configRender = loadFromRemote('widgets', 'configRender')
+const configRender = loadFromRemote('widgets', 'remoteRender')
 
 const editor = useEditor()
 const appendTo = shallowRef<HTMLElement>()

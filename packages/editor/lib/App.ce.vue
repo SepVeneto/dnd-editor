@@ -36,7 +36,8 @@
                 :node="element"
               >
                 <ViewRender
-                  :type="element.type"
+                  scope="widgets"
+                  :type="`${element.type}.view`"
                   :config="element"
                 />
               </NodeWrap>
@@ -149,7 +150,7 @@ function onAdd(evt: DraggableEvt) {
   editor.addNode(node)
 }
 
-const ViewRender = loadFromRemote('widgets', 'viewRender')
+const ViewRender = loadFromRemote('widgets', 'remote')
 
 app.setWidgets(props.widgets)
 
