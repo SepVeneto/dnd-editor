@@ -97,8 +97,6 @@ export class Node {
       _uuid: this.wid,
       _name: this.name,
       _view: this.type,
-      // TODO
-      isShow: true,
       data: this.data,
       style: this.style,
       list: this.list?.map(item => item.parse()),
