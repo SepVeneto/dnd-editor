@@ -98,7 +98,7 @@ import StyleNumber from './StyleNumber.vue'
 defineProps<{ data: Record<string, any>, config: SchemaItem, stylesheet: boolean }>()
 const model = defineModel<any>({ required: true })
 
-const configRender = loadFromRemote('widgets', 'remoteRender')
+const configRender = loadFromRemote('widgets', 'remote')
 
 const editor = useEditor()
 const appendTo = shallowRef<HTMLElement>()

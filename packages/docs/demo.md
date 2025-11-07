@@ -1,5 +1,6 @@
-<script setup lang="ts">
-import playground from './playground.vue'
-</script>
+---
+layout: page
+sidebar: false
+---
 
-<playground />
+<Playground />

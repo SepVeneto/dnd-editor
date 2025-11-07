@@ -1,14 +1,10 @@
 import { resolve } from 'node:path'
-import AutoImport from 'unplugin-auto-import/vite'
-import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
+import Components from 'unplugin-vue-components/vite'
 
 export function getViteConfig() {
   return {
     plugins: [
-      AutoImport({
-        resolvers: [ElementPlusResolver()],
-      }),
       Components({
         resolvers: [ElementPlusResolver()],
       }),
@@ -17,6 +13,6 @@ export function getViteConfig() {
         include: [/\.vue$/, /\.vue\?vue/, /\.md$/],
         transformer: 'vue3',
       }),
-    ]
+    ],
   }
 }

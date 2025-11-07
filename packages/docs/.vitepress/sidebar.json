@@ -7,6 +7,10 @@
         "text": "介绍"
       },
       {
+        "link": "/base/quickstart",
+        "text": "快速开始"
+      },
+      {
         "link": "/base/explain",
         "text": "名词解释"
       },
@@ -25,72 +29,24 @@
     ]
   },
   {
-    "text": "组件",
+    "text": "使用",
     "items": [
       {
-        "link": "/widget/",
-        "text": "Config Provider 全局配置"
+        "link": "/usage/widgets",
+        "text": "组件"
+      },
+      {
+        "link": "/usage/schema",
+        "text": "数据"
+      },
+      {
+        "link": "/usage/extension",
+        "text": "扩展"
       }
     ]
   },
   {
-    "text": "基础组件",
-    "items": [
-      {
-        "link": "/components/button",
-        "text": "Button 按钮"
-      },
-      {
-        "link": "/components/status",
-        "text": "Status 状态"
-      },
-      {
-        "link": "/components/motion",
-        "text": "Motion 动画"
-      }
-    ]
-  },
-  {
-    "text": "表单组件",
-    "items": [
-      {
-        "link": "/components/form",
-        "text": "Form 表单"
-      },
-      {
-        "link": "/components/select",
-        "text": "Select 选择器"
-      },
-      {
-        "link": "/components/input",
-        "text": "Input 输入框"
-      },
-      {
-        "link": "/components/upload",
-        "text": "Upload 上传"
-      },
-      {
-        "link": "/components/date-picker",
-        "text": "Date Picker 日期时间选择器"
-      }
-    ]
-  },
-  {
-    "text": "复合组件",
-    "items": [
-      {
-        "link": "/components/table",
-        "text": "Table 表格"
-      },
-
-      {
-        "link": "/components/search",
-        "text": "Search 搜索栏"
-      },
-      {
-        "link": "/components/dialog",
-        "text": "Dialog 对话框"
-      }
-    ]
+    "link": "/limit",
+    "text": "局限性"
   }
 ]

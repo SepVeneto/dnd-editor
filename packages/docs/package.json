@@ -12,11 +12,13 @@
   },
   "dependencies": {
     "@sepveneto/dnde": "workspace: *",
+    "@sepveneto/dnde-core": "workspace: *",
     "@vitejs/plugin-vue": "^5.2.4",
     "markdown-it-task-lists": "^2.1.1",
     "vitepress": "^1.6.4"
   },
   "devDependencies": {
+    "@shikijs/vitepress-twoslash": "^2",
     "@types/markdown-it": "^14.1.2",
     "@types/node": "^24.10.0",
     "markdown-it": "^14.1.0",
