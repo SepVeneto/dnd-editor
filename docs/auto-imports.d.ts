@@ -8,4 +8,5 @@ export {}
 declare global {
   const ElButtonGroup: typeof import('element-plus/es').ElButtonGroup
   const ElCheckboxGroup: typeof import('element-plus/es').ElCheckboxGroup
+  const ElOption2: typeof import('element-plus/es').ElOption2
 }

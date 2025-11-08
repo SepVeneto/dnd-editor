@@ -12,9 +12,6 @@
     "module": "esnext",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
-    "types": [
-      "element-plus/global",
-    ],
     "strict": true,
     "sourceMap": true,
     "allowSyntheticDefaultImports": true,
@@ -26,7 +23,7 @@
   "include": [
     ".vitepress/**/*.ts",
     ".vitepress/**/*.tsx",
-    ".vitepress/**/*.vue",
+    ".vitepress/**/*.vue"
   ],
   "exclude": [
     "node_modules"

@@ -1,5 +1,6 @@
 import type { EnhanceAppContext } from 'vitepress'
 import TwoslashFloatingVue from '@shikijs/vitepress-twoslash/client'
+import { ID_INJECTION_KEY } from 'element-plus'
 import theme from 'vitepress/theme'
 
 import './custom.scss'
@@ -10,5 +11,9 @@ export default {
   enhanceApp({ app }: EnhanceAppContext) {
     // @ts-expect-error: ignore
     app.use(TwoslashFloatingVue)
+    app.provide(ID_INJECTION_KEY, {
+      prefix: 1024,
+      current: 0,
+    })
   },
 }

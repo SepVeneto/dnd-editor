@@ -8,7 +8,8 @@
   "keywords": [],
   "main": "index.js",
   "scripts": {
-    "dev": "vitepress"
+    "dev": "vitepress",
+    "build": "vitepress build"
   },
   "dependencies": {
     "@sepveneto/dnde": "workspace: *",

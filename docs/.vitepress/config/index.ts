@@ -10,7 +10,7 @@ export default defineConfig({
   base: '/dnd-editor',
   themeConfig: {
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/SepVeneto/dnd-editor' }
+      { icon: 'github', link: 'https://github.com/SepVeneto/dnd-editor' },
     ],
     nav: [
       { text: '首页', link: '/' },
@@ -22,13 +22,14 @@ export default defineConfig({
   lang: 'zh-CN',
   markdown: {
     config: mpPlugin,
-    codeTransformers: [
-      transformerTwoslash({
-        twoslashOptions: {
-          handbookOptions: { noErrors: true },
-        },
-      }),
-    ],
+    // TODO: build error
+    // codeTransformers: [
+    //   transformerTwoslash({
+    //     twoslashOptions: {
+    //       handbookOptions: { noErrors: true },
+    //     },
+    //   }),
+    // ],
   },
   vite: getViteConfig(),
   vue: {
