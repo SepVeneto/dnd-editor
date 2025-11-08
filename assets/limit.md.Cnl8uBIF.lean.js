@@ -1,0 +1,1 @@
+import{a8 as a,i as o,o as t,aF as d}from"./chunks/framework.-UWVxQvf.js";const p=JSON.parse('{"title":"局限性","description":"","frontmatter":{"title":"局限性"},"headers":[],"relativePath":"limit.md","filePath":"limit.md"}'),r={name:"limit.md"};function i(c,e,n,l,s,m){return t(),o("div",null,[...e[0]||(e[0]=[d("",6)])])}const h=a(r,[["render",i]]);export{p as __pageData,h as default};

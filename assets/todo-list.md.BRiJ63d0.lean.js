@@ -1,0 +1,1 @@
+import{a8 as s,i as e,o as i,aF as a}from"./chunks/framework.-UWVxQvf.js";const m=JSON.parse('{"title":"","description":"","frontmatter":{},"headers":[],"relativePath":"todo-list.md","filePath":"todo-list.md"}'),l={name:"todo-list.md"};function c(o,t,d,k,n,p){return i(),e("div",null,[...t[0]||(t[0]=[a("",1)])])}const r=s(l,[["render",c]]);export{m as __pageData,r as default};
