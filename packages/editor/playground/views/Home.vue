@@ -12,7 +12,7 @@
   <pre>config: {{ config }}</pre>
   <mpd-editor
     ref="editorRef"
-    remote-url="http://localhost:8090"
+    remote-url="http://localhost:8091"
     :root="rootSchema"
     :widgets="widgets"
     @change="onUpdate"

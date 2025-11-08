@@ -42,6 +42,10 @@
       {
         "link": "/usage/extension",
         "text": "扩展"
+      },
+      {
+        "link": "/usage/viewconfig",
+        "text": "视图和配置"
       }
     ]
   },

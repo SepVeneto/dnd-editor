@@ -95,7 +95,7 @@ import { loadFromRemote } from '@/utils'
 import ColorPicker from './ColorPicker.vue'
 import StyleNumber from './StyleNumber.vue'
 
-defineProps<{ data: Record<string, any>, config: SchemaItem, stylesheet: boolean }>()
+defineProps<{ data: Record<string, any>, config: SchemaItem }>()
 const model = defineModel<any>({ required: true })
 
 const configRender = loadFromRemote('widgets', 'remote')
