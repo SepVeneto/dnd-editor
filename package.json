@@ -11,10 +11,11 @@
     "build:plugin": "pnpm -C packages/plugins build",
     "build:core": "pnpm -C packages/core build",
     "build:editor": "pnpm -C packages/editor build",
-    "bootstrap": "pnpm build:core && pnpm build:plugin",
+    "bootstrap": "pnpm build:core && pnpm build:plugin && pnpm build:editor",
     "dev": "pnpm -C packages/editor dev",
     "docs:dev": "pnpm -C docs dev",
     "docs:build": "pnpm -C docs build",
+    "docs:deploy": "pnpm bootstrap && pnpm docs:build",
     "release:core": "cd packages/core && bumpp --tag core@",
     "release:editor": "cd packages/editor && bumpp --tag editor@",
     "release:plugin": "cd packages/plugins && bumpp --tag plugin@"
