@@ -22,7 +22,7 @@ jobs:
         run: |
           npm i -g pnpm@9
           pnpm i --registry=https://registry.npmmirror.com
-          pnpm docs:build
+          pnpm docs:deploy
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@4.1.0
         with:
