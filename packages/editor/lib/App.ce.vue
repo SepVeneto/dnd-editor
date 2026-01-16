@@ -142,6 +142,10 @@ function onAdd(evt: DraggableEvt) {
     // 跨容器移动触发fixed时需要手动还原到旧容器中
     if (evt.to !== evt.from) {
       const oldContainer = editor.nodeMap.get(evt.from.dataset.id!)!
+      // 如果没有父容器说明是从组件栏中拖动的，就不需要还原了
+      if (!oldContainer) {
+        return
+      }
       ;(oldContainer.list as Node[]).splice(evt.oldIndex, 0, deletedNode)
     }
     return
