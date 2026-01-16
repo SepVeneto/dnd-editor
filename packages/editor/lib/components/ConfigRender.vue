@@ -72,7 +72,7 @@
   />
 
   <component
-    :is="configRender"
+    :is="RemoteRender"
     v-else-if="config.type === 'custom'"
     v-model="model"
     :config="config"
@@ -98,7 +98,7 @@ import StyleNumber from './StyleNumber.vue'
 defineProps<{ data: Record<string, any>, config: SchemaItem }>()
 const model = defineModel<any>({ required: true })
 
-const configRender = loadFromRemote('widgets', 'remote')
+const RemoteRender = loadFromRemote('widgets', 'remote')
 
 const editor = useEditor()
 const appendTo = shallowRef<HTMLElement>()

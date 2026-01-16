@@ -18,8 +18,9 @@
       <NodeWrap
         :node="element"
       >
-        <ViewRender
-          :type="element.type"
+        <RemoteRender
+          scope="widgets"
+          :type="`${element.type}.view`"
           :config="element.data"
           :style="element.style"
         />
@@ -38,7 +39,7 @@ import NodeWrap from './NodeWrap.vue'
 
 const props = defineProps<{ node: Node }>()
 
-const ViewRender = loadFromRemote('widgets', 'viewRender')
+const RemoteRender = loadFromRemote('widgets', 'remote')
 const editor = useEditor()
 
 function handleStart(evt: DraggableEvt) {
