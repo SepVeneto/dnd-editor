@@ -7,6 +7,9 @@
   "license": "GPL",
   "keywords": [],
   "main": "index.js",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "build:plugin": "pnpm -C packages/plugins build",
     "build:core": "pnpm -C packages/core build",
