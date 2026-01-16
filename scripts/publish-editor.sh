@@ -14,8 +14,6 @@ pnpm build
 
 cd -
 
-npm config set registry https://registry.npmjs.org/
-
-npm publish --no-git-checks --access public -w packages/editor --tag beta
+npm publish --no-git-checks --access public -w packages/editor --tag beta --registry=https://registry.npmjs.org/
 
 echo "✅ Publish completed"
