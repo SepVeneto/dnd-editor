@@ -24,16 +24,6 @@ jobs:
           node-version: 20.17.0
           registry-url: https://registry.npmjs.org
           scope: '@sepveneto'
-          auth-token: ${{ steps.npm-auth.outputs.token }}
-
-      - name: Authenticate to npm
-        id: npm-auth
-        uses: actions/setup-node@v3
-        with:
-          node-version: 20.17.0
-          registry-url: https://registry.npmjs.org/
-          scope: '@sepveneto'
-          publish-token: true # 开启 OIDC 临时 token
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
