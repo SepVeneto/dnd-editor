@@ -9,6 +9,9 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
 
     steps:
       - uses: actions/checkout@v3
@@ -22,7 +25,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: 20.16.0
+          node-version: 20.17.0
           registry-url: https://registry.npmjs.org
 
       - name: Get pnpm store directory
@@ -37,14 +40,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
 
+      - name: Update npm
+        run: npm install npm@11.6.1 -g
+
       - name: Get Version
         run: echo "TAG_VERSION=${GITHUB_REF#refs/*/plugin@}" >> $GITHUB_ENV
-
-      - name: Gen npmrc
-        run: echo "//registry.npmjs.com/:_authToken=${{ secrets.NPM_PUBLISH_TOKEN }}" > ./.npmrc
 
       - name: Build and Publish
         run: sh ./scripts/publish-plugin.sh
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+          NODE_AUTH_TOKEN: ''
           NPM_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
