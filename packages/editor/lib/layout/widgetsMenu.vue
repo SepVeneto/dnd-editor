@@ -2,7 +2,7 @@
 import type { WidgetGroup } from '@/store/app'
 import { Node, Widget } from '@sepveneto/dnde-core/class'
 import { ElCard, ElCollapse, ElCollapseItem, ElScrollbar, ElTabPane, ElTabs } from 'element-plus'
-import { computed, h, shallowRef, watchEffect } from 'vue'
+import { h, shallowRef } from 'vue'
 import VueDraggable from 'vuedraggable'
 import IconWidget from '@/assets/widget.vue'
 import { useEditor } from '@/store'
@@ -32,15 +32,11 @@ export default {
 
     const render = shallowRef()
 
-    const needTabs = computed(() => {
-      return editor.plugins.widget.list.length > 0
-    })
+    // const needTabs = computed(() => {
+    //   return editor.plugins.widget.list.length > 0
+    // })
 
-    watchEffect(() => {
-      if (needTabs.value) {
-        render.value = loadFromRemote('widgets', 'remote')
-      }
-    })
+    render.value = loadFromRemote('widgets', 'remote')
 
     const widgetRenderer = (element: any) => (
       h(
