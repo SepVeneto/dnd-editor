@@ -10,7 +10,6 @@ sed -i "s/\"version\": \"0.0.1\",/\"version\": \"$TAG_VERSION\",/" package.json
 
 pnpm build
 
-cd -
-npm publish --no-git-checks --access public -w packages/core --registry=https://registry.npmjs.org/
+pnpm publish --no-git-checks --access public --registry=https://registry.npmjs.org/
 
 echo "✅ Publish completed"
