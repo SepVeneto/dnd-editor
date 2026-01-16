@@ -137,7 +137,7 @@ function handelStart(evt: DraggableEvt) {
 function onAdd(evt: DraggableEvt) {
   const nextNode = editor.rootNode.list[evt.newIndex + 1]
   if (nextNode && nextNode.widget.isFixed) {
-    const deletedNode = editor.rootNode.list.splice(0, 1)[0]
+    const deletedNode = editor.rootNode.list.splice(evt.newIndex, 1)[0]
 
     // 跨容器移动触发fixed时需要手动还原到旧容器中
     if (evt.to !== evt.from) {
