@@ -56,7 +56,7 @@
             wrap-style="padding-right: 20px;"
           >
             <ConfigForm
-              :ref="(ref: any) => refPageConfig.push({ ref, name: pane.name })"
+              :ref="(ref: any) => { refPageConfig = []; refPageConfig.push({ ref, name: pane.name }) }"
               v-model="editor.selectedNode.data[pane.name]"
               :list="pane.attributes"
             />
