@@ -56,7 +56,7 @@
             wrap-style="padding-right: 20px;"
           >
             <ConfigForm
-              :ref="(ref: any) => { refPageConfig = []; refPageConfig.push({ ref, name: pane.name }) }"
+              :ref="(ref: any) => updateRef(ref, pane.name)"
               v-model="editor.selectedNode.data[pane.name]"
               :list="pane.attributes"
             />
@@ -71,7 +71,7 @@
 import type { Raw } from 'vue'
 import { ArrowRight } from '@element-plus/icons-vue'
 import { watchOnce } from '@vueuse/core'
-import { computed, nextTick, ref, shallowRef, useTemplateRef, watch } from 'vue'
+import { computed, nextTick, onBeforeUpdate, ref, shallowRef, useTemplateRef, watch } from 'vue'
 import ConfigForm from '@/components/ConfigForm.vue'
 import { useEditor } from '@/store'
 
@@ -113,6 +113,19 @@ watch(() => editor.selected, () => {
     refProp.value?.clearValidate()
     refStyle.value?.clearValidate()
   })
+})
+
+function updateRef(r: PaneInstance, name: string) {
+  if (!r)
+    return []
+
+  refPageConfig.value.push({ ref: r, name })
+
+  return refPageConfig.value.map(item => item.ref)
+}
+
+onBeforeUpdate(() => {
+  refPageConfig.value.length = 0
 })
 
 defineExpose({
