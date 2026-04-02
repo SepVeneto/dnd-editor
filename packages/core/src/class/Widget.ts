@@ -14,7 +14,12 @@ interface SchemaItemBase {
   rules?: FormItemRule | FormItemRule[]
 }
 interface SchemaItemInput extends SchemaItemBase { type: 'input', attrs?: InputInstance['$props'] }
-interface SchemaItemSelect extends SchemaItemBase { type: 'select', options?: Option['$props'][], attrs?: SelectInstance['$props'] }
+interface SchemaItemSelect extends SchemaItemBase {
+  type: 'select',
+  options?: Option['$props'][],
+  attrs?: SelectInstance['$props'],
+  link?: Record<string | number, SchemaItem[]>,
+}
 interface SchemaItemNumber extends SchemaItemBase { type: 'number', attrs?: InputNumberInstance['$props'] }
 interface SchemaItemSwitch extends SchemaItemBase { type: 'switch', attrs?: SwitchInstance['$props'] }
 interface SchemaItemImage extends SchemaItemBase { type: 'image', attrs?: ImageInstance['$props'] }
@@ -28,8 +33,18 @@ export interface SchemaItemCustom extends SchemaItemBase {
 interface SchemaItemStyleNumber extends SchemaItemBase {
   type: 'styleNumber'
 }
-interface SchemaItemRadio extends SchemaItemBase { type: 'radio', attrs?: RadioGroupInstance['$props'], options?: RadioOption['$props'][] }
-interface SchemaItemRadioButton extends SchemaItemBase { type: 'radioButton', attrs?: RadioGroupInstance['$props'], options?: RadioButtonOption['$props'][] }
+interface SchemaItemRadio extends SchemaItemBase {
+  type: 'radio',
+  attrs?: RadioGroupInstance['$props'],
+  options?: RadioOption['$props'][],
+  link?: Record<string | number, SchemaItem[]>
+}
+interface SchemaItemRadioButton extends SchemaItemBase {
+  type: 'radioButton',
+  attrs?: RadioGroupInstance['$props'],
+  options?: RadioButtonOption['$props'][],
+  link?: Record<string | number, SchemaItem[]>
+}
 
 export type SchemaItem = SchemaItemInput |
   SchemaItemSelect |

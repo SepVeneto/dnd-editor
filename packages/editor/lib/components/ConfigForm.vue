@@ -4,28 +4,20 @@
     :model="form"
     label-width="80px"
   >
-    <ElFormItem
+    <ConfigItem
       v-for="item in list"
       :key="item.key"
-      :label="item.label"
-      :prop="item.key"
-      :rules="item.rules"
-      v-bind="item.formItem"
-    >
-      <ConfigRender
-        :model-value="getData(form, item.key)"
-        :config="item"
-        :data="form"
-        @update:model-value="updateData(item.key, $event)"
-      />
-    </ElFormItem>
+      :form="form"
+      :config="item"
+      @change="onChange"
+    />
   </ElForm>
 </template>
 
 <script lang="ts" setup>
 import type { SchemaItem } from '@sepveneto/dnde-core/class'
 import { ref, useTemplateRef, watch } from 'vue'
-import ConfigRender from './ConfigRender.vue'
+import ConfigItem from './ConfigItem.vue'
 
 const props = defineProps<{ list: SchemaItem[], modelValue: Record<string, any> | undefined }>()
 const emit = defineEmits(['update:modelValue'])
@@ -41,36 +33,7 @@ watch(() => props.modelValue, () => {
   form.value = props.modelValue || {}
 }, { immediate: true })
 
-function updateData(key: string, val: unknown) {
-  const path = key.split('.')
-  const _path = path.slice(0, -1)
-  const parent = (path.length === 1
-    ? form.value
-    : _path.reduce((obj, curr) => {
-        if (!obj) {
-          obj = {}
-        }
-        return obj[curr]
-      }, form.value)) || {}
-  parent[path.slice(-1)[0]] = val
+function onChange() {
   emit('update:modelValue', form.value)
-}
-function getData(data: Record<string, any> | undefined, key: string): any {
-  if (!data)
-    return null
-
-  const path = key.split('.')
-
-  if (path.length === 1) {
-    return data[key]
-  }
-  // 自动补全数据结构
-  const res = path.reduce((obj, curr, index) => {
-    if (!obj[curr] && index !== path.length - 1) {
-      obj[curr] = {}
-    }
-    return obj[curr] == null ? '' : obj[curr]
-  }, data)
-  return res || null
 }
 </script>

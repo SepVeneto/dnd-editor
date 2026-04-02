@@ -22,7 +22,7 @@ interface BaseConfig {
 }
 
 export const schema = {
-  _create(type: any, config: BaseConfig & { attrs?: any, options?: any }): SchemaItem {
+  _create(type: any, config: BaseConfig & { attrs?: any, options?: any, link?: any }): SchemaItem {
     const base: SchemaItem = {
       label: config.label,
       key: config.key,
@@ -35,7 +35,7 @@ export const schema = {
       case 'select':
       case 'radio':
       case 'radioButton':
-        return { ...base, type, options: config.options }
+        return { ...base, type, options: config.options, link: config.link }
       default:
         return base
     }
@@ -47,14 +47,14 @@ export const schema = {
     return this._create('number', config)
   },
   select(
-    config: BaseConfig & { attrs?: SelectInstance['$props'], options?: Option['$props'][] },
+    config: BaseConfig & { attrs?: SelectInstance['$props'], options?: Option['$props'][], link?: Record<string, SchemaItem[]> },
   ): SchemaItem {
     return this._create('select', config)
   },
-  radio(config: BaseConfig & { attrs?: RadioInstance['$props'], options?: RadioOption['$props'][] }): SchemaItem {
+  radio(config: BaseConfig & { attrs?: RadioInstance['$props'], options?: RadioOption['$props'][], link?: Record<string, SchemaItem[]> }): SchemaItem {
     return this._create('radio', config)
   },
-  radioButton(config: BaseConfig & { attrs?: RadioInstance['$props'], options?: RadioButtonOption['$props'][] }): SchemaItem {
+  radioButton(config: BaseConfig & { attrs?: RadioInstance['$props'], options?: RadioButtonOption['$props'][], link?: Record<string, SchemaItem[]> }): SchemaItem {
     return this._create('radioButton', config)
   },
   switch(config: BaseConfig & { attrs?: SwitchInstance['$props'] }): SchemaItem {
