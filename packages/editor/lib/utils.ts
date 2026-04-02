@@ -1,5 +1,5 @@
 import type { ModuleFederation } from '@module-federation/enhanced/runtime'
-import type { AppContext, CSSProperties, VNode } from 'vue'
+import type { AppContext, CSSProperties, InjectionKey, Ref, VNode } from 'vue'
 import {
   WarningFilled as IconFailed,
   Loading as IconLoading,
@@ -143,3 +143,5 @@ export function normalizeStyle(customStyle: Record<string, any>, mode: 'grid' | 
 export function createDebug(namespace: string) {
   return debug(`mpd:${namespace}`)
 }
+
+export const EditorKey: InjectionKey<{ root: Ref<HTMLDivElement | null> }> = Symbol('EditorContext')

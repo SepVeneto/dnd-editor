@@ -78,7 +78,7 @@ import WidgetsMenu from './layout/widgetsMenu.vue'
 import { editorProps } from './props'
 import { useEditor } from './store'
 import { useApp } from './store/app'
-import { loadFromRemote, normalizeStyle } from './utils'
+import { EditorKey, loadFromRemote, normalizeStyle } from './utils'
 
 const props = defineProps(editorProps)
 
@@ -92,6 +92,10 @@ const bus = new EventEmitter((event: string, ...args: any) => {
 const refRoot = useTemplateRef('rootRef')
 onMounted(() => {
   editor.elementRoot = refRoot.value!
+})
+
+provide(EditorKey, {
+  root: refRoot,
 })
 
 // TODO: 需要优化

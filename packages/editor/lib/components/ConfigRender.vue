@@ -89,9 +89,8 @@
 
 <script lang="ts" setup>
 import type { SchemaItem } from '@sepveneto/dnde-core/class'
-import { onMounted, shallowRef } from 'vue'
-import { useEditor } from '@/store'
-import { loadFromRemote } from '@/utils'
+import { computed, inject } from 'vue'
+import { EditorKey, loadFromRemote } from '@/utils'
 import ColorPicker from './ColorPicker.vue'
 import StyleNumber from './StyleNumber.vue'
 
@@ -99,12 +98,6 @@ defineProps<{ data: Record<string, any>, config: SchemaItem }>()
 const model = defineModel<any>({ required: true })
 
 const RemoteRender = loadFromRemote('widgets', 'remote')
-
-const editor = useEditor()
-const appendTo = shallowRef<HTMLElement>()
-
-onMounted(() => {
-  const parent: HTMLElement = editor.shadowRoot!.querySelector('.mpd-editor')!
-  appendTo.value = parent
-})
+const ctx = inject(EditorKey)
+const appendTo = computed(() => ctx!.root.value!)
 </script>

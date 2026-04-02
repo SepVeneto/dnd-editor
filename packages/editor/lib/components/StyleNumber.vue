@@ -1,17 +1,46 @@
 <template>
-  <div>
+  <div class="mpd-flex">
+    <ElSelect
+      v-model="type"
+      :append-to="appendTo"
+      class="mpd-w-24 mpd-shrink-0"
+      @change="onChange"
+    >
+      <ElOption
+        label="自适应"
+        value="auto"
+      />
+      <ElOption
+        label="自定义"
+        value="manual"
+      />
+    </ElSelect>
     <ElInputNumber
+      v-if="type === 'manual'"
       v-model="value"
+      class="mpd-flex-1"
       controls-position="right"
+    />
+    <ElInput
+      v-else-if="type === 'auto'"
+      class="mpd-flex-1"
+      model-value="100%"
+      disabled
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { customRef, watch } from 'vue'
+import { computed, customRef, inject, ref } from 'vue'
+import { EditorKey } from '@/utils'
 
 const props = defineProps<{ modelValue: string | number | undefined }>()
 const emit = defineEmits(['update:modelValue'])
+const ctx = inject(EditorKey)
+
+const appendTo = computed(() => ctx!.root.value!)
+
+const type = ref(typeof props.modelValue === 'string' ? 'auto' : 'manual')
 
 const value = customRef<string | number>((track, trigger) => {
   let inner: number
@@ -27,7 +56,7 @@ const value = customRef<string | number>((track, trigger) => {
       }
     },
     set(val) {
-      if (!val || typeof val === 'string') {
+      if (typeof val === 'string') {
         inner = 0
         outer = '100%'
       }
@@ -41,7 +70,12 @@ const value = customRef<string | number>((track, trigger) => {
   }
 })
 
-watch(() => props.modelValue, (val) => {
-  value.value = val || ''
-}, { immediate: true })
+function onChange(type: 'auto' | 'manual') {
+  if (type === 'auto') {
+    value.value = '100%'
+  }
+  else {
+    value.value = 0
+  }
+}
 </script>
