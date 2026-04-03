@@ -108,8 +108,8 @@ importers:
         specifier: ^0.21.0
         version: 0.21.2(@rspack/core@1.6.0(@swc/helpers@0.5.17))(debug@4.4.3)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(typescript@5.8.3)(vue-tsc@3.0.6(typescript@5.8.3))(webpack@5.101.3(@swc/core@1.13.3(@swc/helpers@0.5.17)))
       '@sepveneto/basic-comp':
-        specifier: ^0.9.6
-        version: 0.9.6(@element-plus/icons-vue@2.3.1(vue@3.5.15(typescript@5.8.3)))(element-plus@2.11.7(@vue/composition-api@1.7.2(vue@3.5.15(typescript@5.8.3)))(vue@3.5.15(typescript@5.8.3)))(vue@3.5.15(typescript@5.8.3))
+        specifier: ^0.10.7
+        version: 0.10.7(@element-plus/icons-vue@2.3.1(vue@3.5.15(typescript@5.8.3)))(element-plus@2.11.7(@vue/composition-api@1.7.2(vue@3.5.15(typescript@5.8.3)))(vue@3.5.15(typescript@5.8.3)))(vue@3.5.15(typescript@5.8.3))
       '@sepveneto/dnde-core':
         specifier: 'workspace: *'
         version: link:../core
@@ -1647,8 +1647,8 @@ packages:
   '@rushstack/ts-command-line@5.0.2':
     resolution: {integrity: sha512-+AkJDbu1GFMPIU8Sb7TLVXDv/Q7Mkvx+wAjEl8XiXVVq+p1FmWW6M3LYpJMmoHNckSofeMecgWg5lfMwNAAsEQ==}
 
-  '@sepveneto/basic-comp@0.9.6':
-    resolution: {integrity: sha512-6CJ7iqKt0XF0thzTjS/MaWuhGahQ7pFco84Tm+LDf0HYrpqcW4xAFhWJ0rsMbLygfbaXFgsMlnNTobc/P8dh2A==}
+  '@sepveneto/basic-comp@0.10.7':
+    resolution: {integrity: sha512-CAFKe0ZBtT/lsnuxyoy0KGb3z7UGAGxzExQwLr67R0P3JLG1wCDhzHypRzm56TU3UWovzTMAKCfsNj8NSQg1+g==}
     peerDependencies:
       '@element-plus/icons-vue': ^2.0.0
       element-plus: ^2.0.0
@@ -7648,7 +7648,7 @@ snapshots:
       - '@types/node'
     optional: true
 
-  '@sepveneto/basic-comp@0.9.6(@element-plus/icons-vue@2.3.1(vue@3.5.15(typescript@5.8.3)))(element-plus@2.11.7(@vue/composition-api@1.7.2(vue@3.5.15(typescript@5.8.3)))(vue@3.5.15(typescript@5.8.3)))(vue@3.5.15(typescript@5.8.3))':
+  '@sepveneto/basic-comp@0.10.7(@element-plus/icons-vue@2.3.1(vue@3.5.15(typescript@5.8.3)))(element-plus@2.11.7(@vue/composition-api@1.7.2(vue@3.5.15(typescript@5.8.3)))(vue@3.5.15(typescript@5.8.3)))(vue@3.5.15(typescript@5.8.3))':
     dependencies:
       '@element-plus/icons-vue': 2.3.1(vue@3.5.15(typescript@5.8.3))
       element-plus: 2.11.7(@vue/composition-api@1.7.2(vue@3.5.15(typescript@5.8.3)))(vue@3.5.15(typescript@5.8.3))

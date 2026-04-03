@@ -46,7 +46,7 @@
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.1",
     "@module-federation/enhanced": "^0.21.0",
-    "@sepveneto/basic-comp": "^0.9.6",
+    "@sepveneto/basic-comp": "^0.10.7",
     "@sepveneto/dnde-core": "workspace: *",
     "@sepveneto/free-dom": "^0.14.7",
     "@vueuse/core": "^13.3.0",
