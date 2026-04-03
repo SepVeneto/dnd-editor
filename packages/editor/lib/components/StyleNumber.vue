@@ -70,6 +70,10 @@ const value = customRef<string | number>((track, trigger) => {
   }
 })
 
+if (type.value === 'manual') {
+  value.value = Number(props.modelValue)
+}
+
 function onChange(type: 'auto' | 'manual') {
   if (type === 'auto') {
     value.value = '100%'

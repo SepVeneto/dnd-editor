@@ -22,7 +22,7 @@ export default {
     }
 
     function handleClone(original: Widget) {
-      const node = new Node(original, { props: original.defaultData, style: original.defaultStyle })
+      const node = new Node(original, JSON.parse(JSON.stringify({ props: original.defaultData, style: original.defaultStyle })))
       editor.dragging = node
       return node
     }

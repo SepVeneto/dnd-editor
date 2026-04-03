@@ -23,6 +23,7 @@
         >
           <ConfigForm
             ref="propRef"
+            :key="editor.selectedNode.wid"
             v-model="editor.selectedNode.data"
             :list="propSchema"
           />
@@ -39,6 +40,7 @@
         >
           <ConfigForm
             ref="styleRef"
+            :key="editor.selectedNode.wid"
             v-model="editor.selectedNode.style"
             :list="styleSchema"
           />

@@ -23,11 +23,11 @@
 
 <script lang="ts" setup>
 import type { SchemaItem } from '@sepveneto/dnde-core/class'
-import { computed } from 'vue';
+import { computed } from 'vue'
 import ConfigRender from './ConfigRender.vue'
 
 const props = defineProps<{
-  config: SchemaItem,
+  config: SchemaItem
   form: Record<string, any>
 }>()
 const emit = defineEmits(['change'])
@@ -37,11 +37,9 @@ const linkItems = computed(() => {
     case 'radio':
     case 'radioButton':
     case 'select': {
-      console.log('type', props.config.type, props.config.link, props.config.key)
       if (!props.config.link) {
         return []
       }
-      console.log(props.config.link, props.form[props.config.key])
       return props.config.link[props.form[props.config.key]] || []
     }
     default:
@@ -63,8 +61,6 @@ function updateData(key: string, val: unknown) {
   parent[path.slice(-1)[0]] = val
   emit('change')
 }
-
-
 
 function getData(data: Record<string, any> | undefined, key: string): any {
   if (!data)
