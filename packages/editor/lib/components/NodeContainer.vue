@@ -72,7 +72,7 @@ function onAdd(evt: DraggableEvt) {
 
 <style scoped lang="scss">
 .node-container {
-  width: 375px;
+  width: 100%;
   // min-height: calc(667px - 60px);
   height: 100%;
   background: #ddd;
