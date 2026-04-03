@@ -77,12 +77,10 @@ import TreePanel from './layout/treePanel.vue'
 import WidgetsMenu from './layout/widgetsMenu.vue'
 import { editorProps } from './props'
 import { useEditor } from './store'
-import { useApp } from './store/app'
 import { EditorKey, loadFromRemote, normalizeStyle } from './utils'
 
 const props = defineProps(editorProps)
 
-const app = useApp()
 const editor = useEditor()
 const inst = getCurrentInstance()
 const bus = new EventEmitter((event: string, ...args: any) => {
@@ -159,8 +157,6 @@ function onAdd(evt: DraggableEvt) {
 }
 
 const ViewRender = loadFromRemote('widgets', 'remote')
-
-app.setWidgets(props.widgets)
 
 const refConfigPanel = useTemplateRef('configPanelRef')
 defineExpose({

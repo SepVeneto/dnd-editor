@@ -9,7 +9,6 @@ export interface WidgetGroup { name: string, list: Widget[] }
 export type LikeWidget = IWidget | { name: string, list: IWidget[], type: widgetType }
 
 export const useApp = defineStore('app', () => {
-  const editor = useEditor()
   const widgets = shallowRef<(Widget | WidgetGroup)[]>()
   const widgetMap = new Map<string, Widget>()
 
@@ -32,7 +31,12 @@ export const useApp = defineStore('app', () => {
     })
 
     if (widgetMap.has('page')) {
-      editor.rootNode = new Node(widgetMap.get('page')!)
+      const editor = useEditor()
+      const widget = widgetMap.get('page')!
+      editor.rootNode = new Node(
+        widget,
+        JSON.parse(JSON.stringify({ props: widget.defaultData, style: widget.defaultStyle })),
+      )
     }
   }
 

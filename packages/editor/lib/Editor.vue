@@ -14,7 +14,7 @@ import * as Vue from 'vue'
 import { useTemplateRef } from 'vue'
 import App from './App.ce.vue'
 import { editorProps } from './props'
-import { useEditor } from './store'
+import { useApp, useEditor } from './store'
 import { initMf } from './utils'
 
 const props = defineProps(editorProps)
@@ -32,6 +32,8 @@ const inst = Vue.getCurrentInstance()
 if (inst) {
   Object.assign(inst.appContext, app._context)
 }
+const appStore = useApp()
+appStore.setWidgets(props.widgets)
 const editor = useEditor()
 editor.shadowRoot = Vue.useShadowRoot()!
 const updateModelValue = useDebounceFn(() => {
