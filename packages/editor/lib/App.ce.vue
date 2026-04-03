@@ -39,6 +39,7 @@
                   scope="widgets"
                   :type="`${element.type}.view`"
                   :config="element"
+                  :data="element.data"
                 />
               </NodeWrap>
             </template>
