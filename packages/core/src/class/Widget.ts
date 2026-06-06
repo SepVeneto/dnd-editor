@@ -15,10 +15,10 @@ interface SchemaItemBase {
 }
 interface SchemaItemInput extends SchemaItemBase { type: 'input', attrs?: InputInstance['$props'] }
 interface SchemaItemSelect extends SchemaItemBase {
-  type: 'select',
-  options?: Option['$props'][],
-  attrs?: SelectInstance['$props'],
-  link?: Record<string | number, SchemaItem[]>,
+  type: 'select'
+  options?: Option['$props'][]
+  attrs?: SelectInstance['$props']
+  link?: Record<string | number, SchemaItem[]>
 }
 interface SchemaItemNumber extends SchemaItemBase { type: 'number', attrs?: InputNumberInstance['$props'] }
 interface SchemaItemSwitch extends SchemaItemBase { type: 'switch', attrs?: SwitchInstance['$props'] }
@@ -34,29 +34,29 @@ interface SchemaItemStyleNumber extends SchemaItemBase {
   type: 'styleNumber'
 }
 interface SchemaItemRadio extends SchemaItemBase {
-  type: 'radio',
-  attrs?: RadioGroupInstance['$props'],
-  options?: RadioOption['$props'][],
+  type: 'radio'
+  attrs?: RadioGroupInstance['$props']
+  options?: RadioOption['$props'][]
   link?: Record<string | number, SchemaItem[]>
 }
 interface SchemaItemRadioButton extends SchemaItemBase {
-  type: 'radioButton',
-  attrs?: RadioGroupInstance['$props'],
-  options?: RadioButtonOption['$props'][],
+  type: 'radioButton'
+  attrs?: RadioGroupInstance['$props']
+  options?: RadioButtonOption['$props'][]
   link?: Record<string | number, SchemaItem[]>
 }
 
-export type SchemaItem = SchemaItemInput |
-  SchemaItemSelect |
-  SchemaItemNumber |
-  SchemaItemSwitch |
-  SchemaItemImage |
-  SchemaItemCustom |
-  SchemaItemStyleNumber |
-  SchemaItemRadio |
-  SchemaItemRadioButton |
-  SchemaItemDatetimePicker |
-  SchemaItemColorPicker
+export type SchemaItem = SchemaItemInput
+  | SchemaItemSelect
+  | SchemaItemNumber
+  | SchemaItemSwitch
+  | SchemaItemImage
+  | SchemaItemCustom
+  | SchemaItemStyleNumber
+  | SchemaItemRadio
+  | SchemaItemRadioButton
+  | SchemaItemDatetimePicker
+  | SchemaItemColorPicker
 
 export class Widget {
   public name: string
@@ -100,7 +100,13 @@ export class Widget {
   }
 
   get isFixed() {
-    return this._data.meta?.fixed
+    const fixed = this._data.meta?.fixed
+    if (fixed === true) {
+      return 'header'
+    }
+    else {
+      return fixed
+    }
   }
 
   get visible() {

@@ -21,7 +21,7 @@ export interface Base {
     draggable?: boolean
     visible?: boolean
     // 一般与draggable配合使用，达到类似header之类的效果
-    fixed?: boolean
+    fixed?: boolean | 'header' | 'footer'
   }
   schema?: {
     props?: SchemaItem[]
@@ -31,14 +31,14 @@ export interface Base {
   data?: Record<string, any> | any[]
 }
 
-type BaseKey =
-  '_inContainer'
-  | '_custom'
-  | '_disableDel'
-  | '_name'
-  | '_schema'
-  | '_uuid'
-  | '_view'
+type BaseKey
+  = '_inContainer'
+    | '_custom'
+    | '_disableDel'
+    | '_name'
+    | '_schema'
+    | '_uuid'
+    | '_view'
 
 export type IWidget = Base
 // endregion
