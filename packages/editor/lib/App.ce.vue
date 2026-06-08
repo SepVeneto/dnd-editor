@@ -128,8 +128,25 @@ function handleMove(evt: any) {
     return
 
   const nextNode = editor.rootNode.list[evt.draggedContext.futureIndex]
-  if (nextNode && nextNode.widget.isFixed) {
-    return false
+  const direct = evt.draggedContext.index - evt.draggedContext.futureIndex
+  if (direct > 0) {
+    // 向上移动
+    if (nextNode && nextNode.widget.isFixed === 'header') {
+      return false
+    }
+  }
+  else {
+    // TODO: 多个容器会有问题
+    // 向下移动
+    for (let i = evt.draggedContext.futureIndex; i > 0; --i) {
+      const node = editor.rootNode.list[i]
+      if (!node)
+        continue
+
+      if (node.widget.isFixed === 'footer') {
+        return false
+      }
+    }
   }
 }
 function handelStart(evt: DraggableEvt) {
@@ -139,7 +156,22 @@ function handelStart(evt: DraggableEvt) {
 }
 function onAdd(evt: DraggableEvt) {
   const nextNode = editor.rootNode.list[evt.newIndex + 1]
-  if (nextNode && nextNode.widget.isFixed) {
+  const prevNode = editor.rootNode.list[evt.newIndex - 1]
+  if (nextNode && nextNode.widget.isFixed === 'header') {
+    const deletedNode = editor.rootNode.list.splice(evt.newIndex, 1)[0]
+
+    // 跨容器移动触发fixed时需要手动还原到旧容器中
+    if (evt.to !== evt.from) {
+      const oldContainer = editor.nodeMap.get(evt.from.dataset.id!)!
+      // 如果没有父容器说明是从组件栏中拖动的，就不需要还原了
+      if (!oldContainer) {
+        return
+      }
+      ;(oldContainer.list as Node[]).splice(evt.oldIndex, 0, deletedNode)
+    }
+    return
+  }
+  if (prevNode && prevNode.widget.isFixed === 'footer') {
     const deletedNode = editor.rootNode.list.splice(evt.newIndex, 1)[0]
 
     // 跨容器移动触发fixed时需要手动还原到旧容器中

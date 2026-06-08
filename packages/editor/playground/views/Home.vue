@@ -9,14 +9,14 @@
   <button @click="handleGet">
     get config
   </button>
-  <pre>config: {{ config }}</pre>
   <mpd-editor
     ref="editorRef"
-    remote-url="http://localhost:8091"
+    remote-url="http://localhost:8090"
     :root="rootSchema"
     :widgets="widgets"
     @change="onUpdate"
   />
+  <pre>config: {{ config }}</pre>
 </template>
 
 <script setup lang="ts">
@@ -180,7 +180,13 @@ const baseWidgets: IWidget<object>[] = [
   widget.create({
     name: '顶部',
     type: 'header',
-    config: { draggable: false, fixed: true },
+    config: { draggable: false, fixed: 'header' },
+    defaultStyle: { width: 375, height: 44 },
+  }),
+  widget.create({
+    name: '底部',
+    type: 'footer',
+    config: { draggable: false, fixed: 'footer' },
     defaultStyle: { width: 375, height: 44 },
   }),
 ]
@@ -191,6 +197,7 @@ const serviceWidgets: IWidget<object>[] = [
     defaultData: {
       isShow: 1,
     },
+    defaultStyle: { width: 375 },
     attributes: [
       schema.switch({
         label: '是否显示',

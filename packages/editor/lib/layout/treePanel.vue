@@ -28,13 +28,34 @@ import TreePanelItem from './treePanel.item.vue'
 
 const editor = useEditor()
 function onAdd(evt: DraggableEvt) {
+  const prevNode = editor.rootNode.list[evt.newIndex - 1]
   const nextNode = editor.rootNode.list[evt.newIndex + 1]
-  if (nextNode && nextNode.widget.isFixed) {
-    const deletedNode = editor.rootNode.list.splice(0, 1)[0]
+  if (nextNode && nextNode.widget.isFixed === 'header') {
+    const deletedNode = editor.rootNode.list.splice(evt.newIndex, 1)[0]
 
     // 跨容器移动触发fixed时需要手动还原到旧容器中
     if (evt.to !== evt.from) {
       const oldContainer = editor.nodeMap.get(evt.from.dataset.id!)!
+      // 如果没有父容器说明是从组件栏中拖动的，就不需要还原了
+      if (!oldContainer) {
+        return
+      }
+      ;(oldContainer.list as Node[]).splice(evt.oldIndex, 0, deletedNode)
+    }
+
+    return
+  }
+
+  if (prevNode && prevNode.widget.isFixed === 'footer') {
+    const deletedNode = editor.rootNode.list.splice(evt.newIndex, 1)[0]
+
+    // 跨容器移动触发fixed时需要手动还原到旧容器中
+    if (evt.to !== evt.from) {
+      const oldContainer = editor.nodeMap.get(evt.from.dataset.id!)!
+      // 如果没有父容器说明是从组件栏中拖动的，就不需要还原了
+      if (!oldContainer) {
+        return
+      }
       ;(oldContainer.list as Node[]).splice(evt.oldIndex, 0, deletedNode)
     }
 
@@ -44,6 +65,7 @@ function onAdd(evt: DraggableEvt) {
   node && editor.addNode(node)
 }
 function onInput(val: Node[]) {
+  // 新增的可以忽略
   if (editor.rootNode.list.length >= val.length) {
     editor.rootNode.list = val
   }
@@ -60,10 +82,42 @@ function onInput(val: Node[]) {
     // 可以被删除的前提一定是该元素的wid与其原始位置的元素一样
     // 否则就向下找，即下标加1
     if (wid === val[originIndex].wid) {
-      val.splice(originIndex, 1)
+      // 旧元素在上方
+      // 下移检查
+      const newIndex = val.findLastIndex(node => node.wid === wid)
+      const prevIndex = newIndex - 1
+      const nextIndex = newIndex + 1
+
+      // 先检查是否满足Fixed的条件
+      const prevNode = val[prevIndex]
+      const nextNode = val[nextIndex]
+      if ((prevNode && prevNode.widget.isFixed === 'footer')
+        || (nextNode && nextNode.widget.isFixed === 'header')
+      ) {
+        // pass
+      }
+      else {
+        val.splice(originIndex, 1)
+      }
     }
     else {
-      val.splice(originIndex + 1, 1)
+      // 旧元素在下方
+      // 上移检查
+      const newIndex = val.findIndex(node => node.wid === wid)
+      const prevIndex = newIndex - 1
+      const nextIndex = newIndex + 1
+
+      // 先检查是否满足Fixed的条件
+      const prevNode = val[prevIndex]
+      const nextNode = val[nextIndex]
+      if ((prevNode && prevNode.widget.isFixed === 'footer')
+        || (nextNode && nextNode.widget.isFixed === 'header')
+      ) {
+        // pass
+      }
+      else {
+        val.splice(originIndex + 1, 1)
+      }
     }
     nextTick().then(() => {
       (editor.rootNode as Node).list = val
