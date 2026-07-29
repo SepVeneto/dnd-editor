@@ -8,11 +8,12 @@
     "lint": "vue-cli-service lint"
   },
   "dependencies": {
-    "@element-plus/icons-vue": "^2.3.1",
+    "@element-plus/icons-vue": "catalog:",
     "@module-federation/enhanced": "^2.8.1",
     "@module-federation/rsbuild-plugin": "^2.8.1",
     "@vueuse/core": "^9.1.1",
     "core-js": "^3.8.3",
+    "element-plus": "catalog:",
     "vue": "catalog:"
   },
   "devDependencies": {

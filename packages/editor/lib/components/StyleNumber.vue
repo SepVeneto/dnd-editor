@@ -17,7 +17,7 @@
     </ElSelect>
     <ElInputNumber
       v-if="type === 'manual'"
-      v-model="value"
+      v-model="value as number"
       class="mpd-flex-1"
       controls-position="right"
     />

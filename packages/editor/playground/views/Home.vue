@@ -12,7 +12,6 @@
   <mpd-editor
     ref="editorRef"
     remote-url="http://localhost:8090"
-    :root="rootSchema"
     :widgets="widgets"
     @change="onUpdate"
   />

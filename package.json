@@ -23,15 +23,8 @@
     "release:editor": "cd packages/editor && bumpp --tag editor@",
     "release:plugin": "cd packages/plugins && bumpp --tag plugin@"
   },
-  "dependencies": {
-    "@element-plus/icons-vue": "^2.3.2",
-    "debug": "^4.4.3",
-    "element-plus": "^2.11.7",
-    "vue": "catalog:"
-  },
   "devDependencies": {
     "@antfu/eslint-config": "^4.19.0",
-    "@types/debug": "^4.1.12",
     "bumpp": "^10.3.1",
     "eslint": "^9.39.0",
     "typescript": "catalog:"

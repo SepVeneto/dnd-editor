@@ -1,21 +1,30 @@
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import vue from '@vitejs/plugin-vue'
+import { visualizer } from 'rollup-plugin-visualizer'
 import { defineConfig } from 'vite'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
-  plugins: [vue({
-    template: {
-      compilerOptions: {
-        isCustomElement: tag => tag === 'mpd-editor',
+  plugins: [
+    visualizer({
+      filename: 'stats.html',
+      open: true,
+      gzipSize: true,
+      brotliSize: true,
+    }),
+    vue({
+      template: {
+        compilerOptions: {
+          isCustomElement: tag => tag === 'mpd-editor',
+        },
       },
-    },
-    features: {
-      customElement: true,
-    },
-  })],
+      features: {
+        customElement: true,
+      },
+    }),
+  ],
   server: {
     port: 8082,
     fs: {
