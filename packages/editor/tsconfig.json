@@ -8,16 +8,17 @@
       "dom.iterable",
       "scripthost"
     ],
-    "baseUrl": "./",
+    "rootDir": "./",
     "module": "esnext",
     "moduleResolution": "bundler",
     "paths": {
       "@/*": [
-        "lib/*"
+        "./lib/*"
       ]
     },
     "resolveJsonModule": true,
     "types": [
+      "./global.d.ts",
       "element-plus/global",
       "@sepveneto/basic-comp/global"
     ],

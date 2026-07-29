@@ -18,11 +18,11 @@ export function initMf(url: string) {
     remotes: [],
     shared: {
       vue: {
-        version: '3.5.15',
+        version: '3.5.40',
         lib: () => Vue,
         shareConfig: {
           singleton: true,
-          requiredVersion: '^3.5.15',
+          requiredVersion: '^3.5.40',
         },
       },
     },

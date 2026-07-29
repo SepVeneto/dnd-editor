@@ -8,12 +8,12 @@
       "dom.iterable",
       "scripthost"
     ],
-    "baseUrl": "./",
+    "rootDir": "./",
     "module": "esnext",
     "moduleResolution": "bundler",
     "paths": {
       "@/*": [
-        "lib/*"
+        "./lib/*"
       ]
     },
     "resolveJsonModule": true,
