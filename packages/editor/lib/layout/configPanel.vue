@@ -76,6 +76,7 @@ import { watchOnce } from '@vueuse/core'
 import { computed, nextTick, onBeforeUpdate, ref, shallowRef, useTemplateRef, watch } from 'vue'
 import ConfigForm from '@/components/ConfigForm.vue'
 import { useEditor } from '@/store'
+import { ElBreadcrumb, ElBreadcrumbItem, ElScrollbar, ElTabPane, ElTabs } from 'element-plus'
 
 const editor = useEditor()
 const list = computed(() => {

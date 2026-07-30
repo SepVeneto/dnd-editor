@@ -46,6 +46,7 @@ import { useEditor } from '@/store'
 import { normalizeStyle } from '@/utils'
 import NodeContainer from './NodeContainer.vue'
 import NodeOperate from './NodeOperate.vue'
+import { ElIcon } from 'element-plus'
 
 const props = defineProps<{ node: Node }>()
 

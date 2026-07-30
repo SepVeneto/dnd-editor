@@ -19,8 +19,6 @@
     "resolveJsonModule": true,
     "types": [
       "./global.d.ts",
-      "element-plus/global",
-      "@sepveneto/basic-comp/global"
     ],
     "strict": true,
     "sourceMap": true,

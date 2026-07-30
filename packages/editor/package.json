@@ -46,21 +46,18 @@
   "dependencies": {
     "@element-plus/icons-vue": "catalog:",
     "@module-federation/enhanced": "catalog:",
-    "@sepveneto/basic-comp": "^0.12.4",
     "@sepveneto/dnde-core": "workspace: *",
-    "@sepveneto/free-dom": "^0.14.7",
     "@vueuse/core": "^13.3.0",
     "async-validator": "^4.2.5",
     "element-plus": "catalog:",
-    "lodash-es": "^4.17.21",
     "pinia": "^3.0.2",
-    "sass-embedded": "^1.89.0",
     "uuid": "^11.1.0",
     "vue": "catalog:",
     "vue-router": "^4.5.1",
     "vuedraggable": "^4.1.0"
   },
   "devDependencies": {
+    "sass-embedded": "^1.89.0",
     "@types/debug": "^4.1.13",
     "@types/node": "catalog:",
     "@vitejs/plugin-vue": "^5.2.4",

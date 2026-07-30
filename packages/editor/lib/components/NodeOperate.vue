@@ -51,6 +51,7 @@ import IconContainer from '@/assets/container.vue'
 import IconItem from '@/assets/puzzle.vue'
 import { useEditor } from '@/store'
 import NodePlugin from './NodePlugin.vue'
+import { ElDropdown, ElDropdownItem, ElDropdownMenu } from 'element-plus'
 
 defineProps<{
   node: Node

@@ -17,10 +17,6 @@
       ]
     },
     "resolveJsonModule": true,
-    "types": [
-      "element-plus/global",
-      "@sepveneto/basic-comp/global"
-    ],
     "strict": true,
     "declaration": true,
     "emitDeclarationOnly": true,
