@@ -25,6 +25,7 @@
 import type { SchemaItem } from '@sepveneto/dnde-core/class'
 import { computed } from 'vue'
 import ConfigRender from './ConfigRender.vue'
+import { ElFormItem } from 'element-plus';
 
 const props = defineProps<{
   config: SchemaItem

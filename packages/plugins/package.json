@@ -21,8 +21,8 @@
     "build": "tsup"
   },
   "devDependencies": {
-    "@rsbuild/core": "^1.4.15",
-    "@rspack/core": "^1.4.11",
-    "tsup": "^8.4.0"
+    "@rsbuild/core": "catalog:",
+    "@rspack/core": "^2.1.7",
+    "tsup": "^8.5.1"
   }
 }

@@ -1,7 +1,8 @@
 <template>
   <section
     ref="widgetRef"
-    :class="['widget-wrapper', { 'can-move': _move }]"
+    class="widget-wrapper"
+    :class="[{ 'can-move': _move }]"
     :style="wrapStyle"
     @mousedown="onMousedown"
   >
@@ -22,10 +23,10 @@
 
 <script lang="ts" setup>
 import type { CSSProperties, PropType } from 'vue'
-import { computed, inject, nextTick, onMounted, ref, shallowRef, watch, watchEffect } from 'vue'
 import { onClickOutside, useElementBounding } from '@vueuse/core'
+import { computed, inject, nextTick, onMounted, ref, shallowRef, watch, watchEffect } from 'vue'
 import { useNormalizeStyle } from '@/hooks'
-const emit = defineEmits(['update:customStyle'])
+
 const props = defineProps({
   customStyle: {
     type: Object as PropType<CSSProperties>,
@@ -38,6 +39,7 @@ const props = defineProps({
   //   required: true,
   // }
 })
+const emit = defineEmits(['update:customStyle'])
 const editorContext = inject('Editor', { preview: false })
 const _preview = computed(() => editorContext.preview)
 const _scale = computed(() => !_preview.value && props.scale)
@@ -71,8 +73,8 @@ async function normalizeCustomStyle() {
     ...props.customStyle,
   }
   await nextTick()
-  _height = parseFloat(getComputedStyle(widgetRef.value).height)
-  _width = parseFloat(getComputedStyle(widgetRef.value).width)
+  _height = Number.parseFloat(getComputedStyle(widgetRef.value).height)
+  _width = Number.parseFloat(getComputedStyle(widgetRef.value).width)
   _style.value = {
     ...props.customStyle,
     width: _width,
@@ -153,7 +155,8 @@ function setPosition(pos: { x: number, y: number, width: number, height: number 
   // })
 }
 function getDotPos(dot: string): CSSProperties {
-  if (!_style.value) return {}
+  if (!_style.value)
+    return {}
   const { width, height } = _style.value
   const isL = /l/.test(dot)
   const isR = /r/.test(dot)
@@ -165,11 +168,13 @@ function getDotPos(dot: string): CSSProperties {
   if (dot.length === 2) {
     left = isL ? 0 : width
     top = isT ? 0 : height
-  } else {
+  }
+  else {
     if (isL || isR) {
       left = isL ? 0 : width
       top = Number(height) / 2
-    } else {
+    }
+    else {
       left = Number(width) / 2
       top = isT ? 0 : height
     }
@@ -177,14 +182,15 @@ function getDotPos(dot: string): CSSProperties {
   return {
     marginLeft: '-2px',
     marginTop: '-2px',
-    top: top + 'px',
-    left: left + 'px',
-    cursor: dot.split('').reverse().map(item => direct[item as keyof typeof direct]).join('') + '-resize',
+    top: `${top}px`,
+    left: `${left}px`,
+    cursor: `${dot.split('').reverse().map(item => direct[item as keyof typeof direct]).join('')}-resize`,
   }
 }
 function onMousedown(evt: MouseEvent) {
   evt.stopPropagation()
-  if (!_move.value) return
+  if (!_move.value)
+    return
   // componentData.current = props.element
   const pos = getPos(_style.value)
   const move = (mouseEvt: MouseEvent) => {
@@ -213,8 +219,8 @@ function getPos(style: CSSProperties) {
   return {
     x: x ? Number(x) : Number(width) / 2,
     y: y ? Number(y) : Number(height) / 2,
-    width: parseFloat(width as string),
-    height: parseFloat(height as string),
+    width: Number.parseFloat(width as string),
+    height: Number.parseFloat(height as string),
   }
 }
 </script>

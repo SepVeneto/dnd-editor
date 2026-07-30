@@ -58,7 +58,20 @@ export default defineConfig({
       exposes: {
         './remote': './src/components/remoteRender.vue',
       },
-      shared: ['vue', 'vue-router', 'element-plus'],
+      shared: {
+        'vue': {
+          singleton: true,
+          requiredVersion: '^3.5.40',
+        },
+        'vue-router': {
+          singleton: true,
+          requiredVersion: '^4.5.0',
+        },
+        'element-plus': {
+          singleton: true,
+          requiredVersion: '^2.x',
+        },
+      },
     }),
   ],
 })

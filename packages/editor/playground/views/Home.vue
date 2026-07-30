@@ -12,7 +12,6 @@
   <mpd-editor
     ref="editorRef"
     remote-url="http://localhost:8090"
-    :root="rootSchema"
     :widgets="widgets"
     @change="onUpdate"
   />
@@ -190,7 +189,7 @@ const baseWidgets: IWidget<object>[] = [
     defaultStyle: { width: 375, height: 44 },
   }),
 ]
-const serviceWidgets: IWidget<object>[] = [
+const serviceWidgets: IWidget[] = [
   widget.create({
     name: '菜单',
     type: 'menuItem',

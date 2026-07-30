@@ -79,6 +79,7 @@ import WidgetsMenu from './layout/widgetsMenu.vue'
 import { editorProps } from './props'
 import { useEditor } from './store'
 import { EditorKey, loadFromRemote, normalizeStyle } from './utils'
+import { ElConfigProvider, ElScrollbar } from 'element-plus'
 
 const props = defineProps(editorProps)
 
@@ -201,8 +202,6 @@ defineExpose({
 
 <style lang="scss">
 @use './styles/global.scss';
-@use 'element-plus/theme-chalk/src/index.scss';
-@use '@sepveneto/basic-comp/css';
 .top-header {
   background: #fff;
   padding: 0 20px;

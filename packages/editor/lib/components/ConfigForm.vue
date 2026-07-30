@@ -18,6 +18,7 @@
 import type { SchemaItem } from '@sepveneto/dnde-core/class'
 import { ref, useTemplateRef, watch } from 'vue'
 import ConfigItem from './ConfigItem.vue'
+import { ElForm } from 'element-plus';
 
 const props = defineProps<{ list: SchemaItem[], modelValue: Record<string, any> | undefined }>()
 const emit = defineEmits(['update:modelValue'])

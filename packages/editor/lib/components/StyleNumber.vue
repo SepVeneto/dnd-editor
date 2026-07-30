@@ -17,7 +17,7 @@
     </ElSelect>
     <ElInputNumber
       v-if="type === 'manual'"
-      v-model="value"
+      v-model="value as number"
       class="mpd-flex-1"
       controls-position="right"
     />
@@ -33,6 +33,7 @@
 <script setup lang="ts">
 import { computed, customRef, inject, ref } from 'vue'
 import { EditorKey } from '@/utils'
+import { ElInput, ElInputNumber, ElOption, ElSelect } from 'element-plus';
 
 const props = defineProps<{ modelValue: string | number | undefined }>()
 const emit = defineEmits(['update:modelValue'])

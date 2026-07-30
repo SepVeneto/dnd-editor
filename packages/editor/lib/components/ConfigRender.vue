@@ -93,6 +93,7 @@ import { computed, inject } from 'vue'
 import { EditorKey, loadFromRemote } from '@/utils'
 import ColorPicker from './ColorPicker.vue'
 import StyleNumber from './StyleNumber.vue'
+import { ElDatePicker, ElInput, ElInputNumber, ElOption, ElRadio, ElRadioButton, ElRadioGroup, ElSelect, ElSwitch } from 'element-plus'
 
 defineProps<{ data: Record<string, any>, config: SchemaItem }>()
 const model = defineModel<any>({ required: true })

@@ -54,18 +54,18 @@
               backgroundColor: displayedColor,
             }"
           >
-            <el-icon
+            <ElIcon
               v-show="modelValue"
               class="mpd-color-picker__icon is-icon-arrow-down"
             >
               <IconArrowDown />
-            </el-icon>
-            <el-icon
+          </ElIcon>
+            <ElIcon
               v-show="!modelValue"
               class="mpd-color-picker__empty is-icon-close"
             >
               <IconClose />
-            </el-icon>
+            </ElIcon>
           </span>
         </span>
       </div>
@@ -75,6 +75,7 @@
 
 <script setup lang="ts">
 import { ArrowDown as IconArrowDown, Close as IconClose } from '@element-plus/icons-vue'
+import { ElButton, ElColorPickerPanel, ElIcon, ElTooltip } from 'element-plus';
 import { computed, ref, useTemplateRef, watch, watchEffect } from 'vue'
 
 const props = withDefaults(defineProps<{

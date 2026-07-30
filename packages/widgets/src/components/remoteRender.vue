@@ -20,7 +20,8 @@ const props = defineProps({
 })
 const compView = shallowRef()
 watch([() => props.type, () => props.scope], ([type, scope]) => {
-  if (!type || !scope) return
+  if (!type || !scope)
+    return
   compView.value = defineAsyncComponent(() => import(`@/${scope}/${type}.vue`))
 }, { immediate: true })
 </script>

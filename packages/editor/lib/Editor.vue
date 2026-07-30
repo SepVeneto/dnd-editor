@@ -6,9 +6,7 @@
 </template>
 
 <script lang="ts" setup>
-import BasicComp from '@sepveneto/basic-comp'
 import { useDebounceFn, useEventListener } from '@vueuse/core'
-import ElementPlus from 'element-plus'
 import { createPinia } from 'pinia'
 import * as Vue from 'vue'
 import { useTemplateRef } from 'vue'
@@ -24,8 +22,8 @@ initMf(props.remoteUrl)
 
 const app = Vue.createApp(App)
 const store = createPinia()
-app.use(ElementPlus, { namespace: 'mpd' })
-app.use(BasicComp, {})
+// app.use(ElementPlus, { namespace: 'mpd' })
+// app.use(BasicComp, {})
 app.use(store)
 
 const inst = Vue.getCurrentInstance()
