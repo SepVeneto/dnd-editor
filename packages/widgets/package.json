@@ -3,20 +3,20 @@
   "type": "module",
   "version": "0.0.1",
   "scripts": {
-    "dev": "rsbuild dev -c rspack.config.ts",
-    "build": "rsbuild build -c rspack.config.ts",
-    "lint": "vue-cli-service lint"
+    "dev": "rsbuild dev",
+    "build": "rsbuild build",
+    "preview": "rsbuild preview"
   },
   "dependencies": {
     "@element-plus/icons-vue": "catalog:",
     "@module-federation/enhanced": "^2.8.1",
-    "@module-federation/rsbuild-plugin": "^2.8.1",
     "@vueuse/core": "^9.1.1",
     "core-js": "^3.8.3",
     "element-plus": "catalog:",
     "vue": "catalog:"
   },
   "devDependencies": {
+    "@module-federation/rsbuild-plugin": "^2.8.1",
     "@rsbuild/core": "^2.1.8",
     "@rsbuild/plugin-sass": "^2.0.1",
     "@rsbuild/plugin-vue": "^2.0.1",

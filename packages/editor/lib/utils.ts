@@ -34,6 +34,8 @@ export function initMf(url: string) {
     },
   // 必须开启，否则从其它页面切换回编辑器会导致渲染异常
   ], { force: true })
+
+  return mf
 }
 
 export function loadFromRemote(scope: string, module: string) {

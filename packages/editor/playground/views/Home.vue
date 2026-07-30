@@ -10,8 +10,8 @@
     get config
   </button>
   <mpd-editor
+    v-if="rendering"
     ref="editorRef"
-    remote-url="http://localhost:8090"
     :widgets="widgets"
     @change="onUpdate"
   />
@@ -38,89 +38,93 @@ watchEffect(() => {
 })
 
 const refEditor = useTemplateRef<EditorInstance>('editorRef')
-register()
+const rendering = ref(false)
+register({ remoteUrl: "http://localhost:8090" }).then(() => {
+  rendering.value = true
+})
 
 onMounted(() => {
-  refEditor.value?.register(ctx => ({
-    // helper: 节点的操作菜单
-    // widget: 组件菜单
-    init() {
-      ctx.plugins.config.addPanel({
-        label: '弹窗',
-        name: 'dialog',
-        attributes: [
-          schema.input({
-            label: '标题',
-            key: 'title',
-            required: true,
-          }),
-          schema.time({ label: '时间', key: 'time' }),
-          schema.number({
-            label: '数字',
-            key: 'num',
-          }),
-          schema.radioButton({ label: '单选', key: 'radio', options: [
-            { label: '选项1', value: '1' },
-            { label: '选项2', value: '2' },
-          ] }),
-        ],
-      })
-      ctx.plugins.config.addPanel({
-        label: '弹窗1',
-        name: 'dialog1',
-        attributes: [
-          schema.switch({
-            label: '启用',
-            key: 'enable',
-          }),
+  console.log(refEditor.value)
+  // refEditor.value?.register(ctx => ({
+  //   // helper: 节点的操作菜单
+  //   // widget: 组件菜单
+  //   init() {
+  //     ctx.plugins.config.addPanel({
+  //       label: '弹窗',
+  //       name: 'dialog',
+  //       attributes: [
+  //         schema.input({
+  //           label: '标题',
+  //           key: 'title',
+  //           required: true,
+  //         }),
+  //         schema.time({ label: '时间', key: 'time' }),
+  //         schema.number({
+  //           label: '数字',
+  //           key: 'num',
+  //         }),
+  //         schema.radioButton({ label: '单选', key: 'radio', options: [
+  //           { label: '选项1', value: '1' },
+  //           { label: '选项2', value: '2' },
+  //         ] }),
+  //       ],
+  //     })
+  //     ctx.plugins.config.addPanel({
+  //       label: '弹窗1',
+  //       name: 'dialog1',
+  //       attributes: [
+  //         schema.switch({
+  //           label: '启用',
+  //           key: 'enable',
+  //         }),
 
-          // schema.input({
-          //   label: '标题',
-          //   key: 'title',
-          //   rules: { validator: (rule, value, cb) => {
-          //     const data = editorRef.value!.getData()
-          //     if (data.dialog1?.enable) {
-          //       if (!value) {
-          //         return cb(new Error('必填'))
-          //       }
-          //       else {
-          //         cb()
-          //       }
-          //     }
-          //     else {
-          //       cb()
-          //     }
-          //   } },
-          // }),
-          // schema.select({
-          //   label: '数字',
-          //   key: 'num',
-          //   options: [1, 2, 3],
-          // }),
-        ],
-      })
-      // const copy = createCopy(ctx)
-      // const del = createDelete(ctx)
-      ctx.plugins.helper.addBuiltin({
-        name: 'export',
-        title: '导出组件配置',
-        action: (node) => {
-          console.log('export', node)
-        },
-        condition: (node) => {
-          return true
-        },
-      })
+  //         // schema.input({
+  //         //   label: '标题',
+  //         //   key: 'title',
+  //         //   rules: { validator: (rule, value, cb) => {
+  //         //     const data = editorRef.value!.getData()
+  //         //     if (data.dialog1?.enable) {
+  //         //       if (!value) {
+  //         //         return cb(new Error('必填'))
+  //         //       }
+  //         //       else {
+  //         //         cb()
+  //         //       }
+  //         //     }
+  //         //     else {
+  //         //       cb()
+  //         //     }
+  //         //   } },
+  //         // }),
+  //         // schema.select({
+  //         //   label: '数字',
+  //         //   key: 'num',
+  //         //   options: [1, 2, 3],
+  //         // }),
+  //       ],
+  //     })
+  //     // const copy = createCopy(ctx)
+  //     // const del = createDelete(ctx)
+  //     ctx.plugins.helper.addBuiltin({
+  //       name: 'export',
+  //       title: '导出组件配置',
+  //       action: (node) => {
+  //         console.log('export', node)
+  //       },
+  //       condition: (node) => {
+  //         return true
+  //       },
+  //     })
 
-      ctx.plugins.widget.addPanel({ label: '模板', name: 'template' })
-      // ctx.plugins.helper.addBuiltin({
-      //   name: 'delete',
-      //   condition: (node: any) => {
-      //     return node.type !== 'container'
-      //   },
-      // })
-    },
-  }))
+  //     ctx.plugins.widget.addPanel({ label: '模板', name: 'template' })
+  //     // ctx.plugins.helper.addBuiltin({
+  //     //   name: 'delete',
+  //     //   condition: (node: any) => {
+  //     //     return node.type !== 'container'
+  //     //   },
+  //     // })
+  //   },
+  // }))
 })
 
 const rootSchema = {
@@ -142,11 +146,12 @@ const rootSchema = {
     }),
   ],
 }
-const baseWidgets: IWidget<object>[] = [
+const baseWidgets: IWidget[] = [
   widget.root({
     name: '活动设置',
     attributes: [
-      schema.input({
+      schema.custom({
+        type: 'element',
         label: '标题',
         key: 'title',
         formItem: { labelWidth: '160px' },

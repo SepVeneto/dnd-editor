@@ -7,29 +7,15 @@
 
 <script lang="ts" setup>
 import { useDebounceFn, useEventListener } from '@vueuse/core'
-import { createPinia } from 'pinia'
 import * as Vue from 'vue'
 import { useTemplateRef } from 'vue'
-import App from './App.ce.vue'
+import App from './App.vue'
 import { editorProps } from './props'
 import { useApp, useEditor } from './store'
-import { initMf } from './utils'
 
 const props = defineProps(editorProps)
 const emit = defineEmits(['change'])
 
-initMf(props.remoteUrl)
-
-const app = Vue.createApp(App)
-const store = createPinia()
-// app.use(ElementPlus, { namespace: 'mpd' })
-// app.use(BasicComp, {})
-app.use(store)
-
-const inst = Vue.getCurrentInstance()
-if (inst) {
-  Object.assign(inst.appContext, app._context)
-}
 const appStore = useApp()
 appStore.setWidgets(props.widgets)
 const editor = useEditor()
