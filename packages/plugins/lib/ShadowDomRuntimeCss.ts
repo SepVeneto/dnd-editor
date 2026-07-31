@@ -1,20 +1,34 @@
-import type { Compiler, RspackPluginInstance } from '@rspack/core'
+import { type Compiler, type RspackPluginInstance } from '@rspack/core'
 
 export class ShadowDomRuntimeCss implements RspackPluginInstance {
   apply(compiler: Compiler) {
-    compiler.hooks.compilation.tap('ShadowDomRunTimeCss', (compilation) => {
-      compilation.hooks.runtimeModule.tap('ShadowDomRunTimeCss', (module) => {
-        if (module.name !== 'css loading')
-          return
+    compiler.hooks.thisCompilation.tap('ShadowDomRunTimeCss', (compilation) => {
 
-        const generate = module.generate.bind(module)
+      compilation.hooks.processAssets.tap(
+        {
+          name: 'ShadowDomCss',
+          stage: compiler.rspack.Compilation.PROCESS_ASSETS_STAGE_OPTIMIZE
+        },
+        assets => {
+          for (const filename of Object.keys(assets)) {
+            if (!filename.endsWith('.js')) continue
 
-        module.generate = () => {
-          const source = generate()
+            const source = assets[filename].source().toString()
 
-          return source.replace('document.head.appendChild(linkTag)', 'window.__shadowdom_css_runtime__(linkTag); ')
+            if (source.includes('document.head.appendChild(linkTag)')) {
+              compilation.updateAsset(
+                filename,
+                new compiler.rspack.sources.RawSource(
+                  source.replace(
+                    'document.head.appendChild(linkTag)',
+                    'window.__shadowdom_css_runtime__(linkTag)'
+                  )
+                )
+              )
+            }
+          }
         }
-      })
+      )
     })
   }
 }

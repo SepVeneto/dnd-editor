@@ -12,17 +12,19 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
     }
   },
   "main": "dist/index.js",
   "scripts": {
     "build": "tsup"
   },
+  "dependencies": {
+  },
   "devDependencies": {
-    "@rsbuild/core": "catalog:",
     "@rspack/core": "^2.1.7",
+    "@rsbuild/core": "catalog:",
     "tsup": "^8.5.1"
   }
 }
