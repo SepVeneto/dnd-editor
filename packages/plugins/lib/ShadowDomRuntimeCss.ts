@@ -15,14 +15,16 @@ export class ShadowDomRuntimeCss implements RspackPluginInstance {
 
             const source = assets[filename].source().toString()
 
-            if (source.includes('document.head.appendChild(linkTag)')) {
+            if (source.includes('document.head.appendChild(linkTag)')
+              && source.includes('installedCssChunks[chunkId] = 0')
+            ) {
               compilation.updateAsset(
                 filename,
                 new compiler.rspack.sources.RawSource(
                   source.replace(
                     'document.head.appendChild(linkTag)',
                     'window.__shadowdom_css_runtime__(linkTag)'
-                  )
+                  ).replace('installedCssChunks[chunkId] = 0', 'installedCssChunks[chunkId] = 1')
                 )
               )
             }
