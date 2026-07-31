@@ -110,7 +110,10 @@ onUnmounted(() => {
     delete window.__GLOBAL_LOADING_REMOTE_ENTRY__[key]
   })
   // @ts-expect-error: ignore
-  delete window[props.name]
+  if (window[props.name]) {
+    // @ts-expect-error: ignore
+    delete window[props.name]
+  }
 })
 
 provide(editorContextKey, {
