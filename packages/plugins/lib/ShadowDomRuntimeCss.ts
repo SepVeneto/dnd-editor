@@ -24,7 +24,7 @@ export class ShadowDomRuntimeCss implements RspackPluginInstance {
                   source.replace(
                     'document.head.appendChild(linkTag)',
                     'window.__shadowdom_css_runtime__(linkTag)'
-                  ).replace('installedCssChunks[chunkId] = 0', 'installedCssChunks[chunkId] = 1')
+                  ).replace('installedCssChunks[chunkId] = 0', 'installedCssChunks[chunkId] = null')
                 )
               )
             }

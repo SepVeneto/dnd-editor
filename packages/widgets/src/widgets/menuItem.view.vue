@@ -3,6 +3,7 @@
     class="menu-item-wrapper"
     :style="renderStyle"
   >
+    <div>test</div>
     <div>
       <img
         v-if="config.icon"
@@ -40,6 +41,7 @@ const renderStyle = useNormalizeStyle(toRef(props, 'style'))
 
 <style lang="scss" scoped>
 .menu-item-wrapper {
+  color: crimson;
   display: flex;
   justify-content: space-between;
   align-items: center;

@@ -12,6 +12,63 @@ import { createVNode, defineAsyncComponent, h, render } from 'vue'
 
 let mf: ModuleFederation
 
+function findWebpackRequire(
+  obj: any,
+  path = 'root',
+  visited = new WeakSet()
+) {
+  if (!obj || typeof obj !== 'object') {
+    return;
+  }
+
+  if (visited.has(obj)) {
+    return;
+  }
+
+  visited.add(obj);
+
+  for (const key of Object.keys(obj)) {
+    let value;
+
+    try {
+      value = obj[key];
+    } catch {
+      continue;
+    }
+
+    if (
+      typeof value === 'function' &&
+      value.m &&
+      value.c
+    ) {
+      console.log(
+        '[FOUND webpack_require]',
+        `${path}.${key}`
+      );
+
+      console.log('m:', value.m);
+      console.log('c:', value.c);
+
+      return value;
+    }
+
+    if (
+      value &&
+      typeof value === 'object'
+    ) {
+      const result = findWebpackRequire(
+        value,
+        `${path}.${key}`,
+        visited
+      );
+
+      if (result) {
+        return result;
+      }
+    }
+  }
+}
+
 export function initMf(url: string) {
   mf = createInstance({
     name: 'editor',
@@ -26,6 +83,55 @@ export function initMf(url: string) {
         },
       },
     },
+    plugins: [
+    {
+      name: 'debug-webpack-runtime',
+
+      beforeInit(args) {
+        console.log(
+          '[beforeInit]',
+          args
+        );
+
+        findWebpackRequire(args);
+
+        return args;
+      },
+
+      afterInit(args) {
+        console.log(
+          '[afterInit]',
+          args
+        );
+
+        findWebpackRequire(args);
+
+        return args;
+      },
+
+      beforeRequest(args) {
+        console.log(
+          '[beforeRequest]',
+          args
+        );
+
+        findWebpackRequire(args);
+
+        return args;
+      },
+
+      afterResolve(args) {
+        console.log(
+          '[afterResolve]',
+          args
+        );
+
+        findWebpackRequire(args);
+
+        return args;
+      },
+    },
+  ],
   })
   mf.registerRemotes([
     {

@@ -68,6 +68,7 @@
 import type { Node } from '@sepveneto/dnde-core/class'
 import type { DraggableEvt } from './type'
 import { editorContextKey, EventEmitter } from '@sepveneto/dnde-core'
+import { ElConfigProvider, ElScrollbar } from 'element-plus'
 // @ts-expect-error: no def
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
 import { getCurrentInstance, onMounted, onUnmounted, provide, useTemplateRef } from 'vue'
@@ -79,7 +80,6 @@ import WidgetsMenu from './layout/widgetsMenu.vue'
 import { editorProps } from './props'
 import { useEditor } from './store'
 import { EditorKey, loadFromRemote, normalizeStyle } from './utils'
-import { ElConfigProvider, ElScrollbar } from 'element-plus'
 
 const props = defineProps(editorProps)
 
@@ -106,14 +106,15 @@ provide(EditorKey, {
 // 未来要么mf兼容web components，要么提供手动清除缓存的方式
 // 或者可以从根本上解决，即考虑其它样式加载的方式
 onUnmounted(() => {
-  Object.keys(window.__GLOBAL_LOADING_REMOTE_ENTRY__).forEach((key) => {
-    delete window.__GLOBAL_LOADING_REMOTE_ENTRY__[key]
-  })
+  window.disposeModules()
+  // Object.keys(window.__GLOBAL_LOADING_REMOTE_ENTRY__).forEach((key) => {
+  //   delete window.__GLOBAL_LOADING_REMOTE_ENTRY__[key]
+  // })
   // @ts-expect-error: ignore
-  if (window[props.name]) {
-    // @ts-expect-error: ignore
-    delete window[props.name]
-  }
+  // if (window[props.name]) {
+  //   // @ts-expect-error: ignore
+  //   delete window[props.name]
+  // }
 })
 
 provide(editorContextKey, {

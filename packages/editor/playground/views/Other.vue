@@ -11,8 +11,8 @@
   </button>
   <pre>config: {{ config }}</pre>
   <mpd-editor
+    v-if="rendering"
     ref="editorRef"
-    remote-url="http://localhost:8090"
     :root="rootSchema"
     :widgets="widgets"
     @change="onUpdate"
@@ -39,7 +39,10 @@ watchEffect(() => {
 })
 
 const refEditor = useTemplateRef<EditorInstance>('editorRef')
-register()
+const rendering = ref(false)
+register({ remoteUrl: 'http://localhost:8090' }).then(() => {
+  rendering.value = true
+})
 
 onMounted(() => {
   refEditor.value?.register(ctx => ({
