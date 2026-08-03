@@ -107,7 +107,7 @@ provide(EditorKey, {
 // 或者可以从根本上解决，即考虑其它样式加载的方式
 onUnmounted(() => {
   // @ts-expect-error: ignore
-  window.disposeModules()
+  window.__disposeModules()
   // Object.keys(window.__GLOBAL_LOADING_REMOTE_ENTRY__).forEach((key) => {
   //   delete window.__GLOBAL_LOADING_REMOTE_ENTRY__[key]
   // })
