@@ -7,10 +7,8 @@ __webpack_require__.c = __webpack_module_cache__;
 
 
 globalThis.__disposeModules = function () {
-  if (!'__lazy_modules__' in __webpack_require__.m) {
-    return
-  }
   const ids = __webpack_require__.m.__lazy_modules__
+  if (!ids) return
   const keys = Object.keys(__webpack_require__.c)
   for (const id of ids) {
     keys.filter(key => key.startsWith(id)).forEach(key => {
