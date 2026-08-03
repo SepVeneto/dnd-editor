@@ -38,6 +38,8 @@ export const pluginEditor: (options?: { name?: string }) => RsbuildPlugin = (opt
                   .PROCESS_ASSETS_STAGE_OPTIMIZE,
             },
             assets => {
+              const remoteEntry = options?.name || 'remoteEntry'
+
               for (const name of Object.keys(assets)) {
                 if (
                   name.includes(
@@ -68,19 +70,19 @@ module.exports = __webpack_require__.e(${chunkId})
                     );
                   }
                 }
-              }
 
-              const remoteEntry = options?.name || 'remoteEntry'
-              const name = `static/js/${remoteEntry}.js`
-              const source = assets[name].source() as string
+                if (name.includes(`js/${remoteEntry}`)) {
+                  const source = assets[name].source() as string
 
-              const patched = source.replace('__webpack_require__.c = __webpack_module_cache__;', exposeDispose)
+                  const patched = source.replace('__webpack_require__.c = __webpack_module_cache__;', exposeDispose)
 
-              if (patched !== source) {
-                compilation.updateAsset(
-                  name,
-                  new RawSource(patched)
-                );
+                  if (patched !== source) {
+                    compilation.updateAsset(
+                      name,
+                      new RawSource(patched)
+                    );
+                  }
+                }
               }
             }
           );
