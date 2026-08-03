@@ -6,13 +6,11 @@ const exposeDispose = `
 __webpack_require__.c = __webpack_module_cache__;
 
 
-globalThis.disposeModules = function () {
+globalThis.__disposeModules = function () {
   const ids = __webpack_require__.m.__lazy_modules__
   const keys = Object.keys(__webpack_require__.c)
   for (const id of ids) {
-    console.log('remove', id)
     keys.filter(key => key.startsWith(id)).forEach(key => {
-      console.log('remove', key)
       delete __webpack_require__.c[key];
     })
   }
