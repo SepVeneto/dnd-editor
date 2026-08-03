@@ -71,6 +71,12 @@
     :show-alpha="config.attrs?.showAlpha"
   />
 
+  <ElCheckbox
+    v-else-if="config.type === 'checkbox'"
+    v-model="model"
+    v-bind="config.attrs"
+  />
+
   <component
     :is="RemoteRender"
     v-else-if="config.type === 'custom'"
@@ -93,7 +99,7 @@ import { computed, inject } from 'vue'
 import { EditorKey, loadFromRemote } from '@/utils'
 import ColorPicker from './ColorPicker.vue'
 import StyleNumber from './StyleNumber.vue'
-import { ElDatePicker, ElInput, ElInputNumber, ElOption, ElRadio, ElRadioButton, ElRadioGroup, ElSelect, ElSwitch } from 'element-plus'
+import { ElCheckbox, ElDatePicker, ElInput, ElInputNumber, ElOption, ElRadio, ElRadioButton, ElRadioGroup, ElSelect, ElSwitch } from 'element-plus'
 
 defineProps<{ data: Record<string, any>, config: SchemaItem }>()
 const model = defineModel<any>({ required: true })

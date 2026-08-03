@@ -1,13 +1,14 @@
 import type {
-  ColorPickerInstance,
-  DatePickerInstance,
   FormItemProps,
-  // ImageInstance,
-  InputInstance,
-  InputNumberInstance,
-  RadioInstance,
-  SelectInstance,
-  SwitchInstance,
+  CheckboxProps,
+  InputProps,
+  InputNumberProps,
+  SelectProps,
+  RadioProps,
+  RadioButtonProps,
+  SwitchProps,
+  DatePickerProps,
+  ColorPickerProps,
 } from 'element-plus'
 import type { Option, RadioButtonOption, RadioOption, SchemaItem, SchemaItemCustom } from '@/class'
 import { likeArray } from '@/utils'
@@ -40,30 +41,33 @@ export const schema = {
         return base
     }
   },
-  input(config: BaseConfig & { attrs?: InputInstance['$props'] }): SchemaItem {
+  input(config: BaseConfig & { attrs?: InputProps }): SchemaItem {
     return this._create('input', config)
   },
-  number(config: BaseConfig & { attrs?: InputNumberInstance['$props'] }): SchemaItem {
+  number(config: BaseConfig & { attrs?: InputNumberProps }): SchemaItem {
     return this._create('number', config)
   },
+  checkbox(config: BaseConfig & { attrs?: CheckboxProps }): SchemaItem {
+    return this._create('checkbox', config)
+  },
   select(
-    config: BaseConfig & { attrs?: SelectInstance['$props'], options?: Option['$props'][], link?: Record<string, SchemaItem[]> },
+    config: BaseConfig & { attrs?: SelectProps, options?: Option[], link?: Record<string, SchemaItem[]> },
   ): SchemaItem {
     return this._create('select', config)
   },
-  radio(config: BaseConfig & { attrs?: RadioInstance['$props'], options?: RadioOption['$props'][], link?: Record<string, SchemaItem[]> }): SchemaItem {
+  radio(config: BaseConfig & { attrs?: RadioProps, options?: RadioOption[], link?: Record<string, SchemaItem[]> }): SchemaItem {
     return this._create('radio', config)
   },
-  radioButton(config: BaseConfig & { attrs?: RadioInstance['$props'], options?: RadioButtonOption['$props'][], link?: Record<string, SchemaItem[]> }): SchemaItem {
+  radioButton(config: BaseConfig & { attrs?: RadioButtonProps, options?: RadioButtonOption[], link?: Record<string, SchemaItem[]> }): SchemaItem {
     return this._create('radioButton', config)
   },
-  switch(config: BaseConfig & { attrs?: SwitchInstance['$props'] }): SchemaItem {
+  switch(config: BaseConfig & { attrs?: SwitchProps }): SchemaItem {
     return this._create('switch', config)
   },
-  time(config: BaseConfig & { attrs?: Partial<DatePickerInstance['$props']> }): SchemaItem {
+  time(config: BaseConfig & { attrs?: DatePickerProps }): SchemaItem {
     return this._create('datetimePicker', config)
   },
-  color(config: BaseConfig & { attrs?: ColorPickerInstance['$props'] }): SchemaItem {
+  color(config: BaseConfig & { attrs?: ColorPickerProps }): SchemaItem {
     return this._create('colorPicker', config)
   },
   custom(config: BaseConfig & { attrs?: Record<string, any>, type: string }): SchemaItem {
