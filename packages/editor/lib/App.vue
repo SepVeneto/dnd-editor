@@ -106,11 +106,11 @@ provide(EditorKey, {
 // 未来要么mf兼容web components，要么提供手动清除缓存的方式
 // 或者可以从根本上解决，即考虑其它样式加载的方式
 onUnmounted(() => {
+  // @ts-expect-error: ignore
   window.disposeModules()
   // Object.keys(window.__GLOBAL_LOADING_REMOTE_ENTRY__).forEach((key) => {
   //   delete window.__GLOBAL_LOADING_REMOTE_ENTRY__[key]
   // })
-  // @ts-expect-error: ignore
   // if (window[props.name]) {
   //   // @ts-expect-error: ignore
   //   delete window[props.name]
