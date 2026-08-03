@@ -89,7 +89,7 @@
   />
 
   <div v-else>
-    unknown type: {{ config.type }}
+    unknown type: {{ (config as unknown as any).type }}
   </div>
 </template>
 
