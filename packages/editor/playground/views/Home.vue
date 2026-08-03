@@ -201,7 +201,7 @@ const serviceWidgets: IWidget[] = [
     defaultData: {
       isShow: 1,
     },
-    defaultStyle: { width: 375 },
+    defaultStyle: { width: 375, height: 300 },
     attributes: [
       schema.switch({
         label: '是否显示',

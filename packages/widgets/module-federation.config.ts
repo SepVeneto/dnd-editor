@@ -5,7 +5,7 @@ export default createModuleFederationConfig({
   dts: false,
   exposes: {
     './remote': './src/components/remoteRender.vue',
-    // './setup': './src/setup.ts',
+    './setup': './src/setup.ts',
   },
   shared: {
     'vue': {
