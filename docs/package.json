@@ -16,6 +16,8 @@
     "@sepveneto/dnde-core": "workspace: *",
     "@vitejs/plugin-vue": "^5.2.4",
     "markdown-it-task-lists": "^2.1.1",
+    "element-plus": "catalog:",
+    "@element-plus/icons-vue": "catalog:",
     "vitepress": "^1.6.4"
   },
   "devDependencies": {
