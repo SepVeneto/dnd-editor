@@ -10,43 +10,53 @@
       <WidgetsMenu class="mpd-flex-shrink-0" />
       <div class="phone-wrap mpd-relative">
         <img src="./assets/iPhone13.png">
-        <ElScrollbar
-          height="714px"
-          class=" phone-body mpd-scale-100"
-          noresize
+        <div
+          class="mpd-flex mpd-flex-col mpd-absolute"
+          style="top: 50px; left: 14px; right: 14px; height: 714px;"
         >
-          <VueDraggable
-            v-model="editor.rootNode.list"
-            :group="{ name: 'editor', pull: true, put: true }"
-            class="mpd-relative mpd-bg-gray-100  mpd-flex mpd-flex-col mpd-items-center"
-            style="width: 375px; min-height: 714px;"
-            :style="normalizeStyle(editor.rootNode.style)"
-            :component-data="{ type: 'transition-group', name: 'flip-list' }"
-            :animation="150"
-            ghost-class="dragging-ghost"
-            :invert-swap="true"
-            :swap-threshold="0.5"
-            handle=".mpd-node.draggable"
-            item-key="wid"
-            :move="handleMove"
-            @start="handelStart"
-            @add="onAdd"
-            @end="onEnd"
+          <header class="phone-header" v-if="editor.showTopbar">
+            <LeftArrow />
+            <span>顶部导航栏</span>
+            <span />
+          </header>
+          <ElScrollbar
+            class="mpd-scale-100 mpd-bg-gray-100"
+            noresize
+            view-style="height: 100%;"
           >
-            <template #item="{ element }">
-              <NodeWrap
-                :node="element"
-              >
-                <ViewRender
-                  scope="widgets"
-                  :type="`${element.type}.view`"
-                  :config="element"
-                  :data="element.data"
-                />
-              </NodeWrap>
-            </template>
-          </VueDraggable>
-        </ElScrollbar>
+            <VueDraggable
+              v-model="editor.rootNode.list"
+              :group="{ name: 'editor', pull: true, put: true }"
+              class="mpd-relative  mpd-flex mpd-flex-col mpd-items-center"
+              style="width: 375px; min-height: 100%;"
+              :style="normalizeStyle(editor.rootNode.style)"
+              :component-data="{ type: 'transition-group', name: 'flip-list' }"
+              :animation="150"
+              ghost-class="dragging-ghost"
+              :invert-swap="true"
+              :swap-threshold="0.5"
+              handle=".mpd-node.draggable"
+              item-key="wid"
+              :move="handleMove"
+              @start="handelStart"
+              @add="onAdd"
+              @end="onEnd"
+            >
+              <template #item="{ element }">
+                <NodeWrap
+                  :node="element"
+                >
+                  <ViewRender
+                    scope="widgets"
+                    :type="`${element.type}.view`"
+                    :config="element"
+                    :data="element.data"
+                  />
+                </NodeWrap>
+              </template>
+            </VueDraggable>
+          </ElScrollbar>
+        </div>
       </div>
 
       <aside style="width: 500px; border: 1px solid var(--mpd-border-color); padding: 1rem;">
@@ -67,6 +77,7 @@
 </template>
 
 <script lang="ts" setup>
+import LeftArrow from './assets/leftArrow.vue'
 import type { Node } from '@sepveneto/dnde-core/class'
 import type { DraggableEvt } from './type'
 import { editorContextKey, EventEmitter } from '@sepveneto/dnde-core'
@@ -282,10 +293,15 @@ defineExpose({
 .phone-wrap > img {
   width: 403px;
 }
-.phone-body {
-  position: absolute;
-  top: 50px;
-  left: 14px;
-  right: 14px;
+.phone-header {
+  height: 44px;
+  flex-shrink: 0;
+  background: #fff;
+  padding: 7px 3px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 16px;
+  font-weight: 700;
 }
 </style>

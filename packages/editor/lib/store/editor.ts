@@ -142,6 +142,16 @@ export const useEditor = defineStore('editor', () => {
   nodeMap.set(rootNode.value.wid, rootNode.value)
   const selected = ref<string>(rootNode.value.wid)
 
+  const showTopbar = computed(() => {
+    const topbar = rootNode.value.widget._data.schema?.props?.find(item => {
+      return item._role === 'topbar'
+    })
+    // 默认显示
+    if (!topbar) return true
+
+    return !!rootNode.value.data[topbar.key]
+  })
+
   watchEffect(() => {
     nodeMap.delete(rootNode.value.wid)
     selected.value = rootNode.value.wid
@@ -267,6 +277,7 @@ export const useEditor = defineStore('editor', () => {
     isPreview,
     dragging,
     plugins,
+    showTopbar,
 
     getData,
     setData,

@@ -14,6 +14,8 @@ import type { Option, RadioButtonOption, RadioOption, SchemaItem, SchemaItemCust
 import { likeArray } from '@/utils'
 
 interface BaseConfig {
+  /** @private */
+  _role?: string
   label: SchemaItem['label']
   key: SchemaItem['key']
   tips?: string
@@ -25,6 +27,7 @@ interface BaseConfig {
 export const schema = {
   _create(type: any, config: BaseConfig & { attrs?: any, options?: any, link?: any }): SchemaItem {
     const base: SchemaItem = {
+      _role: config._role,
       label: config.label,
       key: config.key,
       type,
@@ -84,6 +87,10 @@ export const schema = {
   ): SchemaItem {
     return this._create('styleNumber', config)
   },
+
+  topbar(config: BaseConfig & { attrs?: RadioProps, options?: RadioOption[], link?: Record<string, SchemaItem[]> }): SchemaItem {
+    return this.radio({ ...config, _role: 'topbar' })
+  }
 }
 
 function normalizeRules(config: BaseConfig) {

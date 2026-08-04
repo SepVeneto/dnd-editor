@@ -19,11 +19,13 @@ import type {
 import type { IWidget } from '@/types'
 import Validator from 'async-validator'
 
-export type Option = InstanceType<typeof ElOption>
-export type RadioOption = InstanceType<typeof ElRadio>
-export type RadioButtonOption = InstanceType<typeof ElRadioButton>
+export type Option = InstanceType<typeof ElOption>['$props']
+export type RadioOption = InstanceType<typeof ElRadio>['$props']
+export type RadioButtonOption = InstanceType<typeof ElRadioButton>['$props']
 
 interface SchemaItemBase {
+  /** @private */
+  _role?: string
   label: string
   key: string
   formItem?: Partial<FormItemProps>

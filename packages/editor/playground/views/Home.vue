@@ -150,6 +150,11 @@ const baseWidgets: IWidget[] = [
   widget.root({
     name: '活动设置',
     attributes: [
+      schema.topbar({
+        label: '顶部导航栏',
+        key: 'topbar',
+        options: [{ label: '显示', value: 1 }, { label: '隐藏', value: 0 }],
+      }),
       schema.custom({
         type: 'element',
         label: '标题',
