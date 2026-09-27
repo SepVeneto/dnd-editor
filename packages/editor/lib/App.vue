@@ -38,8 +38,8 @@
               handle=".mpd-node.draggable"
               item-key="wid"
               :move="handleMove"
-              @start="handelStart"
-              @add="onAdd"
+              @start="drag.onStart"
+              @add="drag.onAdd"
               @end="onEnd"
             >
               <template #item="{ element }">
@@ -79,13 +79,13 @@
 <script lang="ts" setup>
 import LeftArrow from './assets/leftArrow.vue'
 import type { Node } from '@sepveneto/dnde-core/class'
-import type { DraggableEvt } from './type'
 import { editorContextKey, EventEmitter } from '@sepveneto/dnde-core'
 import { ElConfigProvider, ElScrollbar } from 'element-plus'
 // @ts-expect-error: no def
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
 import { getCurrentInstance, onMounted, onUnmounted, provide, useTemplateRef } from 'vue'
 import VueDraggable from 'vuedraggable'
+import { useNodeListDrag } from './composables/useNodeListDrag'
 import NodeWrap from './components/NodeWrap.vue'
 import ConfigPanel from './layout/configPanel.vue'
 import TreePanel from './layout/treePanel.vue'
@@ -174,45 +174,15 @@ function handleMove(evt: any) {
     }
   }
 }
-function handelStart(evt: DraggableEvt) {
-  const nodeId = evt.item.dataset.id
-  const draggingNode = editor.rootNode.list.find((node: any) => node.wid === nodeId)!
-  editor.dragging = draggingNode as Node
-}
-function onAdd(evt: DraggableEvt) {
-  const nextNode = editor.rootNode.list[evt.newIndex + 1]
-  const prevNode = editor.rootNode.list[evt.newIndex - 1]
-  if (nextNode && nextNode.widget.isFixed === 'header') {
-    const deletedNode = editor.rootNode.list.splice(evt.newIndex, 1)[0]
-
-    // 跨容器移动触发fixed时需要手动还原到旧容器中
-    if (evt.to !== evt.from) {
-      const oldContainer = editor.nodeMap.get(evt.from.dataset.id!)!
-      // 如果没有父容器说明是从组件栏中拖动的，就不需要还原了
-      if (!oldContainer) {
-        return
-      }
-      ;(oldContainer.list as Node[]).splice(evt.oldIndex, 0, deletedNode)
-    }
-    return
-  }
-  if (prevNode && prevNode.widget.isFixed === 'footer') {
-    const deletedNode = editor.rootNode.list.splice(evt.newIndex, 1)[0]
-
-    // 跨容器移动触发fixed时需要手动还原到旧容器中
-    if (evt.to !== evt.from) {
-      const oldContainer = editor.nodeMap.get(evt.from.dataset.id!)!
-      // 如果没有父容器说明是从组件栏中拖动的，就不需要还原了
-      if (!oldContainer) {
-        return
-      }
-      ;(oldContainer.list as Node[]).splice(evt.oldIndex, 0, deletedNode)
-    }
-    return
-  }
-  const node = editor.rootNode.list[evt.newDraggableIndex] as Node
-  editor.addNode(node)
-}
+const drag = useNodeListDrag({
+  get list() {
+    return editor.rootNode.list
+  },
+  get parent() {
+    return editor.rootNode as Node
+  },
+  setList: list => editor.rootNode.setList(list),
+})
 
 const ViewRender = loadFromRemote('widgets', 'remote')
 

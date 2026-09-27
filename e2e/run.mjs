@@ -24,9 +24,10 @@ import { extname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)))
-const PORT = 8082
+// 端口交给系统分配，避免与本地 dev server（pnpm dev 用的 8082）冲突
+const PORT = 0
 const CDP_PORT = 9333
-const ORIGIN = `http://127.0.0.1:${PORT}`
+let ORIGIN = ''
 const PROFILE_DIR = '/tmp/dnde-e2e-chrome-profile'
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 
@@ -152,6 +153,7 @@ try {
     '/host': join(ROOT, 'e2e/host'),
     '/': join(ROOT, 'packages/widgets/dist'),
   }, PORT, false))
+  ORIGIN = `http://127.0.0.1:${servers[0].address().port}`
 
   const probe = await fetch(`${ORIGIN}/mf-manifest.json`)
   if (!probe.ok)
@@ -233,6 +235,18 @@ try {
     'element-plus 由宿主提供、被远端消费（provider.from === editor）',
     state.federation?.elementPlusFrom === 'editor',
     `from=${state.federation?.elementPlusFrom}, instances=${ep.join(',')}`,
+  )
+
+  // 节点操作栏 tooltip：必须由编辑器自身的 mpd 命名空间样式着色（曾退化成 el- 而丢样式）
+  check(
+    '节点操作栏 tooltip 使用 mpd 命名空间（不依赖生产者注入的 el- 样式）',
+    /mpd-popper/.test(state.tooltip?.cls || ''),
+    `tooltip=${JSON.stringify(state.tooltip)}`,
+  )
+  check(
+    'tooltip 实际被着色（非透明背景）',
+    state.tooltip?.found === true && state.tooltip.background !== 'rgba(0, 0, 0, 0)',
+    `bg=${state.tooltip?.background}`,
   )
 }
 catch (err) {

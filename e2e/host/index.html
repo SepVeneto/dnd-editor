@@ -126,6 +126,40 @@
           }
         })()
 
+        // 回归检查：节点操作栏 tooltip 用的是编辑器自己的 mpd 命名空间样式，
+        // 而不是靠生产者注入的默认 el- 命名空间样式兜底
+        await (async () => {
+          const wrap = el.shadowRoot.querySelector('.mpd-node .node-wrap')
+          if (!wrap) {
+            state.tooltip = { found: false, reason: 'no node-wrap' }
+            return
+          }
+          wrap.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+          await sleep(250)
+
+          const helper = el.shadowRoot.querySelector('.node-helper')
+          if (!helper) {
+            state.tooltip = { found: false, reason: 'no .node-helper' }
+            return
+          }
+          helper.dispatchEvent(new MouseEvent('mouseenter'))
+          await sleep(400)
+
+          const popper = el.shadowRoot.querySelector('.mpd-popper, .el-popper')
+          if (!popper) {
+            state.tooltip = { found: false, reason: 'no popper rendered' }
+            return
+          }
+          const cs = getComputedStyle(popper)
+          state.tooltip = {
+            found: true,
+            cls: popper.className,
+            background: cs.backgroundColor,
+            color: cs.color,
+            padding: cs.padding,
+          }
+        })()
+
         state.phase = 'done'
       }
       catch (err) {

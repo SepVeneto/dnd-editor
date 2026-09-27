@@ -9,9 +9,9 @@
     handle=".node-wrap.draggable"
     ghost-class="dragging-ghost"
     item-key="wid"
-    @update:model-value="onInput"
-    @start="handleStart"
-    @add="onAdd"
+    @update:model-value="drag.onInput"
+    @start="drag.onStart"
+    @add="drag.onAdd"
     @end="editor.dragging = null"
   >
     <template #item="{ element }">
@@ -31,8 +31,8 @@
 
 <script lang="ts" setup>
 import type { Node } from '@sepveneto/dnde-core/class'
-import type { DraggableEvt } from '@/type'
 import VueDraggable from 'vuedraggable'
+import { useNodeListDrag } from '@/composables/useNodeListDrag'
 import { useEditor } from '@/store'
 import { loadFromRemote } from '@/utils'
 import NodeWrap from './NodeWrap.vue'
@@ -41,33 +41,16 @@ const props = defineProps<{ node: Node }>()
 
 const RemoteRender = loadFromRemote('widgets', 'remote')
 const editor = useEditor()
+const drag = useNodeListDrag({
+  get list() {
+    return props.node.list
+  },
+  get parent() {
+    return props.node
+  },
+  setList: list => props.node.setList(list),
+})
 
-function handleStart(evt: DraggableEvt) {
-  const nodeId = evt.item.dataset.id
-  const draggingNode = props.node.list.find(node => node.wid === nodeId)!
-  editor.dragging = draggingNode
-}
-function onInput(list: Node[]) {
-  props.node.setList(list)
-}
-function onAdd(evt: DraggableEvt) {
-  const list = [...props.node.list]
-  const nextNode = list[evt.newIndex + 1]
-  if (nextNode && nextNode.widget.isFixed) {
-    const deletedNode = list.splice(0, 1)[0]
-
-    // 跨容器移动触发fixed时需要手动还原到旧容器中
-    if (evt.to !== evt.from) {
-      const oldContainer = editor.nodeMap.get(evt.from.dataset.id!)!
-      ;(oldContainer.list as Node[]).splice(evt.oldIndex, 0, deletedNode)
-    }
-
-    onInput(list)
-    return
-  }
-  const node = props.node.list[evt.newDraggableIndex]
-  editor.addNode(node, props.node)
-}
 </script>
 
 <style scoped lang="scss">

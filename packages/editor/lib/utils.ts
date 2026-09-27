@@ -10,7 +10,7 @@ import * as ElementPlus from 'element-plus'
 import * as Vue from 'vue'
 import { createVNode, defineAsyncComponent, h, render } from 'vue'
 
-const { ElIcon, ElTooltip } = ElementPlus
+const { ElConfigProvider, ElIcon, ElTooltip } = ElementPlus
 
 let mf: ModuleFederation
 
@@ -84,21 +84,25 @@ export function createPopper(
   }
   removePopper?.()
 
-  const vm = createVNode(ElTooltip, {
+  const tooltip = createVNode(ElTooltip, {
     virtualTriggering: true,
     virtualRef: trigger,
     appendTo: parent,
-    // teleported: false,
     placement: 'top',
     transition: 'none',
     offset: 4,
     hideAfter: 0,
   }, { content: () => content })
+
+  // tooltip 挂在独立渲染根上，拿不到编辑器 <ElConfigProvider namespace="mpd"> 的注入。
+  // 不显式补一层 provider 的话它会退化成 element-plus 默认的 `el-` 命名空间，
+  // 而编辑器自身的样式是按 `mpd` 命名空间编译的，于是 tooltip 会完全没有样式。
+  const vm = createVNode(ElConfigProvider, { namespace: 'mpd' }, { default: () => tooltip })
   vm.appContext = ctx
 
   const container = document.createElement('div')
   render(vm, container)
-  vm.component!.exposed!.onOpen()
+  tooltip.component!.exposed!.onOpen()
 
   removePopper = () => {
     render(null, container)
@@ -106,7 +110,7 @@ export function createPopper(
   }
 
   removePopper.trigger = trigger
-  removePopper.vm = vm
+  removePopper.vm = tooltip
 }
 
 type Style = Partial<Record<keyof CSSProperties, string | number>>
