@@ -6,9 +6,11 @@ import {
 } from '@element-plus/icons-vue'
 import { createInstance } from '@module-federation/enhanced/runtime'
 import debug from 'debug'
-import { ElIcon, ElTooltip } from 'element-plus'
+import * as ElementPlus from 'element-plus'
 import * as Vue from 'vue'
 import { createVNode, defineAsyncComponent, h, render } from 'vue'
+
+const { ElIcon, ElTooltip } = ElementPlus
 
 let mf: ModuleFederation
 
@@ -23,6 +25,14 @@ export function initMf(url: string) {
         shareConfig: {
           singleton: true,
           requiredVersion: '^3.5.40',
+        },
+      },
+      'element-plus': {
+        version: '2.14.3',
+        lib: () => ElementPlus,
+        shareConfig: {
+          singleton: true,
+          requiredVersion: '^2.14.1',
         },
       },
     },
