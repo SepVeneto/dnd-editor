@@ -135,6 +135,13 @@ provide(editorContextKey, {
   plugins: editor.plugins,
   bus,
   extra: props.extra || {},
+  // 预览态保持响应式，业务组件据此禁用拖拽 / 缩放等编辑交互
+  get preview() {
+    return editor.isPreview
+  },
+  // 业务组件的配置对象是按引用共享的，原地修改已能被编辑器的变更监听捕获，
+  // 这里保留该钩子，供远端组件显式请求编辑器同步数据
+  updateConfig() {},
 })
 
 function onEnd() {
