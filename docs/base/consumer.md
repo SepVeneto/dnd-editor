@@ -152,6 +152,16 @@ import { register } from '@sepveneto/dnde'
 await register({ remoteUrl: 'http://localhost:8090' })
 ```
 
+`register`的可选配置：
+
+| 名称 | 类型 | 默认值 | 说明 |
+| ---- | ---- | ------ | ---- |
+| injectGlobalStyle | boolean | true | 是否把 element-plus 主题再挂一份到宿主页面的`document.head`，用于兜住 teleport 到`document.body`的弹层（`ElDialog`、`ElSelect` 下拉、`ElTooltip` 等） |
+
+::: tip
+弹层会被 teleport 到`document.body`，不在编辑器的`shadow dom`内，因此需要一份挂在宿主页面上的样式。默认开启；如果宿主已有自己的 element-plus 全局样式、不希望页面里再多一份，可以关闭（关闭后需自行保证这些弹层的样式，也可以稍后手动调用导出的`injectPopperStyles`）。
+:::
+
 ## 属性
 
 | 名称 | 类型 | 必填 | 默认值 | 说明 |

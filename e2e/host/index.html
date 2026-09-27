@@ -33,7 +33,30 @@
       const widgets = [
         { _name: '页面', _view: 'page', meta: { visible: false }, schema: { props: [], style: [] }, data: {}, style: {} },
         { _name: '栅格容器', _view: 'containerGrid', container: true, meta: { visible: false }, schema: { props: [], style: [] }, data: {}, style: {} },
-        { _name: '卡片', _view: 'card', meta: { visible: false }, schema: { props: [], style: [] }, data: {}, style: {} },
+        {
+          _name: '卡片',
+          _view: 'card',
+          meta: { visible: false },
+          schema: {
+            // 生产者的 element.config.vue：ElButton + ElDialog + ElSelect，全部依赖全局注册，
+            // 弹层会 teleport 到 document.body（用于验证逃出 shadow 的弹层样式）
+            props: [{
+              type: 'custom',
+              name: 'element',
+              label: 'Element 演示',
+              key: 'elementDemo',
+            }, {
+              type: 'select',
+              label: '选择器',
+              key: 'opt',
+              rules: [],
+              options: [{ label: '选项一', value: 'a' }, { label: '选项二', value: 'b' }],
+            }],
+            style: [],
+          },
+          data: { opt: 'a' },
+          style: {},
+        },
       ]
 
       try {
@@ -47,7 +70,11 @@
         }
 
         const { register } = await import('/editor/editor.js')
-        await register({ remoteUrl: location.origin })
+        await register({
+          remoteUrl: location.origin,
+          // ?nogstyle=1 用于验证「不往宿主 head 注入全局主题」的开关
+          injectGlobalStyle: !new URLSearchParams(location.search).has('nogstyle'),
+        })
 
         const el = document.createElement('mpd-editor')
         el.id = 'editor'
@@ -159,6 +186,60 @@
             padding: cs.padding,
           }
         })()
+
+        // 回归检查：配置区 ElSelect 的下拉必须留在 shadow DOM 内，
+        // 并且由编辑器自身的 mpd 命名空间样式着色
+        await (async () => {
+          const cardWrap = el.shadowRoot.querySelector('.mpd-node[data-id="card-1"] .node-wrap')
+          if (!cardWrap) {
+            state.select = { found: false, reason: 'no card node' }
+            return
+          }
+          cardWrap.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+          await sleep(300)
+
+          const trigger = el.shadowRoot.querySelector('.mpd-select__wrapper')
+            || el.shadowRoot.querySelector('.mpd-select')
+          if (!trigger) {
+            state.select = { found: false, reason: 'no select in config panel' }
+            return
+          }
+          trigger.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+          await sleep(500)
+
+          const dropdown = el.shadowRoot.querySelector('.mpd-select-dropdown, .el-select-dropdown')
+          if (!dropdown) {
+            state.select = { found: false, reason: 'dropdown not opened' }
+            return
+          }
+          const popper = dropdown.parentElement
+          const cs = getComputedStyle(popper)
+          const item = el.shadowRoot.querySelector('.mpd-select-dropdown__item')
+          state.select = {
+            found: true,
+            inShadow: dropdown.getRootNode() === el.shadowRoot,
+            popperClass: popper.className,
+            popperBackground: cs.backgroundColor,
+            popperBoxShadow: cs.boxShadow,
+            itemHeight: item ? getComputedStyle(item).height : null,
+          }
+          // 关掉下拉，避免挡住后面的按钮
+          el.shadowRoot.querySelector('.mpd-editor').dispatchEvent(new MouseEvent('click', { bubbles: true }))
+          await sleep(300)
+        })()
+
+        const shadowSheets = [...el.shadowRoot.querySelectorAll('style')].map(s => s.textContent || '')
+        const shadowCss = shadowSheets.join('\n')
+        state.shadowCss = {
+          total: shadowCss.length,
+          mpdVars: (shadowCss.match(/--mpd-[a-z-]+:/g) || []).length,
+          elVars: (shadowCss.match(/--el-[a-z-]+:/g) || []).length,
+        }
+
+        const popperStyle = document.getElementById('mpd-popper-styles')
+        state.popperStyle = popperStyle
+          ? { len: popperStyle.textContent.length, head: popperStyle.textContent.slice(0, 40) }
+          : null
 
         state.phase = 'done'
       }

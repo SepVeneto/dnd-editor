@@ -5,6 +5,7 @@ import {
   Loading as IconLoading,
 } from '@element-plus/icons-vue'
 import { createInstance } from '@module-federation/enhanced/runtime'
+import popperCss from './styles/popper.scss?inline'
 import debug from 'debug'
 import * as ElementPlus from 'element-plus'
 import * as Vue from 'vue'
@@ -14,10 +15,37 @@ const { ElConfigProvider, ElIcon, ElTooltip } = ElementPlus
 
 let mf: ModuleFederation
 
+const POPPER_STYLE_ID = 'mpd-popper-styles'
+
+/**
+ * 把 element-plus 主题（mpd 命名空间）再投放到 light DOM。
+ *
+ * 弹层（ElDialog / ElSelect / ElTooltip / ElPopover ...）默认 teleport 到 document.body，
+ * 不在 shadow DOM 里，拿不到编辑器注入到 shadow root 的样式；而它们的类名带的是编辑器自己的
+ * `mpd-` 前缀，宿主页面里的 element-plus 全局样式（`el-`）也匹配不到。
+ * 这里补一份同样命名空间的主题样式放在 document.head，专门兜住这部分弹层。
+ */
+export function injectPopperStyles() {
+  if (typeof document === 'undefined')
+    return
+  if (document.getElementById(POPPER_STYLE_ID))
+    return
+
+  const style = document.createElement('style')
+  style.id = POPPER_STYLE_ID
+  // 与 shadow DOM 里是同一份主题，作用域从 :host 换成 :root
+  style.textContent = popperCss.replaceAll(':host', ':root')
+  document.head.appendChild(style)
+}
+
 export function initMf(url: string) {
   mf = createInstance({
     name: 'editor',
     remotes: [],
+    // 共享 element-plus：生产者的组件在编辑器的组件树里渲染（全局组件也是编辑器注册的），
+    // 所以它们应当使用编辑器的 element-plus 实例与配置（命名空间 mpd、locale 等）。
+    // 代价是这些组件的弹层会带 `mpd-` 前缀，而 teleport 到 document.body 的弹层拿不到
+    // shadow DOM 里的样式 —— 这部分由 injectPopperStyles() 投放到 light DOM 的主题样式兜底。
     shared: {
       vue: {
         version: '3.5.40',

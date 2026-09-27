@@ -22,16 +22,19 @@ title: 生产者
 ```ts
 // src/setup.ts
 import ElementPlus from 'element-plus'
-import ElementPlusCss from 'element-plus/dist/index.css?inline'
 
 // 编辑器创建应用时会依次 app.use(plugin, options)
 export const use = [{ plugin: ElementPlus, options: {} }]
-// 需要注入到编辑器 shadow dom 中的样式
-export const styles = [ElementPlusCss.replace(':root', ':host')]
+// 生产者自己的样式，会被注入到编辑器的 shadow dom 中
+export const styles: string[] = []
 ```
 
-::: warning
-生产者的样式不会自动注入。编辑器会把`./setup`导出的`styles`挂载到自己的`shadow dom`中，因此组件库的全局样式需要在这里显式导出（通常需要把`:root`替换为`:host`）。
+::: tip
+element-plus 的主题由编辑器统一注入（shadow dom 与 `document.head` 各一份，命名空间都是 `mpd`），
+业务组件直接按正常方式使用 element-plus 即可，**不需要再导出 element-plus 的 CSS** ——
+那份是 `el-` 前缀，与编辑器的命名空间对不上，只会白白增大 shadow dom 的样式体积。
+
+`styles` 留给生产者自己的样式；如果你的组件用了**不参与模块联邦共享**的 element-plus（例如版本不匹配导致回退到自己的副本），才需要在这里补一份对应的 CSS。
 :::
 
 ## 构建配置

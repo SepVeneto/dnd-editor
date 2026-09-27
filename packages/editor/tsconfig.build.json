@@ -30,7 +30,8 @@
   },
   "include": [
     "lib/Editor.vue",
-    "lib/main.ts"
+    "lib/main.ts",
+    "lib/shims.d.ts"
   ],
   "exclude": [
     "node_modules"

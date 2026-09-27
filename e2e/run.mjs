@@ -196,6 +196,43 @@ try {
   await cdp.send('Runtime.enable')
   await cdp.send('Page.navigate', { url: `${ORIGIN}/host/` })
 
+  /** 等待编辑器 shadow DOM 内出现某个元素（如经模块联邦异步加载的生产者组件） */
+  async function waitInEditor(selector, timeout = 10000) {
+    const start = Date.now()
+    for (;;) {
+      const res = await cdp.send('Runtime.evaluate', {
+        expression: `!!document.getElementById('editor').shadowRoot.querySelector(${JSON.stringify(selector)})`,
+        returnByValue: true,
+      })
+      if (res?.result?.value === true)
+        return
+      if (Date.now() - start > timeout)
+        throw new Error(`等待元素超时：${selector}`)
+      await sleep(200)
+    }
+  }
+
+  /** 在编辑器 shadow DOM 内用真实鼠标事件点击某个元素 */
+  async function clickInEditor(selector) {
+    const res = await cdp.send('Runtime.evaluate', {
+      expression: `(() => {
+        const el = document.getElementById('editor').shadowRoot.querySelector(${JSON.stringify(selector)})
+        if (!el) return null
+        const r = el.getBoundingClientRect()
+        return JSON.stringify({ x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2) })
+      })()`,
+      returnByValue: true,
+    })
+    const value = res?.result?.value
+    if (!value)
+      throw new Error(`找不到元素：${selector}`)
+    const { x, y } = JSON.parse(value)
+    await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y })
+    await cdp.send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1 })
+    await cdp.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 })
+    await sleep(300)
+  }
+
   const deadline = Date.now() + 45000
   while (Date.now() < deadline) {
     const res = await cdp.send('Runtime.evaluate', {
@@ -215,26 +252,36 @@ try {
     throw new Error('页面未上报状态')
 
   check('编辑器自定义元素成功挂载', state.mounted === true)
-  check('生产者 setup 经模块联邦加载（element-plus 样式已注入 shadow dom）', state.styleHasElCss === true, `style 标签数=${state.styleTagCount}`)
+  // 生产者不再注入冗余的 el- 主题；shadow 里应当是编辑器自己的 mpd 主题
+  check(
+    'shadow DOM 使用编辑器自己的 mpd 主题',
+    (state.shadowCss?.mpdVars || 0) > 0,
+    `mpdVars=${state.shadowCss?.mpdVars}`,
+  )
+  check(
+    '生产者不再注入冗余的 el- 主题（shadow 里没有 --el- 变量）',
+    (state.shadowCss?.elVars || 0) === 0,
+    `elVars=${state.shadowCss?.elVars}, shadowCss=${state.shadowCss?.total}`,
+  )
   check('生产者视图在 shadow dom 内渲染 element-plus 组件', state.hasElImage === true)
   const unresolved = (state.warnings || []).filter(w => /resolve component/i.test(w))
   check('无「Failed to resolve component」告警', unresolved.length === 0, unresolved.join(' | '))
   check('页面无未捕获错误', state.phase === 'done' && (state.errors || []).length === 0, (state.errors || []).join(' | '))
 
-  // element-plus 单例的行为级证明：namespace(mpd) 经由 element-plus 内部的 injection key 传递，
-  // 只有宿主与远端是同一模块实例时，远端组件才会带上 mpd- 前缀
+  // element-plus 不能被宿主共享：一旦共享，生产者组件的命名空间会从默认的 `el-` 变成宿主的
+  // `mpd-`，于是 teleport 到 document.body 的弹层（ElSelect 下拉、ElTooltip 等）会因为宿主页面
+  // 只有 `el-` 全局样式而完全失去样式。
+  // 生产者组件在编辑器的组件树里渲染，应当使用编辑器那份 element-plus（命名空间 mpd）
   check(
-    '远端 element-plus 组件使用宿主 namespace(mpd-)：证明共用同一实例',
+    '生产者组件使用编辑器的 element-plus（namespace mpd-）',
     /mpd-image/.test(state.cardImgClass || ''),
     `img class=${state.cardImgClass}`,
   )
-
   const instances = state.federation?.instances || []
-  const ep = instances.flatMap(i => (i.elementPlus || []).map(v => `${i.name}@${v}`))
   check(
     'element-plus 由宿主提供、被远端消费（provider.from === editor）',
     state.federation?.elementPlusFrom === 'editor',
-    `from=${state.federation?.elementPlusFrom}, instances=${ep.join(',')}`,
+    `from=${state.federation?.elementPlusFrom}, instances=${instances.map(i => i.name).join(',')}`,
   )
 
   // 节点操作栏 tooltip：必须由编辑器自身的 mpd 命名空间样式着色（曾退化成 el- 而丢样式）
@@ -248,6 +295,133 @@ try {
     state.tooltip?.found === true && state.tooltip.background !== 'rgba(0, 0, 0, 0)',
     `bg=${state.tooltip?.background}`,
   )
+
+  // ElSelect 下拉：必须留在 shadow DOM 内并被编辑器自身样式着色
+  check(
+    '配置区 ElSelect 下拉留在 shadow DOM 内（未 teleport 到 body）',
+    state.select?.found === true && state.select.inShadow === true,
+    `select=${JSON.stringify(state.select)}`,
+  )
+  check(
+    'ElSelect 下拉使用 mpd 命名空间且被着色',
+    /mpd-select__popper/.test(state.select?.popperClass || '')
+    && state.select?.popperBackground !== 'rgba(0, 0, 0, 0)',
+    `popper=${state.select?.popperClass} bg=${state.select?.popperBackground} item=${state.select?.itemHeight}`,
+  )
+
+  // 生产者组件的弹层（teleport 到 body）：靠投放到 light DOM 的主题兜底
+  check(
+    'light DOM 已注入弹层主题（document.head #mpd-popper-styles）',
+    state.popperStyle != null && /:root\{--mpd-/.test(state.popperStyle.head),
+    `head=${state.popperStyle?.head}`,
+  )
+  // 生产者 element.config.vue（ElButton + ElDialog + ElSelect，全部依赖全局注册）：
+  // 用真实鼠标事件打开弹窗，验证 teleport 到 body 的内容也能被样式覆盖
+  // 选中卡片（用元素 click()，CDP 坐标点击在嵌套画布里不稳定）
+  await cdp.send('Runtime.evaluate', {
+    expression: `document.getElementById('editor').shadowRoot.querySelector('.mpd-node[data-id="card-1"] .node-wrap').click()`,
+  })
+  // element.config.vue 是经模块联邦异步加载的，等按钮出现
+  await waitInEditor(`.mpd-button`)
+  // 生产者 element.config.vue：ElButton + ElDialog + ElSelect，全部依赖全局注册。
+  // - ElDialog 默认不 append-to-body，渲染在 shadow DOM 内（因此由 shadow 里的主题负责）
+  // - 弹窗里的 ElSelect 下拉会 teleport 到 document.body（由 light DOM 那份主题负责）
+  await clickInEditor(`.mpd-button`)
+  await sleep(500)
+
+  const dialogInfo = await cdp.send('Runtime.evaluate', {
+    expression: `(() => {
+      const sr = document.getElementById('editor').shadowRoot
+      const dialog = sr.querySelector('.mpd-dialog')
+      if (!dialog) return JSON.stringify({ found: false })
+      const cs = getComputedStyle(dialog)
+      return JSON.stringify({
+        found: true,
+        inShadow: dialog.getRootNode() === sr,
+        cls: dialog.className,
+        background: cs.backgroundColor,
+        width: cs.width,
+      })
+    })()`,
+    returnByValue: true,
+  })
+  const dialog = JSON.parse(dialogInfo.result.value)
+
+  // 点开弹窗里的 select，它的下拉应该出现在 body 里并且仍然有样式
+  await clickInEditor(`.mpd-dialog .mpd-select__wrapper`)
+  await sleep(500)
+  const bodyDropdownInfo = await cdp.send('Runtime.evaluate', {
+    expression: `(() => {
+      const dd = document.body.querySelector('.mpd-select-dropdown')
+      if (!dd) return JSON.stringify({ found: false, bodyEls: [...document.body.children].map(n => n.id || n.className).slice(0, 6) })
+      const popper = dd.parentElement
+      const cs = getComputedStyle(popper)
+      const item = dd.querySelector('.mpd-select-dropdown__item') || document.body.querySelector('.mpd-select-dropdown__item')
+      return JSON.stringify({
+        found: true,
+        inBody: dd.getRootNode() === document,
+        popperClass: popper.className,
+        popperBackground: cs.backgroundColor,
+        popperBoxShadow: cs.boxShadow,
+        itemHeight: item ? getComputedStyle(item).height : null,
+      })
+    })()`,
+    returnByValue: true,
+  })
+  const bodyDropdown = JSON.parse(bodyDropdownInfo.result.value)
+
+  check(
+    '生产者 element.config.vue 的 ElDialog 在编辑器内渲染且被着色',
+    dialog?.found === true && dialog.inShadow === true
+    && /mpd-dialog/.test(dialog.cls || '')
+    && dialog.background !== 'rgba(0, 0, 0, 0)',
+    `dialog=${JSON.stringify(dialog)}`,
+  )
+  check(
+    '生产者弹窗内的 ElSelect 下拉 teleport 到 body 后仍有样式（light DOM 主题兜底）',
+    bodyDropdown?.found === true && bodyDropdown.inBody === true
+    && /mpd-select__popper/.test(bodyDropdown.popperClass || '')
+    && bodyDropdown.popperBackground !== 'rgba(0, 0, 0, 0)',
+    `dropdown=${JSON.stringify(bodyDropdown)}`,
+  )
+  // injectGlobalStyle: false —— 不往宿主 head 注入主题
+  await cdp.send('Page.navigate', { url: `${ORIGIN}/host/?nogstyle=1` })
+  let offState = null
+  const offDeadline = Date.now() + 45000
+  while (Date.now() < offDeadline) {
+    const res = await cdp.send('Runtime.evaluate', {
+      expression: 'JSON.stringify(window.__E2E__ || null)',
+      returnByValue: true,
+    })
+    const value = res?.result?.value
+    if (value) {
+      offState = JSON.parse(value)
+      if (offState.phase === 'done' || offState.phase === 'error')
+        break
+    }
+    await sleep(300)
+  }
+  const offInfo = await cdp.send('Runtime.evaluate', {
+    expression: `JSON.stringify({
+      injected: !!document.getElementById('mpd-popper-styles'),
+      mounted: !!document.getElementById('editor')?.shadowRoot?.querySelector('.mpd-editor'),
+      shadowTheme: [...document.getElementById('editor').shadowRoot.querySelectorAll('style')]
+        .some(s => (s.textContent || '').includes('--mpd-color-white')),
+    })`,
+    returnByValue: true,
+  })
+  const off = JSON.parse(offInfo.result.value)
+  check(
+    'injectGlobalStyle: false 时不向宿主 head 注入主题',
+    off.injected === false && offState?.phase === 'done',
+    `injected=${off.injected}, phase=${offState?.phase}`,
+  )
+  check(
+    'injectGlobalStyle: false 时编辑器仍可用（shadow 内主题仍在）',
+    off.mounted === true && off.shadowTheme === true,
+    `mounted=${off.mounted}, shadowTheme=${off.shadowTheme}`,
+  )
+
 }
 catch (err) {
   check('E2E 执行未抛异常', false, String((err && err.stack) || err))
