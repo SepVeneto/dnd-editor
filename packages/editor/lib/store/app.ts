@@ -33,10 +33,10 @@ export const useApp = defineStore('app', () => {
     if (widgetMap.has('page')) {
       const editor = useEditor()
       const widget = widgetMap.get('page')!
-      editor.rootNode = new Node(
+      editor.setRoot(new Node(
         widget,
         JSON.parse(JSON.stringify({ props: widget.defaultData, style: widget.defaultStyle })),
-      )
+      ))
     }
   }
 
