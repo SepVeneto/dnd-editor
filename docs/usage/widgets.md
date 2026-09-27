@@ -17,7 +17,9 @@ const richText = schema.custom({
 
 const card = widget.create({
   name: '卡片',
+  // 组件视图名称，生产者会按 `${type}.view.vue` 查找
   type: 'card',
+  // 组件在编辑器中的交互配置
   config: {
     fixed: true,
     draggable: false,
@@ -39,65 +41,112 @@ const card = widget.create({
 
 这是一个典型的用于编辑器的组件创建。通过`widget.create`可以创建一个基本的组件，向其中传递的对象可以进一步设置组件在组件区中显示的名称和图标，在编辑区中所使用的视图的名称以及选中后在配置区可自定义的内容。
 
-## 全局配置
+::: warning
+`config`对应组件在编辑器中的交互配置（内部映射为`meta`），不要与组件数据混淆。
+:::
 
-编辑器默认存在一个根节点，也就是页面本身，可以认为是一个全局组件。一般可以用来配置主题色或者弹窗通知之类的。在这种情况下`widget.create`需要指定`type: 'page'`
+## 内置方法
+
+除了`widget.create`，还提供几个常用封装：
+
+| 方法 | 说明 |
+| --- | --- |
+| `widget.create(config)` | 创建普通组件 |
+| `widget.root(config)` | 创建页面根节点，`type`固定为`page`，且不会出现在组件区 |
+| `widget.columnContainer(config)` | 创建栅格容器，`type`为`containerGrid`，可容纳子组件 |
+| `widget.group(name, list)` | 把多个组件归到组件区的同一个分组下 |
+
+## 根节点
+
+编辑器默认存在一个根节点，也就是页面本身，可以认为是一个全局组件。一般可以用来配置主题色或者弹窗通知之类的。
+
+```ts
+const rootPage = widget.root({
+  name: '页面',
+  attributes: [
+    schema.input({ label: '标题', key: 'title' }),
+  ],
+})
+```
+
+等价于通过`widget.create`创建一个`type: 'page'`的组件：
 
 ```ts
 const rootPage = widget.create({
   name: '页面',
   type: 'page',
   // 由于是作为根节点设置，所以不需要它出现在组件区
-  meta: { visible: false }
+  config: { visible: false },
 })
+```
+
+::: tip
+编辑器只会把`type === 'page'`的组件作为根节点。如果没有提供，编辑器会使用一个空的默认页面。
+:::
+
+## 组件分组
+
+组件区支持分组展示，通过`widget.group`把多个组件放到同一个分组下：
+
+```ts
+export const widgets = [
+  widget.group('基础组件', [card, richText]),
+  widget.group('业务组件', [menu]),
+]
 ```
 
 ## 类型定义
 
 ::: details 显示类型定义
 ```ts twoslash
-import type {
-  ColorPickerInstance,
-  DatePickerInstance,
-  ElOption,
-  ElRadio,
-  ElRadioButton,
-  FormItemProps,
-  FormItemRule,
-  ImageInstance,
-  InputInstance,
-  InputNumberInstance,
-  RadioGroupInstance,
-  SelectInstance,
-  SwitchInstance
-} from 'element-plus'
+import type { SchemaItem } from '@sepveneto/dnde-core/class'
 import type { CSSProperties } from 'vue'
+
+interface WidgetPos {
+  x?: number
+  y?: number
+  width?: number
+  height?: number
+}
 
 interface CWidget {
   /**
-   *组件名称
+   * 组件名称
    */
-  name: IWidget['_name']
+  name: string
   /**
-   * 视图名称
+   * 组件视图名称，生产者按 `${type}.view.vue` 查找
    */
-  type: IWidget['_view']
+  type: string
   /**
-   * 组件图标
+   * 组件图标，生产者按 `icons/${icon}.vue` 查找
    */
-  icon?: IWidget['_icon']
+  icon?: string
   /**
-   * 组件的交互配置
+   * 组件在编辑器中的交互配置
    */
-  config?: IWidget['meta']
+  config?: {
+    /**
+     * 在编辑区是否允许拖拽
+     */
+    draggable?: boolean
+    /**
+     * 在组件区是否可见
+     */
+    visible?: boolean
+    /**
+     * 在编辑区是否固定，一般与 draggable 配合使用，达到类似 header 的效果
+     */
+    fixed?: boolean | 'header' | 'footer'
+  }
   /**
    * 是否把组件视为容器处理
    */
-  isContainer?: IWidget['container']
+  isContainer?: boolean
   /**
    * 默认样式
    */
-  defaultStyle?: IWidget['style']
+  defaultStyle?: CSSProperties & WidgetPos
   /**
    * 默认数据
    */
@@ -113,73 +162,23 @@ interface CWidget {
 }
 
 interface IWidget {
+  _uuid?: string
   _name: string
   _view: string
   _icon?: string
   container?: boolean
+  isShow?: boolean
   meta?: {
-    /**
-     * 在编辑区是否允许拖拽
-     */
     draggable?: boolean
-    /**
-     * 在组件区是否可见
-     */
     visible?: boolean
-    /**
-     * 在编辑区的位置是否固定
-     *
-     * 一般与draggable配合使用，达到类似header之类的效果
-     */
-    fixed?: boolean
+    fixed?: boolean | 'header' | 'footer'
+  }
+  schema?: {
+    props?: SchemaItem[]
+    style?: SchemaItem[]
   }
   style?: CSSProperties & WidgetPos
+  data?: Record<string, any> | any[]
 }
-export interface WidgetPos {
-  x?: number
-  y?: number
-  width?: number
-  height?: number
-}
-
-export type Option = InstanceType<typeof ElOption>
-export type RadioOption = InstanceType<typeof ElRadio>
-export type RadioButtonOption = InstanceType<typeof ElRadioButton>
-
-interface SchemaItemBase {
-  label: string
-  key: string
-  formItem?: Partial<FormItemProps>
-  rules?: FormItemRule | FormItemRule[]
-}
-interface SchemaItemInput extends SchemaItemBase { type: 'input', attrs?: InputInstance['$props'] }
-interface SchemaItemSelect extends SchemaItemBase { type: 'select', options?: Option['$props'][], attrs?: SelectInstance['$props'] }
-interface SchemaItemNumber extends SchemaItemBase { type: 'number', attrs?: InputNumberInstance['$props'] }
-interface SchemaItemSwitch extends SchemaItemBase { type: 'switch', attrs?: SwitchInstance['$props'] }
-interface SchemaItemImage extends SchemaItemBase { type: 'image', attrs?: ImageInstance['$props'] }
-interface SchemaItemDatetimePicker extends SchemaItemBase { type: 'datetimePicker', attrs?: Partial<DatePickerInstance['$props']> }
-interface SchemaItemColorPicker extends SchemaItemBase { type: 'colorPicker', attrs?: ColorPickerInstance['$props'] }
-export interface SchemaItemCustom extends SchemaItemBase {
-  type: 'custom'
-  name: string
-  attrs?: Record<string, any>
-}
-interface SchemaItemStyleNumber extends SchemaItemBase {
-  type: 'styleNumber'
-}
-interface SchemaItemRadio extends SchemaItemBase { type: 'radio', attrs?: RadioGroupInstance['$props'], options?: RadioOption['$props'][] }
-interface SchemaItemRadioButton extends SchemaItemBase { type: 'radioButton', attrs?: RadioGroupInstance['$props'], options?: RadioButtonOption['$props'][] }
-
-export type SchemaItem = SchemaItemInput
-  | SchemaItemSelect
-  | SchemaItemNumber
-  | SchemaItemSwitch
-  | SchemaItemImage
-  | SchemaItemCustom
-  | SchemaItemStyleNumber
-  | SchemaItemRadio
-  | SchemaItemRadioButton
-  | SchemaItemDatetimePicker
-  | SchemaItemColorPicker
 ```
 :::
