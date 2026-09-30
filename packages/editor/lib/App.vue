@@ -73,6 +73,8 @@
         </ElScrollbar>
       </aside>
     </div>
+
+    <Agent v-if="agent" />
   </ElConfigProvider>
 </template>
 
@@ -93,6 +95,7 @@ import WidgetsMenu from './layout/widgetsMenu.vue'
 import { editorProps } from './props'
 import { useEditor } from './store'
 import { EditorKey, loadFromRemote, normalizeStyle } from './utils'
+import Agent from './components/agent/Copilot.vue'
 
 const props = defineProps(editorProps)
 

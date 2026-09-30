@@ -13,6 +13,7 @@
     v-if="rendering"
     ref="editorRef"
     :widgets="widgets"
+    agent
     @change="onUpdate"
   />
   <pre>config: {{ config }}</pre>

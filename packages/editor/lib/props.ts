@@ -14,4 +14,5 @@ export const editorProps = {
     type: Object as PropType<Record<string, any>>,
     default: () => ({}),
   },
+  agent: Boolean
 } as const
