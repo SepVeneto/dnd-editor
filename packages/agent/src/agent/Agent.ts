@@ -2,6 +2,7 @@ import { ref, shallowRef, ShallowRef, triggerRef } from "vue"
 import { ThreadMessage } from "./type"
 import { run } from "./core/run"
 import { ZodObject } from "zod";
+import { z } from 'zod'
 
 export type JsonSchemaDefinitionEntry = Record<string, any>;
 
@@ -119,3 +120,15 @@ export class Agent<
 function createId(): string {
   return Math.random().toString(36).slice(2, 10)
 }
+
+export const normalizeLayoutInputAgent = new Agent({
+  name: 'normalize layout input',
+  instructions: '将输入的业务内容标准化',
+  outputType: z.array(z.object({
+    kind: z.string().describe('业务类型'),
+    items: z.array(z.object({
+      name: z.string().describe('业务名称'),
+      id: z.number().nullable().describe('业务数据索引'),
+    }))
+  }))
+})

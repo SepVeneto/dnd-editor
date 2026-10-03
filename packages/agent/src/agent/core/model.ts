@@ -53,19 +53,35 @@ function getInputItems(input: ModelRequest['input']) {
   throw new Error('TODO')
 }
 
+/** 把 agent 的 outputType 转成 chat 的 response_format；'text' 返回 undefined */
+function buildResponseFormat(agent: Agent<any, any>) {
+  const outputType = agent.outputType
+  if (!outputType || outputType === 'text') {
+    return undefined
+  }
+
+  const schema = typeof (outputType as any)?.toJSONSchema === 'function'
+    ? (outputType as any).toJSONSchema()
+    : outputType
+
+  return {
+    type: 'json_schema' as const,
+    json_schema: {
+      name: 'json',
+      strict: true,
+      schema,
+    },
+  }
+}
+
 export async function getResponse(agent: Agent, input: any) {
+  const responseFormat = buildResponseFormat(agent)
+
   const result = await client.chat.completions.create({
     model: 'qwen-plus',
     messages: input,
     temperature: 0.1,
-    response_format: {
-      type: 'json_schema',
-      json_schema: {
-        name: 'json',
-        strict: true,
-        schema: (agent.outputType as any).toJSONSchema?.() ?? agent.outputType,
-      }
-    }
+    ...(responseFormat ? { response_format: responseFormat } : {}),
   })
 
   console.log(result)
@@ -81,11 +97,14 @@ export async function* getStreamedResponse(
   agent: Agent<any, any>,
   messages: ChatMessage[],
 ): AsyncGenerator<ModelStreamEvent> {
+  const responseFormat = buildResponseFormat(agent)
+
   const result = await client.chat.completions.create({
     model: 'qwen-plus',
     messages: messages as any,
     temperature: 0.1,
     stream: true,
+    ...(responseFormat ? { response_format: responseFormat } : {}),
     tools: agent.tools.map(item => ({
       type: 'function',
       function: {

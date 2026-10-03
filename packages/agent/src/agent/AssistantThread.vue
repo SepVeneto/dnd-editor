@@ -103,9 +103,9 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, reactive, ref, watch } from 'vue'
+import { nextTick, reactive, ref, shallowRef, watch } from 'vue'
 import OpenAI from 'openai'
-import { Agent } from './Agent'
+import { Agent, normalizeLayoutInputAgent } from './Agent'
 import type { ToolApprovalRequest } from './Agent'
 import { run } from './core/run'
 import type { RunEvent } from './core/run'
@@ -189,6 +189,8 @@ const checkScenesTool = tool({
     }
   },
 })
+
+const manifest = shallowRef<any>()
 
 // 开通属于写操作：调用本工具后运行时会自动暂停并请用户确认，
 // 所以模型应当直接调用，而不是在文本里询问用户。
@@ -286,13 +288,13 @@ const verifyAgent = new Agent({
 必须调用 check_scenes_enabled 工具获取真实业务数据，
 不能仅根据用户输入直接判断场景是否开通。
   `,
-  outputType: z.object({
-    scenes: z.array(z.object({
-      id: z.number().nullable(),
-      name: z.string(),
-      status: z.string(),
-    }))
-  }),
+  // outputType: z.object({
+  //   scenes: z.array(z.object({
+  //     id: z.number().nullable(),
+  //     name: z.string(),
+  //     status: z.string(),
+  //   }))
+  // }),
   tools: [checkScenesTool, enableSceneTool],
 })
 
@@ -408,6 +410,12 @@ async function send(message: string) {
   finally {
     isRunning.value = false
   }
+
+  const res = await run(normalizeLayoutInputAgent, JSON.stringify({
+    scenes: [{ id: 1, name: '大润发小时达' }, { id: 2, name: '叮咚买菜'}],
+    coupon: [{ id: 1, name: '盒马', faceValue: 500 }],
+  }))
+  console.log(res)
 }
 
 const suggestions = ref<Array<{ title: string, label?: string, prompt: string }>>([])
