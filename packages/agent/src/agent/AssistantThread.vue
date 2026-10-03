@@ -180,18 +180,22 @@ const checkScenesTool = tool({
       }
     })
 
-    return { scenes }
+    const disabled = scenes.filter(scene => !scene.enabled).map(scene => scene.name)
+    return {
+      scenes,
+      message: disabled.length
+        ? `以下场景未开通：${disabled.join('、')}。需要自行开通。`
+        : '所有场景均已开通。',
+    }
   },
 })
 
-// 开通属于写操作：运行时调用它之前会暂停并等用户在对话框底部确认
+// 开通属于写操作：调用本工具后运行时会自动暂停并请用户确认，
+// 所以模型应当直接调用，而不是在文本里询问用户。
 const enableSceneTool = tool({
   name: 'enable_scene',
   description: `
 开通业务系统中指定的场景。
-
-会改变业务数据的写操作，执行前必须由用户确认。
-只负责开通，不做其它业务判断。
   `,
   parameters: z.object({
     id: z.number(),
@@ -274,8 +278,8 @@ const verifyAgent = new Agent({
 4. 不修改用户提供的原始配置。
 5. 不自行假设业务系统中不存在的数据。
 6. 如果工具返回的信息不足以判断，则明确说明无法判断。
-7. 对每个「未开通」的场景，调用 enable_scene 请求开通；一次可以请求多个，
-   运行时会在对话框底部逐个询问是否开通。
+7. 对每个「未开通」的场景，直接调用 enable_scene 发起开通，一次可以请求多个。
+   用户确认由工具自动触发，禁止在回复文本里询问「是否要开通」，直接调用工具即可。
 8. 如果某个场景用户不同意开通，不要重试，继续处理下一个未开通的场景。
 9. 最终汇总所有场景的检查结果。
 
