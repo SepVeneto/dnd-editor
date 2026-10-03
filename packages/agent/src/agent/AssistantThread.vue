@@ -18,7 +18,9 @@
         :class="`message--${message.role}`"
       >
         <template v-for="(part, index) in message.parts" :key="index">
-          <p v-if="part.type === 'text' && part.text" class="message__text">{{ part.text }}</p>
+          <div v-if="part.type === 'step'" class="message__step">{{ part.label }}</div>
+
+          <p v-else-if="part.type === 'text' && part.text" class="message__text">{{ part.text }}</p>
 
           <p
             v-else-if="part.type === 'action'"
@@ -42,6 +44,18 @@
             </span>
           </p>
 
+          <p
+            v-else-if="part.type === 'approval'"
+            class="message__action message__approval"
+            :class="{ 'message__action--failed': part.decision === 'rejected' }"
+          >
+            <code>{{ describeApproval(part.call) }}</code>
+            <span v-if="part.decision" class="message__action-result">
+              {{ part.decision === 'approved' ? '✓ 已同意' : '✕ 已拒绝' }}
+            </span>
+            <span v-else class="message__action-result message__action-result--pending">等待确认…</span>
+          </p>
+
           <details v-else-if="part.type === 'raw' && part.text" class="message__raw">
             <summary>模型原始输出{{ part.label ? `（${part.label}）` : '' }}</summary>
             <pre>{{ part.text }}</pre>
@@ -57,10 +71,23 @@
         v-for="suggestion in suggestions"
         :key="suggestion.prompt"
         type="button"
+        @click="useSuggestion(suggestion.prompt)"
       >
         <b>{{ suggestion.title }}</b>
         <span v-if="suggestion.label">{{ suggestion.label }}</span>
       </button>
+    </div>
+
+    <div v-if="pendingApproval" class="approval">
+      <p class="approval__text">{{ describeApproval(pendingApproval) }}</p>
+      <div class="approval__actions">
+        <button type="button" class="approval__reject" @click="resolveApproval(false)">
+          不同意
+        </button>
+        <button type="button" class="approval__approve" @click="resolveApproval(true)">
+          同意开通
+        </button>
+      </div>
     </div>
 
     <div class="composer">
@@ -68,6 +95,7 @@
         v-model="draft"
         rows="2"
         placeholder="例如：服役期1940.4.28-1948.5.12，添加两个分类：船体（图片）、下水仪式（视频）"
+        @keydown="onKeydown"
       />
       <button type="button" :disabled="isRunning || !draft.trim()" @click="submit">发送</button>
     </div>
@@ -75,10 +103,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { nextTick, reactive, ref, watch } from 'vue'
 import OpenAI from 'openai'
 import { Agent } from './Agent'
+import type { ToolApprovalRequest } from './Agent'
 import { run } from './core/run'
+import type { RunEvent } from './core/run'
+import type { MessagePart } from './type'
 import { z } from 'zod'
 import { tool } from './core/tool'
 
@@ -105,7 +136,12 @@ const businessConfigSchema = z.object({
   )
 })
 
-let previousResponseId: string | undefined
+type SceneState = {
+  id: number
+  name: string
+  enabled: boolean
+  message: string
+}
 
 const client = new OpenAI({
   baseURL: 'http://localhost:4000/v1',
@@ -113,10 +149,71 @@ const client = new OpenAI({
   dangerouslyAllowBrowser: true,
 })
 
-// const client = useAui()
-// const messages = useAuiState((state) => state.thread.messages)
-// const isRunning = useAuiState((state) => state.thread.isRunning)
-// const suggestions = useAuiState((state) => state.suggestions.suggestions)
+const checkScenesTool = tool({
+  name: 'check_scenes_enabled',
+  description: `
+查询业务系统中指定场景的开通状态。
+
+输入场景名称列表，调用业务接口查询这些场景是否已经开通。
+只负责查询，不修改配置，不进行业务判断。
+返回每个场景对应的开通状态以及业务系统返回的信息。
+  `,
+  parameters: z.object({
+    scenes: z.array(z.object({ name: z.string() })),
+  }),
+  // mock 查询接口：只负责返回各场景的开通状态
+  invoke: async (input: { scenes: Array<{ name: string }> }) => {
+    const res = await fetch('http://localhost:4000/v1/business/scenes')
+    const resJson = await res.json()
+    const scenes: SceneState[] = input.scenes.map(item => {
+      const target = resJson.data.find((each: any) => each.name === item.name)
+      if (!target) {
+        throw new Error('cannot find scene ' + item.name)
+      }
+      return {
+        id: target.id,
+        name: target.name,
+        enabled: !!target.status,
+        message: target.status
+          ? '业务系统返回：场景已开通'
+          : '业务系统返回：场景未开通',
+      }
+    })
+
+    return { scenes }
+  },
+})
+
+// 开通属于写操作：运行时调用它之前会暂停并等用户在对话框底部确认
+const enableSceneTool = tool({
+  name: 'enable_scene',
+  description: `
+开通业务系统中指定的场景。
+
+会改变业务数据的写操作，执行前必须由用户确认。
+只负责开通，不做其它业务判断。
+  `,
+  parameters: z.object({
+    id: z.number(),
+    name: z.string(),
+  }),
+  needsApproval: true,
+  // mock 开通逻辑
+  invoke: async (input: { id: number, name: string }) => {
+    const res = await fetch('http://localhost:4000/v1/business/scene', { method: 'post' })
+    const resJson = await res.json()
+    if (resJson.code !== 0) {
+      throw new Error(resJson.message ?? `场景 ${input.name} 开通失败`)
+    }
+    return {
+      id: input.id,
+      name: input.name,
+      enabled: true,
+      message: `业务系统返回：场景 ${input.name} 已开通`,
+    }
+  },
+})
+
 const docsAgent = new Agent({
   name: 'parse desc',
   instructions: `
@@ -177,7 +274,10 @@ const verifyAgent = new Agent({
 4. 不修改用户提供的原始配置。
 5. 不自行假设业务系统中不存在的数据。
 6. 如果工具返回的信息不足以判断，则明确说明无法判断。
-7. 最终汇总所有场景的检查结果。
+7. 对每个「未开通」的场景，调用 enable_scene 请求开通；一次可以请求多个，
+   运行时会在对话框底部逐个询问是否开通。
+8. 如果某个场景用户不同意开通，不要重试，继续处理下一个未开通的场景。
+9. 最终汇总所有场景的检查结果。
 
 必须调用 check_scenes_enabled 工具获取真实业务数据，
 不能仅根据用户输入直接判断场景是否开通。
@@ -189,37 +289,36 @@ const verifyAgent = new Agent({
       status: z.string(),
     }))
   }),
-  tools: [
-    tool({
-      name: 'check_scenes_enabled',
-      description: `
-查询业务系统中指定场景的开通状态。
-
-输入场景名称列表，调用业务接口查询这些场景是否已经开通。
-只负责查询，不修改配置，不进行业务判断。
-返回每个场景对应的开通状态以及业务系统返回的信息。
-      `,
-      parameters:  z.object({
-        scenes: z.array(z.object({ name: z.string() }))
-      }),
-      // 先 mock 业务接口，返回各场景的开通情况
-      invoke: async (input: { scenes: Array<{ name: string }> }) => {
-        const enabled = new Set(['叮咚买菜', '大润发小时达', '盒马鲜生'])
-        return {
-          scenes: input.scenes.map(scene => ({
-            name: scene.name,
-            enabled: enabled.has(scene.name),
-            message: enabled.has(scene.name)
-              ? '业务系统返回：场景已开通'
-              : '业务系统返回：场景未开通',
-          })),
-        }
-      },
-    })
-  ]
+  tools: [checkScenesTool, enableSceneTool],
 })
 
 let streamText = ''
+
+// —— 工具审批：运行时暂停，等对话框底部的「同意 / 不同意」——
+const pendingApproval = ref<ToolApprovalRequest | null>(null)
+let approvalResolver: ((approved: boolean) => void) | null = null
+
+function requestApproval(request: ToolApprovalRequest): Promise<boolean> {
+  pendingApproval.value = request
+  return new Promise<boolean>((resolve) => {
+    approvalResolver = resolve
+  })
+}
+
+function resolveApproval(approved: boolean) {
+  const resolve = approvalResolver
+  approvalResolver = null
+  pendingApproval.value = null
+  resolve?.(approved)
+}
+
+function describeApproval(request: { name: string, args?: unknown }): string {
+  const args = request.args as { name?: string } | undefined
+  if (request.name === 'enable_scene' && args?.name)
+    return `场景「${args.name}」未开通，是否需要开通？`
+
+  return `是否执行工具 ${request.name}？`
+}
 
 async function send(message: string) {
   messages.value.push({
@@ -232,51 +331,99 @@ async function send(message: string) {
 
   const config = '{"scenes":[{"name":"叮咚买菜","fee":"2%"},{"name":"大润发小时达","fee":"2%"}],"brand":[{"name":"盒马鲜生","coupon":"米面粮油提货券","faceValue":500,"fee":"2%"},{"name":"盒马鲜生","coupon":"米面粮油提货券","faceValue":200,"fee":"2%"}],"shopPickup":[{"name":"扫码提货","scope":["蛋糕品牌","百果园"]}]}'
 
+  // 每一步都作为 message part 实时展示
+  const reply = reactive<{ id: string, role: 'copilot', parts: MessagePart[] }>({
+    id: createId(),
+    role: 'copilot',
+    parts: [],
+  })
+  messages.value.push(reply)
+
+  let textPart: Extract<MessagePart, { type: 'text' }> | null = null
+
+  function onEvent(event: RunEvent) {
+    switch (event.type) {
+      case 'turn-start':
+        textPart = null
+        reply.parts.push({ type: 'step', label: `第 ${event.turn} 轮 · 模型` })
+        break
+
+      case 'assistant-text':
+        if (!textPart) {
+          textPart = { type: 'text', text: '' }
+          reply.parts.push(textPart)
+        }
+        textPart.text += event.text
+        break
+
+      case 'tool-call':
+        textPart = null
+        reply.parts.push({
+          type: 'tool-call',
+          call: { callId: event.callId, name: event.name, args: event.args },
+        })
+        break
+
+      case 'approval-request':
+        textPart = null
+        reply.parts.push({
+          type: 'approval',
+          call: { callId: event.callId, name: event.name, args: event.args },
+        })
+        break
+
+      case 'approval-result': {
+        const part = reply.parts.find(
+          item => item.type === 'approval' && (item.call as any)?.callId === event.callId,
+        )
+        if (part && part.type === 'approval')
+          part.decision = event.approved ? 'approved' : 'rejected'
+        break
+      }
+
+      case 'tool-result': {
+        const part = reply.parts.find(
+          item => item.type === 'tool-call' && (item.call as any)?.callId === event.callId,
+        )
+        if (part && part.type === 'tool-call')
+          part.result = describeCallOutput(event)
+        break
+      }
+    }
+  }
+
   isRunning.value = true
   try {
-    const result = await run(verifyAgent, config)
-
-    messages.value.push({
-      id: createId(),
-      role: 'copilot',
-      parts: [
-        ...(result.text ? [{ type: 'text', text: result.text }] : []),
-        ...result.toolCalls.map(call => ({
-          type: 'tool-call',
-          call: { name: call.name, args: call.args },
-          result: call.error
-            ? { ok: false, message: call.error }
-            : { ok: true, message: JSON.stringify(call.result) },
-        })),
-      ]
-    })
+    // 模型调 check 拿到状态后会对未开通场景调用 enable_scene，
+    // 该工具声明了 needsApproval，runtime 会逐个暂停等用户确认。
+    await run(verifyAgent, config, { onApproval: requestApproval, onEvent })
+  }
+  catch (error) {
+    reply.parts.push({ type: 'text', text: `⚠️ ${toMessage(error)}` })
   }
   finally {
     isRunning.value = false
   }
 }
 
-// const client = ref({ runtime: { error: {} } })
-const suggestions = ref([])
+const suggestions = ref<Array<{ title: string, label?: string, prompt: string }>>([])
 const messages = ref<any[]>([])
-// omputed(() => agent.runtime.messages.value)
 const isRunning = ref(false)
 
 const draft = ref('')
 const viewport = ref<HTMLElement | null>(null)
 
-// watch(
-//   messages,
-//   () => {
-//     nextTick(() => {
-//       const el = viewport.value
-//       if (el)
-//         el.scrollTop = el.scrollHeight
-//     })
-//   },
-//   { deep: true },
-// )
-
+watch(
+  messages,
+  () => {
+    nextTick(() => {
+      const el = viewport.value
+      if (el)
+        el.scrollTop = el.scrollHeight
+    })
+  },
+  { deep: true },
+)
 
 function createId(): string {
   return Math.random().toString(36).slice(2, 10)
@@ -284,23 +431,75 @@ function createId(): string {
 
 function submit() {
   const text = draft.value.trim()
+  if (!text || isRunning.value)
+    return
 
   send(text)
-  // agent.runtime.run(text)
   draft.value = ''
 }
 
-// function useSuggestion(prompt: string) {
-//   draft.value = prompt
-//   submit()
-// }
+function useSuggestion(prompt: string) {
+  if (isRunning.value)
+    return
 
-// function onKeydown(event: KeyboardEvent) {
-//   if (event.key === 'Enter' && !event.shiftKey) {
-//     event.preventDefault()
-//     submit()
-//   }
-// }
+  draft.value = prompt
+  submit()
+}
+
+function onKeydown(event: KeyboardEvent) {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault()
+    submit()
+  }
+}
+
+function describeAction(action: unknown): string {
+  const value = action as { capability?: string, args?: unknown } | undefined
+  if (value?.capability)
+    return `${value.capability}(${stringifyArgs(value.args)})`
+
+  return JSON.stringify(action)
+}
+
+function describeToolCall(call: unknown): string {
+  const value = call as { name?: string, args?: unknown } | undefined
+  if (value?.name)
+    return `tool:${value.name}(${stringifyArgs(value.args)})`
+
+  return JSON.stringify(call)
+}
+
+function describeToolResult(result: unknown): string {
+  const value = result as { ok?: boolean, message?: string } | undefined
+  return value?.message ?? JSON.stringify(result)
+}
+
+function describeCallOutput(call: { name?: string, result?: unknown, error?: string }): { ok: boolean, message: string } {
+  if (call.error)
+    return { ok: false, message: call.error }
+
+  if (call.name === 'check_scenes_enabled') {
+    const scenes = (call.result as { scenes?: Array<{ name: string, enabled: boolean }> } | undefined)?.scenes ?? []
+    const off = scenes.filter(scene => !scene.enabled).map(scene => scene.name)
+    const on = scenes.filter(scene => scene.enabled).map(scene => scene.name)
+    return { ok: true, message: `未开通：${off.join('、') || '无'}；已开通：${on.join('、') || '无'}` }
+  }
+
+  const value = call.result as { message?: string } | undefined
+  return { ok: true, message: value?.message ?? JSON.stringify(call.result) }
+}
+
+function toMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
+}
+
+function stringifyArgs(args: unknown): string {
+  if (args === undefined)
+    return ''
+
+  const text = typeof args === 'string' ? args : JSON.stringify(args)
+  return text.length > 72 ? `${text.slice(0, 72)}…` : text
+}
 </script>
 
 <style lang="scss" scoped>
@@ -406,6 +605,24 @@ function submit() {
   color: #fff;
 }
 
+/* 第 N 轮 / 阶段标题 */
+.message__step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #94a3b8;
+}
+
+.message__step::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #eef2f7;
+}
+
 /* Action 及其执行结果：set(activeTime, [...]) + Form Engine 的反馈 */
 .message__action {
   display: flex;
@@ -439,7 +656,20 @@ function submit() {
   color: #b91c1c;
 }
 
+.message__action-result--pending {
+  color: #b45309;
+}
+
 /* Tool Call：和 Action 区分开，蓝色 > Action，紫色 > Tool */
+.message__approval {
+  border-color: #fde68a;
+  background: #fffbeb;
+}
+
+.message__approval code {
+  color: #b45309;
+}
+
 .message__tool code {
   color: #7c3aed;
 }
@@ -493,6 +723,51 @@ function submit() {
 .thread__suggestions button:hover {
   border-color: #c7d2fe;
   color: #4338ca;
+}
+
+.approval {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #fde68a;
+  background: #fffbeb;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.approval__text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #92400e;
+}
+
+.approval__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.approval__actions button {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.approval__reject {
+  background: #fff;
+  border-color: #fcd34d;
+  color: #92400e;
+}
+
+.approval__approve {
+  background: #f59e0b;
+  color: #fff;
 }
 
 .composer {

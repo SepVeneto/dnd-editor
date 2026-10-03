@@ -1,12 +1,13 @@
 import { FunctionTool, JsonObjectSchema } from "../Agent"
 
 export function tool(options: any): FunctionTool {
-  const { name, description, parameters, invoke } = options
+  const { name, description, parameters, needsApproval, invoke } = options
   return {
     type: 'function',
     name,
     description,
     parameters: parameters.toJSONSchema(),
+    needsApproval,
     invoke,
   }
 }

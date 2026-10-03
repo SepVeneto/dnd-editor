@@ -25,16 +25,23 @@ export type Model = {
 /**
  * 模型每一轮吐出的内容：
  * - text-delta：普通文本增量
- * - function-call：模型请求调用某个工具
- * - completed：这一轮结束，带回 response.id 用于下一轮续跑
+ * - function-call：模型请求调用某个工具（arguments 为 JSON 字符串）
  */
 export type ModelStreamEvent
   = | { type: 'text-delta', text: string }
     | { type: 'function-call', callId: string, name: string, args: string }
-    | { type: 'completed', responseId: string }
 
-/** 单轮模型的输入：用户原文，或上一轮工具结果 */
-export type ModelInput = string | Array<Record<string, unknown>>
+/** Chat Completions 的消息结构 */
+export type ChatMessage = {
+  role: 'system' | 'user' | 'assistant' | 'tool'
+  content: string | null
+  tool_calls?: Array<{
+    id: string
+    type: 'function'
+    function: { name: string, arguments: string }
+  }>
+  tool_call_id?: string
+}
 
 function getInputItems(input: ModelRequest['input']) {
   if (typeof input === 'string') {
@@ -72,57 +79,53 @@ export async function getResponse(agent: Agent, input: any) {
 
 export async function* getStreamedResponse(
   agent: Agent<any, any>,
-  input: ModelInput,
-  previousResponseId?: string,
+  messages: ChatMessage[],
 ): AsyncGenerator<ModelStreamEvent> {
-  const result = await client.responses.create({
+  const result = await client.chat.completions.create({
     model: 'qwen-plus',
-    instructions: agent.instructions,
-    input: input as any,
+    messages: messages as any,
     temperature: 0.1,
-    previous_response_id: previousResponseId,
     stream: true,
-    tools: agent.tools.map(item => {
-      const { invoke, ...rest } = item
-      return { ...rest, strict: false }
-    }),
+    tools: agent.tools.map(item => ({
+      type: 'function',
+      function: {
+        name: item.name,
+        description: item.description,
+        parameters: item.parameters,
+      },
+    })),
   })
 
-  const seenCallIds = new Set<string>()
+  // 流式 tool_calls 按 index 分片返回，这里先累积再统一抛出
+  const pending = new Map<number, { id: string, name: string, args: string }>()
 
-  for await (const event of result) {
-    switch (event.type) {
-      case 'response.output_text.delta':
-        yield { type: 'text-delta', text: event.delta }
-        break
-      case 'response.output_item.done':
-        if (event.item.type === 'function_call') {
-          seenCallIds.add(event.item.call_id)
-          yield {
-            type: 'function-call',
-            callId: event.item.call_id,
-            name: event.item.name,
-            args: event.item.arguments,
-          }
-        }
-        break
-      case 'response.completed': {
-        // 有些 OpenAI 兼容实现不会单独推送 output_item.done，
-        // 只在最终 response 里带上 function_call，这里兜底补一次。
-        for (const item of event.response.output ?? []) {
-          if (item.type === 'function_call' && !seenCallIds.has(item.call_id)) {
-            seenCallIds.add(item.call_id)
-            yield {
-              type: 'function-call',
-              callId: item.call_id,
-              name: item.name,
-              args: item.arguments,
-            }
-          }
-        }
-        yield { type: 'completed', responseId: event.response.id }
-        break
-      }
+  for await (const chunk of result) {
+    const delta = chunk.choices[0]?.delta
+    if (!delta) {
+      continue
     }
+
+    if (delta.content) {
+      yield { type: 'text-delta', text: delta.content }
+    }
+
+    for (const call of delta.tool_calls ?? []) {
+      const index = call.index ?? 0
+      const current = pending.get(index) ?? { id: '', name: '', args: '' }
+      if (call.id) {
+        current.id = call.id
+      }
+      if (call.function?.name) {
+        current.name = call.function.name
+      }
+      if (call.function?.arguments) {
+        current.args += call.function.arguments
+      }
+      pending.set(index, current)
+    }
+  }
+
+  for (const call of pending.values()) {
+    yield { type: 'function-call', callId: call.id, name: call.name, args: call.args }
   }
 }

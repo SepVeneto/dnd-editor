@@ -35,6 +35,18 @@ export type ToolInputParameters =
   | undefined
   | JsonObjectSchema<any>
 
+/** 运行时准备执行需要确认的工具时，抛给宿主的审批请求 */
+export type ToolApprovalRequest = {
+  callId: string
+  name: string
+  args: unknown
+}
+
+/** 返回 true 表示用户同意执行，false 表示拒绝（拒绝后继续处理下一个） */
+export type ToolApprovalHandler = (
+  request: ToolApprovalRequest,
+) => boolean | Promise<boolean>
+
 export type FunctionTool<
   Context = UnknownContext,
   TParameters extends ToolInputParameters = undefined,
@@ -44,6 +56,12 @@ export type FunctionTool<
   name: string
   description: string
   parameters: JsonObjectSchema<any>
+  /**
+   * 是否需要人工确认后才执行：
+   * - true / false：固定策略
+   * - 函数：根据本次入参动态判断
+   */
+  needsApproval?: boolean | ((input: any) => boolean | Promise<boolean>)
   invoke: (input: any) => Promise<string | Result>
 }
 
