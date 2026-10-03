@@ -102,5 +102,16 @@
     // "skipDefaultLibCheck": true,                      /* Skip type checking .d.ts files that are included with TypeScript. */
     "ignoreDeprecations": "6.0",
     "skipLibCheck": true /* Skip type checking all .d.ts files. */
-  }
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.vue",
+    "playground/**/*.ts",
+    "playground/**/*.vue",
+    "env.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }

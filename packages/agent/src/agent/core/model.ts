@@ -1,8 +1,10 @@
 import OpenAI from 'openai'
+import type { Agent } from '../Agent'
 
 const client = new OpenAI({
-  baseURL: 'https://llm-29a9b93te5uwccoz.cn-beijing.maas.aliyuncs.com/compatible-mode/v1',
-  apiKey: 'sk-ws-H.PRHEMYL.2Y1l.MEUCIQDmd_SSyF-wN4Y7YOEOV2Xxzak91U-tlE89SHHyGvk8bAIgV2HROXyaTvzeGB9Ks3St2EkzoGnJ6t1cXgggcK8T9iQ'
+  baseURL: 'http://localhost:4000/v1',
+  apiKey: 'test',
+  dangerouslyAllowBrowser: true,
 })
 
 
@@ -20,32 +22,107 @@ export type Model = {
   getStreamedResponse(request: ModelRequest): AsyncIterable<unknown>
 }
 
-export class QwenResponseModel implements Model {
-  protected _client: OpenAI
+/**
+ * 模型每一轮吐出的内容：
+ * - text-delta：普通文本增量
+ * - function-call：模型请求调用某个工具
+ * - completed：这一轮结束，带回 response.id 用于下一轮续跑
+ */
+export type ModelStreamEvent
+  = | { type: 'text-delta', text: string }
+    | { type: 'function-call', callId: string, name: string, args: string }
+    | { type: 'completed', responseId: string }
 
-  constructor(client: OpenAI) {
-    this._client = client
+/** 单轮模型的输入：用户原文，或上一轮工具结果 */
+export type ModelInput = string | Array<Record<string, unknown>>
+
+function getInputItems(input: ModelRequest['input']) {
+  if (typeof input === 'string') {
+    return [
+      { role: 'user', content: input }
+    ]
   }
-  async *getStreamedResponse(request: ModelRequest) {
-    try {
-      const response = await this._fetchResponse(request)
+
+  throw new Error('TODO')
+}
+
+export async function getResponse(agent: Agent, input: any) {
+  const result = await client.chat.completions.create({
+    model: 'qwen-plus',
+    messages: input,
+    temperature: 0.1,
+    response_format: {
+      type: 'json_schema',
+      json_schema: {
+        name: 'json',
+        strict: true,
+        schema: (agent.outputType as any).toJSONSchema?.() ?? agent.outputType,
+      }
     }
+  })
+
+  console.log(result)
+
+  const content = result.choices[0].message.content
+  if (!content) {
+    return ''
   }
+  return JSON.parse(content)
+}
 
-  _fetchResponse(request: ModelRequest) {
-    const builtRequest = this._createRequest(request)
+export async function* getStreamedResponse(
+  agent: Agent<any, any>,
+  input: ModelInput,
+  previousResponseId?: string,
+): AsyncGenerator<ModelStreamEvent> {
+  const result = await client.responses.create({
+    model: 'qwen-plus',
+    instructions: agent.instructions,
+    input: input as any,
+    temperature: 0.1,
+    previous_response_id: previousResponseId,
+    stream: true,
+    tools: agent.tools.map(item => {
+      const { invoke, ...rest } = item
+      return { ...rest, strict: false }
+    }),
+  })
 
-    const responsePromis = this._client.responses.create(
-      builtRequest.requestData
-    )
-  }
+  const seenCallIds = new Set<string>()
 
-  _createRequest(request: ModelRequest) {
-    return {
-      requestData: {
-        input: 
+  for await (const event of result) {
+    switch (event.type) {
+      case 'response.output_text.delta':
+        yield { type: 'text-delta', text: event.delta }
+        break
+      case 'response.output_item.done':
+        if (event.item.type === 'function_call') {
+          seenCallIds.add(event.item.call_id)
+          yield {
+            type: 'function-call',
+            callId: event.item.call_id,
+            name: event.item.name,
+            args: event.item.arguments,
+          }
+        }
+        break
+      case 'response.completed': {
+        // 有些 OpenAI 兼容实现不会单独推送 output_item.done，
+        // 只在最终 response 里带上 function_call，这里兜底补一次。
+        for (const item of event.response.output ?? []) {
+          if (item.type === 'function_call' && !seenCallIds.has(item.call_id)) {
+            seenCallIds.add(item.call_id)
+            yield {
+              type: 'function-call',
+              callId: item.call_id,
+              name: item.name,
+              args: item.arguments,
+            }
+          }
+        }
+        yield { type: 'completed', responseId: event.response.id }
+        break
       }
     }
   }
 }
-

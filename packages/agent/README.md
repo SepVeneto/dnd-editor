@@ -473,3 +473,41 @@ DSL 是 Editor 的执行实现，不是 LLM 协议。
 > **宿主负责使用 Editor；Editor 负责 Agent 和页面执行；Producer 负责向 Editor 提供组件及组件相关能力。**
 
 这样就不再存在 `Consumer Capability` 这个概念。宿主和生产者是 Editor 的两类外部角色，但只有 Producer 向 Editor 提供组件级/布局级 Agent Capability。
+
+---
+
+## 11. Playground
+
+`playground/` 是 Agent 的本地调试页，用来在不接入宿主的情况下跑通
+`Agent` 的 runtime、消息结构和四种 message part 的渲染。
+
+```bash
+# 仓库根目录
+pnpm dev:agent
+# 或者
+pnpm -C packages/agent dev
+```
+
+默认地址为 <http://localhost:8083>。
+
+页面分两栏：
+
+```text
+┌──────────────────────────┬───────────────┐
+│  ChatPanel               │  Inspector    │
+│  · 直接驱动 Agent runtime │  · 运行时快照  │
+│  · text / action /       │  · 消息 JSON   │
+│    tool-call / raw       │  · 模型配置    │
+└──────────────────────────┴───────────────┘
+```
+
+模型有两档：
+
+| 模式             | 说明                                                       |
+| -------------- | -------------------------------------------------------- |
+| `mock`         | 离线可用，用预置回复演示各类 part，输入「卡券 / 工具 / 布局」会触发不同 part |
+| `openai`       | 走 OpenAI 兼容的 `/chat/completions` 流式接口，配置只存在浏览器 localStorage |
+
+`playground/responders.ts` 里的 `Responder` 是模型接入点，替换它即可接入其它模型，
+不需要改动 Agent 自身。`Agent` 的 `runtime.messages` / `runtime.isRunning` 就是
+playground 与运行时之间唯一的接口。
