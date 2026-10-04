@@ -458,7 +458,7 @@ async function send(message: string) {
   }))
 
   // TODO: 在这里要对数据做处理，最终抛出去的应该是根据数据索引，组件索引替换过的数据
-  emit('init', JSON.parse(layoutIR.text))
+  emit('init', JSON.parse(layoutIR.text), data.value)
 }
 
 const suggestions = ref<Array<{ title: string, label?: string, prompt: string }>>([])

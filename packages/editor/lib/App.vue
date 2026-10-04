@@ -77,13 +77,14 @@
     <MpdAgent
       :widgets="app.widgets"
       v-if="agent"
+      @init="onInit"
     />
   </ElConfigProvider>
 </template>
 
 <script lang="ts" setup>
 import LeftArrow from './assets/leftArrow.vue'
-import type { Node } from '@sepveneto/dnde-core/class'
+import { Node } from '@sepveneto/dnde-core/class'
 import type { DraggableEvt } from './type'
 import { editorContextKey, EventEmitter } from '@sepveneto/dnde-core'
 import { ElConfigProvider, ElScrollbar } from 'element-plus'
@@ -117,6 +118,21 @@ onMounted(() => {
 provide(EditorKey, {
   root: refRoot,
 })
+
+function onInit({ layout, data }: any) {
+  console.log('layout', layout, data, app.widgetMap)
+
+  layout.forEach(item => {
+    console.log(item)
+    const w = app.widgetMap.get(item.widget)
+    if (!w) return
+    const node = new Node(w, JSON.parse(JSON.stringify({ props: w.defaultData, style: w.defaultStyle })))
+    node.setList(item.items)
+
+    editor.rootNode.list.push(node)
+  })
+
+}
 
 // TODO: 需要优化
 // 目前由于mf在引入时force对于web components在不重新导入的情况下没办法再次加载，导致从其它页面切换回来时不会重新加载样式

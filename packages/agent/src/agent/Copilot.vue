@@ -22,13 +22,15 @@ const props = defineProps({
   widgets: Object
 })
 
+const emit = defineEmits(['init'])
+
 console.log(props)
 
 const open = ref(false)
 const isRunning = ref(false)
 
-function onInit(layout: any) {
-  console.log('layout', layout)
+function onInit(layout: any, data: any) {
+  emit('init', { layout, data })
 }
 </script>
 
