@@ -259,7 +259,7 @@ const serviceWidgets: IWidget[] = [
       description: '较大的独立展示区域。固定占一整行，单行排列。适合少量元素，需要突出单个元素的场景。推荐一个元素使用一个组件，使每个元素获得较大的展示面积。',
       layout: {
         direction: 'row',
-        density: 'high',
+        density: 'low',
         priority: 'large',
       }
     }

@@ -1,7 +1,10 @@
 <template>
   <div class="assistant-root">
     <section v-if="open" class="assistant-panel">
-      <AssistantThread />
+      <AssistantThread
+        :widgets="props.widgets"
+        @init="onInit"
+      />
     </section>
     <button class="assistant-button" type="button" @click="open = !open">
       <span>装修助手</span>
@@ -23,6 +26,10 @@ console.log(props)
 
 const open = ref(false)
 const isRunning = ref(false)
+
+function onInit(layout: any) {
+  console.log('layout', layout)
+}
 </script>
 
 <style lang="scss" scoped>

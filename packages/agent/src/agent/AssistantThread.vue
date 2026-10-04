@@ -113,6 +113,35 @@ import type { MessagePart } from './type'
 import { z } from 'zod'
 import { tool } from './core/tool'
 
+const props = defineProps<{ widgets?: any[] }>()
+
+// 将外部传入的 widgets（可能是分组、Widget 实例或原始 IWidget）拍平，
+// 转换成 layoutAgent 需要的 { typeId, description, layout } 列表。
+function toLayoutWidgets(widgets: any[] = []): Array<{ typeId: string, description: string, layout: Record<string, any> }> {
+  const result: Array<{ typeId: string, description: string, layout: Record<string, any> }> = []
+  const visit = (item: any) => {
+    if (!item)
+      return
+    if (Array.isArray(item.list)) {
+      item.list.forEach(visit)
+      return
+    }
+    const data = item._data ?? item
+    const typeId = item.view ?? data._view
+    const agent = data.agent
+    if (!typeId || !agent)
+      return
+    result.push({
+      typeId,
+      description: agent.description ?? '',
+      layout: agent.layout ?? {},
+    })
+  }
+  widgets.forEach(visit)
+  console.log(result)
+  return result
+}
+
 const businessConfigSchema = z.object({
   scenes: z.array(
     z.object({
@@ -149,6 +178,8 @@ const client = new OpenAI({
   dangerouslyAllowBrowser: true,
 })
 
+const data = shallowRef<any>({})
+
 const checkScenesTool = tool({
   name: 'check_scenes_enabled',
   description: `
@@ -180,6 +211,8 @@ const checkScenesTool = tool({
       }
     })
 
+    data.value['scenes'] = scenes
+
     const disabled = scenes.filter(scene => !scene.enabled).map(scene => scene.name)
     return {
       scenes,
@@ -189,8 +222,6 @@ const checkScenesTool = tool({
     }
   },
 })
-
-const manifest = shallowRef<any>()
 
 // 开通属于写操作：调用本工具后运行时会自动暂停并请用户确认，
 // 所以模型应当直接调用，而不是在文本里询问用户。
@@ -326,6 +357,8 @@ function describeApproval(request: { name: string, args?: unknown }): string {
   return `是否执行工具 ${request.name}？`
 }
 
+const emit = defineEmits(['init'])
+
 async function send(message: string) {
   messages.value.push({
     id: createId(),
@@ -419,33 +452,13 @@ async function send(message: string) {
 
   console.log(elements)
 
-  // TODO: 根据外部传入的widgets，转换成生成layoutIR需要的widgets
   const layoutIR = await run(layoutAgent, JSON.stringify({
     elements,
-    widgets: [  {
-    typeId: '1',
-      "description": "紧凑规则网格。适合大量同类元素，需要提高信息密度、方便用户快速浏览的场景。多个元素可以同时放入一个组件中。不适合少量元素的突出展示。",
-        "layout": {
-    "direction": "row",
-    "itemMode": "single",
-    "density": "low",
-    "priority": "large-area"
-  }
+    widgets: toLayoutWidgets(props.widgets),
+  }))
 
-  },
-  {
-    typeId: '2',
-      "description": "较大的独立展示区域。固定占一整行，单行排列。适合少量元素，需要突出单个元素的场景。推荐一个元素使用一个组件，使每个元素获得较大的展示面积。",
-        "layout": {
-    "direction": "row",
-    "itemMode": "single",
-    "density": "low",
-    "priority": "large-area"
-  }
-
-  }]
-}))
-console.log(JSON.parse(layoutIR.text))
+  // TODO: 在这里要对数据做处理，最终抛出去的应该是根据数据索引，组件索引替换过的数据
+  emit('init', JSON.parse(layoutIR.text))
 }
 
 const suggestions = ref<Array<{ title: string, label?: string, prompt: string }>>([])
