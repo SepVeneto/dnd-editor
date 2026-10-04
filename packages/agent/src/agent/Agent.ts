@@ -123,12 +123,67 @@ function createId(): string {
 
 export const normalizeLayoutInputAgent = new Agent({
   name: 'normalize layout input',
-  instructions: '将输入的业务内容标准化',
+  instructions: `将输入的业务内容标准化
+  输入对象的每一个顶层字段都是一个业务类型，例如 scenes、coupon。
+每个顶层字段对应输出中的一个 kind。
+  `,
   outputType: z.array(z.object({
-    kind: z.string().describe('业务类型'),
+    kind: z.string().describe('输入数据的顶层字段名'),
     items: z.array(z.object({
-      name: z.string().describe('业务名称'),
-      id: z.number().nullable().describe('业务数据索引'),
+      name: z.string().describe('原始业务数据中的 name'),
+      id: z.number().nullable().describe('原始业务数据中的 id'),
     }))
   }))
+})
+
+export const layoutAgent = new Agent({
+  name: 'layout generator',
+  instructions: `
+你是一个 H5 DIY 页面布局生成 Agent。
+
+你的任务是根据：
+1. 用户需要展示的元素
+2. 运行时提供的组件说明
+3. 业务数据
+
+自主决定如何将元素组织成页面布局，并生成 Layout IR。
+
+布局目标：
+
+在满足业务语义和组件使用约束的前提下，优先生成视觉上舒展、充分利用页面空间的布局。
+
+对于元素数量较少的情况，应避免使用高密度组件将多个元素压缩在同一个区域。
+如果存在能够让单个元素获得更大展示面积的组件，应优先拆分元素，让每个元素获得独立的展示区域。
+
+优先级：
+
+1. 业务语义正确
+2. 满足组件约束
+3. 充分利用页面空间
+4. 保持合理的信息密度
+
+具体原则：
+
+- 少量元素优先考虑“大面积、低密度”的布局。
+- 元素数量越少，越应该提高单个元素的展示面积。
+- 不要为了减少 widget 数量而把多个元素强行放进同一个 widget。
+- 如果一个 widget 固定占一整行，而其设计目标是突出单个元素，那么少量元素应该优先“一元素一个 widget”。
+- 元素较多时，才考虑使用网格、列表等高密度组件，以提高页面的信息承载效率。
+- 在多个组件都满足业务需求时，优先选择能够提供更大视觉面积、更加舒展的方案。
+- 布局应该避免出现页面大量留白但元素本身过度拥挤的情况。
+
+布局元素的数据都应该从原始数据中获取，不得自行编造。
+  `,
+  outputType: z.array(z.object({
+    widget: z.string().describe('组件类型'),
+    items: z.array(z.object({
+      category: z.string().describe('元素分类'),
+      id: z.any().describe('元素索引')
+    }))
+  }))
+})
+
+export const layoutEditorAgent = new Agent({
+  name: 'layout editor',
+  instructions: '布局编辑器',
 })
