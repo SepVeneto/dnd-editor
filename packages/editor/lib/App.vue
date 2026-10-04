@@ -74,7 +74,10 @@
       </aside>
     </div>
 
-    <Agent v-if="agent" />
+    <MpdAgent
+      :widgets="app.widgets"
+      v-if="agent"
+    />
   </ElConfigProvider>
 </template>
 
@@ -93,13 +96,14 @@ import ConfigPanel from './layout/configPanel.vue'
 import TreePanel from './layout/treePanel.vue'
 import WidgetsMenu from './layout/widgetsMenu.vue'
 import { editorProps } from './props'
-import { useEditor } from './store'
+import { useApp, useEditor } from './store'
 import { EditorKey, loadFromRemote, normalizeStyle } from './utils'
-import Agent from './components/agent/Copilot.vue'
+import { MpdAgent } from '@agent/sdk'
 
 const props = defineProps(editorProps)
 
 const editor = useEditor()
+const app = useApp()
 const inst = getCurrentInstance()
 const bus = new EventEmitter((event: string, ...args: any) => {
   inst?.parent?.emit(event, ...args)

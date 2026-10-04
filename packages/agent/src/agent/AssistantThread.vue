@@ -105,7 +105,7 @@
 <script setup lang="ts">
 import { nextTick, reactive, ref, shallowRef, watch } from 'vue'
 import OpenAI from 'openai'
-import { Agent, normalizeLayoutInputAgent } from './Agent'
+import { Agent, layoutAgent, normalizeLayoutInputAgent } from './Agent'
 import type { ToolApprovalRequest } from './Agent'
 import { run } from './core/run'
 import type { RunEvent } from './core/run'
@@ -413,9 +413,39 @@ async function send(message: string) {
 
   const res = await run(normalizeLayoutInputAgent, JSON.stringify({
     scenes: [{ id: 1, name: '大润发小时达' }, { id: 2, name: '叮咚买菜'}],
-    coupon: [{ id: 1, name: '盒马', faceValue: 500 }],
+    // coupon: [{ id: 1, name: '盒马', faceValue: 500 }],
   }))
-  console.log(res)
+  const elements = JSON.parse(res.text)
+
+  console.log(elements)
+
+  // TODO: 根据外部传入的widgets，转换成生成layoutIR需要的widgets
+  const layoutIR = await run(layoutAgent, JSON.stringify({
+    elements,
+    widgets: [  {
+    typeId: '1',
+      "description": "紧凑规则网格。适合大量同类元素，需要提高信息密度、方便用户快速浏览的场景。多个元素可以同时放入一个组件中。不适合少量元素的突出展示。",
+        "layout": {
+    "direction": "row",
+    "itemMode": "single",
+    "density": "low",
+    "priority": "large-area"
+  }
+
+  },
+  {
+    typeId: '2',
+      "description": "较大的独立展示区域。固定占一整行，单行排列。适合少量元素，需要突出单个元素的场景。推荐一个元素使用一个组件，使每个元素获得较大的展示面积。",
+        "layout": {
+    "direction": "row",
+    "itemMode": "single",
+    "density": "low",
+    "priority": "large-area"
+  }
+
+  }]
+}))
+console.log(JSON.parse(layoutIR.text))
 }
 
 const suggestions = ref<Array<{ title: string, label?: string, prompt: string }>>([])

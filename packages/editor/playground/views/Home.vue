@@ -234,6 +234,36 @@ const serviceWidgets: IWidget[] = [
       }),
     ],
   }),
+  widget.create({
+    name: '金刚区',
+    type: 'jqg',
+    defaultData: {
+      isShow: 1,
+    },
+    agent: {
+      description: '紧凑规则网格。适合大量同类元素，需要提高信息密度、方便用户快速浏览的场景。多个元素可以同时放入一个组件中。不适合少量元素的突出展示。',
+      layout: {
+        direction: 'row',
+        density: 'high',
+        priority: 'large',
+      }
+    }
+  }),
+  widget.create({
+    name: '图片组件',
+    type: 'picture',
+    defaultData: {
+      isShow: 1,
+    },
+    agent: {
+      description: '较大的独立展示区域。固定占一整行，单行排列。适合少量元素，需要突出单个元素的场景。推荐一个元素使用一个组件，使每个元素获得较大的展示面积。',
+      layout: {
+        direction: 'row',
+        density: 'high',
+        priority: 'large',
+      }
+    }
+  })
 ]
 const widgets = [
   widget.group('基础组件', baseWidgets),

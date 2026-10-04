@@ -15,6 +15,12 @@
 import AssistantThread from './AssistantThread.vue';
 import { ref } from 'vue';
 
+const props = defineProps({
+  widgets: Object
+})
+
+console.log(props)
+
 const open = ref(false)
 const isRunning = ref(false)
 </script>

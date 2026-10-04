@@ -29,6 +29,15 @@ export interface Base {
   }
   style?: CSSProperties & WidgetPos
   data?: Record<string, any> | any[]
+
+  agent?: {
+    description: string,
+    layout?: {
+      direction: 'row' | 'column',
+      density: 'low' | 'medium' | 'high',
+      priority: 'large'
+    }
+  }
 }
 
 type BaseKey

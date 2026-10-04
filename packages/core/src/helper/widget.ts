@@ -16,6 +16,7 @@ interface CWidget {
   defaultData?: Record<string, any>
   attributes?: SchemaItem[]
   stylesheet?: SchemaItem[]
+  agent?: IWidget['agent']
 }
 
 interface RootWidget {
@@ -63,6 +64,7 @@ export const widget = {
       },
       style: config.defaultStyle,
       data: config.defaultData,
+      agent: config.agent,
     }
   },
   group(name: string, list: IWidget[]) {
