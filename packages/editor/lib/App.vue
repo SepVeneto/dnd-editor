@@ -100,6 +100,8 @@ import { editorProps } from './props'
 import { useApp, useEditor } from './store'
 import { EditorKey, loadFromRemote, normalizeStyle } from './utils'
 import { MpdAgent } from '@agent/sdk'
+// 编辑器侧 Agent：注册为子 agent，供 flow agent 调用
+import './agents/editor'
 
 const props = defineProps(editorProps)
 

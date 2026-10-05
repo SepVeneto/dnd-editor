@@ -33,16 +33,26 @@
             </span>
           </p>
 
-          <p
+          <div
             v-else-if="part.type === 'tool-call'"
-            class="message__action message__tool"
-            :class="{ 'message__action--failed': part.result && !part.result.ok }"
+            class="flow"
+            :class="{ 'flow--failed': part.result && !toolOk(part.result) }"
           >
-            <code>{{ describeToolCall(part.call) }}</code>
-            <span v-if="part.result" class="message__action-result">
-              {{ part.result.ok ? '✓' : '✕' }} {{ describeToolResult(part.result) }}
-            </span>
-          </p>
+            <div class="flow__head">
+              <span class="flow__badge">工具</span>
+              <code class="flow__name">{{ toolName(part.call) }}</code>
+              <span v-if="!part.result" class="flow__status flow__status--pending">执行中…</span>
+              <span v-else class="flow__status">{{ toolOk(part.result) ? '✓ 完成' : '✕ 失败' }}</span>
+            </div>
+            <div class="flow__row">
+              <span class="flow__label">输入</span>
+              <pre class="flow__code">{{ formatPayload(toolArgs(part.call)) }}</pre>
+            </div>
+            <div class="flow__row">
+              <span class="flow__label">输出</span>
+              <pre class="flow__code">{{ part.result ? formatPayload(toolOutput(part.result)) : '等待输出…' }}</pre>
+            </div>
+          </div>
 
           <p
             v-else-if="part.type === 'approval'"
@@ -191,6 +201,8 @@ const emit = defineEmits(['init'])
 // 当前正在渲染的 copilot 消息与文本 part，供运行事件回调写入
 let activeReply: { id: string, role: 'copilot', parts: MessagePart[] } | null = null
 let activeTextPart: Extract<MessagePart, { type: 'text' }> | null = null
+// callId -> 对应的 tool-call part（响应式代理），用于把 tool-result 精确回填
+const toolCallParts = new Map<string, Extract<MessagePart, { type: 'tool-call' }>>()
 
 function handleEvent(event: RunEvent) {
   const reply = activeReply
@@ -217,15 +229,19 @@ function handleEvent(event: RunEvent) {
         type: 'tool-call',
         call: { callId: event.callId, name: event.name, args: event.args },
       })
+      toolCallParts.set(
+        event.callId,
+        reply.parts[reply.parts.length - 1] as Extract<MessagePart, { type: 'tool-call' }>,
+      )
       break
 
-      case 'approval-request':
-        activeTextPart = null
-        reply.parts.push({
-          type: 'approval',
-          call: { callId: event.callId, name: event.name, args: event.args, message: event.message },
-        })
-        break
+    case 'approval-request':
+      activeTextPart = null
+      reply.parts.push({
+        type: 'approval',
+        call: { callId: event.callId, name: event.name, args: event.args, message: event.message },
+      })
+      break
 
     case 'approval-result': {
       const part = reply.parts.find(
@@ -237,26 +253,17 @@ function handleEvent(event: RunEvent) {
     }
 
     case 'tool-result': {
-      const part = reply.parts.find(
-        item => item.type === 'tool-call' && (item.call as any)?.callId === event.callId,
-      )
-      if (part && part.type === 'tool-call')
-        part.result = describeCallOutput(event)
+      const part = toolCallParts.get(event.callId)
+      if (part) {
+        part.result = {
+          ...describeCallOutput(event),
+          raw: event.error ?? event.result,
+        }
+      }
       break
     }
   }
 }
-
-// 子 Agent 的步骤带上前缀，和流程 Agent 自己的轮次区分开
-function childEvent(label: string, event: RunEvent) {
-  if (event.type === 'turn-start') {
-    activeReply?.parts.push({ type: 'step', label: `${label} · 第 ${event.turn} 轮` })
-    return
-  }
-
-  handleEvent(event)
-}
-
 
 // 流程 Agent 只在 setup 里构建一次，把子 Agent 暴露成 tool，
 // 由模型根据「用户输入」选择调用哪个子 Agent。
@@ -296,10 +303,12 @@ async function send(message: string) {
   })
   messages.value.push(reply)
 
-  // activeReply = reply
-  // activeTextPart = null
-  // resetFlow()
+  activeReply = reply
+  activeTextPart = null
+  toolCallParts.clear()
+  resetFlow()
   // 宿主侧的可用组件注入共享 state，供布局子 Agent 调用时使用
+  flowState.widgets = toLayoutWidgets(props.widgets)
 
   isRunning.value = true
   try {
@@ -377,17 +386,34 @@ function describeAction(action: unknown): string {
   return JSON.stringify(action)
 }
 
-function describeToolCall(call: unknown): string {
-  const value = call as { name?: string, args?: unknown } | undefined
-  if (value?.name)
-    return `tool:${value.name}(${stringifyArgs(value.args)})`
-
-  return JSON.stringify(call)
+function toolName(call: unknown): string {
+  return (call as { name?: string } | undefined)?.name ?? ''
 }
 
-function describeToolResult(result: unknown): string {
-  const value = result as { ok?: boolean, message?: string } | undefined
-  return value?.message ?? JSON.stringify(result)
+function toolArgs(call: unknown): unknown {
+  return (call as { args?: unknown } | undefined)?.args
+}
+
+function toolOk(result: unknown): boolean {
+  return !!(result as { ok?: boolean } | undefined)?.ok
+}
+
+function toolOutput(result: unknown): unknown {
+  const value = result as { raw?: unknown, message?: string } | undefined
+  return value?.raw ?? value?.message ?? result
+}
+
+function formatPayload(value: unknown): string {
+  if (value === undefined || value === null)
+    return '—'
+  if (typeof value === 'string')
+    return value
+  try {
+    return JSON.stringify(value, null, 2)
+  }
+  catch {
+    return String(value)
+  }
 }
 
 function describeCallOutput(call: { name?: string, result?: unknown, error?: string }): { ok: boolean, message: string } {
@@ -590,13 +616,83 @@ function stringifyArgs(args: unknown): string {
   color: #b45309;
 }
 
-.message__tool code {
-  color: #7c3aed;
+/* 执行流程：工具调用的名称 / 输入 / 输出 */
+.flow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 2px 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid #e9d5ff;
+  background: #faf5ff;
+  font-size: 12px;
 }
 
-.message__tool {
-  border-color: #ede9fe;
-  background: #fbfaff;
+.flow--failed {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.flow__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.flow__badge {
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: #ede9fe;
+  color: #7c3aed;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.flow__name {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 600;
+  color: #6d28d9;
+}
+
+.flow__status {
+  margin-left: auto;
+  color: #059669;
+}
+
+.flow--failed .flow__status {
+  color: #b91c1c;
+}
+
+.flow__status--pending {
+  color: #b45309;
+}
+
+.flow__row {
+  display: flex;
+  gap: 8px;
+}
+
+.flow__label {
+  flex-shrink: 0;
+  width: 28px;
+  color: #9ca3af;
+  line-height: 1.6;
+}
+
+.flow__code {
+  flex: 1;
+  margin: 0;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: #111827;
+  color: #d1fae5;
+  font-size: 11.5px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  overflow: auto;
+  max-height: 220px;
 }
 
 /* 模型原始输出：对着 Prompt / response_format 排查用 */

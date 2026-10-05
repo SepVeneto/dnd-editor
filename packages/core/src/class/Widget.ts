@@ -84,6 +84,9 @@ export class Widget {
 
   constructor(widget: IWidget) {
     this._data = JSON.parse(JSON.stringify(widget))
+    // JSON 深拷贝会丢掉 agent 上的函数（如 update），单独保留
+    if (widget.agent)
+      this._data.agent = { ...widget.agent }
     this.name = widget._name
     this.view = widget._view
     this.container = widget.container
