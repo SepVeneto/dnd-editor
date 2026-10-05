@@ -122,15 +122,15 @@ provide(EditorKey, {
 function onInit({ layout, data }: any) {
   console.log('layout', layout, data, app.widgetMap)
 
-  layout.forEach(item => {
-    console.log(item)
-    const w = app.widgetMap.get(item.widget)
-    if (!w) return
-    const node = new Node(w, JSON.parse(JSON.stringify({ props: w.defaultData, style: w.defaultStyle })))
-    node.setList(item.items)
+  // layout.forEach(item => {
+  //   console.log(item)
+  //   const w = app.widgetMap.get(item.widget)
+  //   if (!w) return
+  //   const node = new Node(w, JSON.parse(JSON.stringify({ props: w.defaultData, style: w.defaultStyle })))
+  //   node.data.list = item.items
 
-    editor.rootNode.list.push(node)
-  })
+  //   editor.rootNode.list.push(node)
+  // })
 
 }
 

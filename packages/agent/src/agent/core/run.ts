@@ -44,7 +44,7 @@ export type RunEvent
   /** 模型请求调用某个工具 */
     | { type: 'tool-call', callId: string, name: string, args: unknown }
   /** 某个工具需要人工确认 */
-    | { type: 'approval-request', callId: string, name: string, args: unknown }
+    | { type: 'approval-request', callId: string, name: string, args: unknown, message: string }
   /** 用户对审批给出的决策 */
     | { type: 'approval-result', callId: string, name: string, approved: boolean }
   /** 工具执行结束（成功或失败） */
@@ -112,6 +112,7 @@ export class Runner {
       // 执行工具，并把结果作为 tool 消息交回模型继续下一轮
       for (const call of functionCalls) {
         const result = await invokeTool(agent, call, options, emit)
+        console.log('tool result', result)
         toolCalls.push(result)
         messages.push({
           role: 'tool',
@@ -155,6 +156,9 @@ async function executeTool(
     return { callId, name, args, error: `工具 ${name} 未在 Agent ${agent.name} 上注册` }
   }
 
+  // 工具执行时把父级运行的钩子透传下去，嵌套子 Agent 才能继续冒泡事件 / 审批
+  const context = { onEvent: emit, onApproval: options.onApproval ?? agent.approval.onApproval }
+
   let parsed: unknown
   try {
     parsed = args ? JSON.parse(args) : {}
@@ -164,19 +168,18 @@ async function executeTool(
 
   const needsApproval = await resolveNeedsApproval(tool, parsed)
   if (needsApproval) {
-    if (!options.onApproval) {
-      return {
-        callId,
-        name,
-        args: parsed,
-        approval: 'rejected',
-        error: `工具 ${name} 需要人工确认，但没有提供审批回调`,
-      }
-    }
-
+    // 审批状态由 Agent 管理；文案 / 回调来自工具配置
+    const onApproval = options.onApproval ?? agent.approval.onApproval
+    const message = tool.approval?.message?.(parsed) ?? `是否执行工具 ${name}？`
     // 运行时在这里停下来等宿主（对话框底部）给出「同意 / 不同意」
-    emit({ type: 'approval-request', callId, name, args: parsed })
-    const approved = await options.onApproval({ callId, name, args: parsed })
+    emit({ type: 'approval-request', callId, name, args: parsed, message })
+    const approved = await onApproval({ callId, name, args: parsed, message })
+    if (approved) {
+      tool.approval?.onApprove?.(parsed)
+    }
+    else {
+      tool.approval?.onReject?.(parsed)
+    }
     emit({ type: 'approval-result', callId, name, approved })
     if (!approved) {
       return {
@@ -189,7 +192,7 @@ async function executeTool(
     }
 
     try {
-      const result = await tool.invoke(parsed)
+      const result = await tool.invoke(parsed, context)
       return { callId, name, args: parsed, approval: 'approved', result }
     } catch (error) {
       return { callId, name, args: parsed, approval: 'approved', error: toMessage(error) }
@@ -197,7 +200,7 @@ async function executeTool(
   }
 
   try {
-    const result = await tool.invoke(parsed)
+    const result = await tool.invoke(parsed, context)
     return { callId, name, args: parsed, result }
   } catch (error) {
     return { callId, name, args: parsed, error: toMessage(error) }

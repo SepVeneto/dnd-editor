@@ -79,12 +79,12 @@
     </div>
 
     <div v-if="pendingApproval" class="approval">
-      <p class="approval__text">{{ describeApproval(pendingApproval) }}</p>
+      <p class="approval__text">{{ approvalMessage }}</p>
       <div class="approval__actions">
-        <button type="button" class="approval__reject" @click="resolveApproval(false)">
+        <button type="button" class="approval__reject" @click="flowAgent.approval.reject()">
           不同意
         </button>
-        <button type="button" class="approval__approve" @click="resolveApproval(true)">
+        <button type="button" class="approval__approve" @click="flowAgent.approval.approve()">
           同意开通
         </button>
       </div>
@@ -103,10 +103,9 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, reactive, ref, shallowRef, watch } from 'vue'
+import { computed, nextTick, reactive, ref, shallowRef, watch } from 'vue'
 import OpenAI from 'openai'
-import { Agent, layoutAgent, normalizeLayoutInputAgent } from './Agent'
-import type { ToolApprovalRequest } from './Agent'
+import { createDecorationFlowAgent } from './flow'
 import { run } from './core/run'
 import type { RunEvent } from './core/run'
 import type { MessagePart } from './type'
@@ -172,192 +171,106 @@ type SceneState = {
   message: string
 }
 
+const data = shallowRef<any>({})
+
 const client = new OpenAI({
   baseURL: 'http://localhost:4000/v1',
   apiKey: 'test',
   dangerouslyAllowBrowser: true,
 })
 
-const data = shallowRef<any>({})
-
-const checkScenesTool = tool({
-  name: 'check_scenes_enabled',
-  description: `
-查询业务系统中指定场景的开通状态。
-
-输入场景名称列表，调用业务接口查询这些场景是否已经开通。
-只负责查询，不修改配置，不进行业务判断。
-返回每个场景对应的开通状态以及业务系统返回的信息。
-  `,
-  parameters: z.object({
-    scenes: z.array(z.object({ name: z.string() })),
-  }),
-  // mock 查询接口：只负责返回各场景的开通状态
-  invoke: async (input: { scenes: Array<{ name: string }> }) => {
-    const res = await fetch('http://localhost:4000/v1/business/scenes')
-    const resJson = await res.json()
-    const scenes: SceneState[] = input.scenes.map(item => {
-      const target = resJson.data.find((each: any) => each.name === item.name)
-      if (!target) {
-        throw new Error('cannot find scene ' + item.name)
-      }
-      return {
-        id: target.id,
-        name: target.name,
-        enabled: !!target.status,
-        message: target.status
-          ? '业务系统返回：场景已开通'
-          : '业务系统返回：场景未开通',
-      }
-    })
-
-    data.value['scenes'] = scenes
-
-    const disabled = scenes.filter(scene => !scene.enabled).map(scene => scene.name)
-    return {
-      scenes,
-      message: disabled.length
-        ? `以下场景未开通：${disabled.join('、')}。需要自行开通。`
-        : '所有场景均已开通。',
-    }
-  },
-})
-
-// 开通属于写操作：调用本工具后运行时会自动暂停并请用户确认，
-// 所以模型应当直接调用，而不是在文本里询问用户。
-const enableSceneTool = tool({
-  name: 'enable_scene',
-  description: `
-开通业务系统中指定的场景。
-  `,
-  parameters: z.object({
-    id: z.number(),
-    name: z.string(),
-  }),
-  needsApproval: true,
-  // mock 开通逻辑
-  invoke: async (input: { id: number, name: string }) => {
-    const res = await fetch('http://localhost:4000/v1/business/scene', { method: 'post' })
-    const resJson = await res.json()
-    if (resJson.code !== 0) {
-      throw new Error(resJson.message ?? `场景 ${input.name} 开通失败`)
-    }
-    return {
-      id: input.id,
-      name: input.name,
-      enabled: true,
-      message: `业务系统返回：场景 ${input.name} 已开通`,
-    }
-  },
-})
-
-const docsAgent = new Agent({
-  name: 'parse desc',
-  instructions: `
-你是一个业务配置文档解析器。
-
-你的任务是将用户提供的自然语言、表格、Word 文档文本或混合格式内容，
-解析成结构化业务配置。
-
-规则：
-
-1. 只解析用户提供的信息。
-2. 不调用任何工具。
-3. 不补充用户没有提供的信息。
-4. 不删除重复记录。
-5. 不合并重复行。
-6. 用户没有提供的字段使用 null。
-7. 保留用户输入中的原始名称、数值和描述。
-8. 表格每一行都必须独立解析。
-9. 手续费保持原始百分比形式，例如 "2%"。
-10. 面值是数字时输出 number。
-11. 不进行业务查询。
-12. 不判断配置是否正确。
-13. 不进行名称匹配。
-
-需要解析三类配置：
-
-H5外接场景：
-- name
-- fee
-
-品牌商户：
-- name
-- coupon
-- faceValue
-- fee
-
-扫码提货：
-- name
-- scope
-
-最终只输出结构化数据。
-  `,
-  outputType: businessConfigSchema,
-})
-
-const verifyAgent = new Agent({
-  name: 'verify configuration',
-  instructions: `
-你是业务配置校验器。
-
-你的输入是 Parser Agent 解析得到的结构化业务配置。
-
-你的任务是：
-
-1. 根据输入中的场景信息，调用 check_scenes_enabled 工具。
-2. 将用户提供的场景名称传给工具。
-3. 根据工具返回的真实业务数据判断每个场景是否已开通。
-4. 不修改用户提供的原始配置。
-5. 不自行假设业务系统中不存在的数据。
-6. 如果工具返回的信息不足以判断，则明确说明无法判断。
-7. 对每个「未开通」的场景，直接调用 enable_scene 发起开通，一次可以请求多个。
-   用户确认由工具自动触发，禁止在回复文本里询问「是否要开通」，直接调用工具即可。
-8. 如果某个场景用户不同意开通，不要重试，继续处理下一个未开通的场景。
-9. 最终汇总所有场景的检查结果。
-
-必须调用 check_scenes_enabled 工具获取真实业务数据，
-不能仅根据用户输入直接判断场景是否开通。
-  `,
-  // outputType: z.object({
-  //   scenes: z.array(z.object({
-  //     id: z.number().nullable(),
-  //     name: z.string(),
-  //     status: z.string(),
-  //   }))
-  // }),
-  tools: [checkScenesTool, enableSceneTool],
-})
 
 let streamText = ''
 
-// —— 工具审批：运行时暂停，等对话框底部的「同意 / 不同意」——
-const pendingApproval = ref<ToolApprovalRequest | null>(null)
-let approvalResolver: ((approved: boolean) => void) | null = null
-
-function requestApproval(request: ToolApprovalRequest): Promise<boolean> {
-  pendingApproval.value = request
-  return new Promise<boolean>((resolve) => {
-    approvalResolver = resolve
-  })
-}
-
-function resolveApproval(approved: boolean) {
-  const resolve = approvalResolver
-  approvalResolver = null
-  pendingApproval.value = null
-  resolve?.(approved)
-}
-
-function describeApproval(request: { name: string, args?: unknown }): string {
-  const args = request.args as { name?: string } | undefined
-  if (request.name === 'enable_scene' && args?.name)
-    return `场景「${args.name}」未开通，是否需要开通？`
-
-  return `是否执行工具 ${request.name}？`
+function describeApproval(request: { name: string, args?: unknown, message?: string }): string {
+  return request.message || `是否执行工具 ${request.name}？`
 }
 
 const emit = defineEmits(['init'])
+
+// 当前正在渲染的 copilot 消息与文本 part，供运行事件回调写入
+let activeReply: { id: string, role: 'copilot', parts: MessagePart[] } | null = null
+let activeTextPart: Extract<MessagePart, { type: 'text' }> | null = null
+
+function handleEvent(event: RunEvent) {
+  const reply = activeReply
+  if (!reply)
+    return
+
+  switch (event.type) {
+    case 'turn-start':
+      activeTextPart = null
+      reply.parts.push({ type: 'step', label: `第 ${event.turn} 轮 · 模型` })
+      break
+
+    case 'assistant-text':
+      if (!activeTextPart) {
+        activeTextPart = { type: 'text', text: '' }
+        reply.parts.push(activeTextPart)
+      }
+      activeTextPart.text += event.text
+      break
+
+    case 'tool-call':
+      activeTextPart = null
+      reply.parts.push({
+        type: 'tool-call',
+        call: { callId: event.callId, name: event.name, args: event.args },
+      })
+      break
+
+      case 'approval-request':
+        activeTextPart = null
+        reply.parts.push({
+          type: 'approval',
+          call: { callId: event.callId, name: event.name, args: event.args, message: event.message },
+        })
+        break
+
+    case 'approval-result': {
+      const part = reply.parts.find(
+        item => item.type === 'approval' && (item.call as any)?.callId === event.callId,
+      )
+      if (part && part.type === 'approval')
+        part.decision = event.approved ? 'approved' : 'rejected'
+      break
+    }
+
+    case 'tool-result': {
+      const part = reply.parts.find(
+        item => item.type === 'tool-call' && (item.call as any)?.callId === event.callId,
+      )
+      if (part && part.type === 'tool-call')
+        part.result = describeCallOutput(event)
+      break
+    }
+  }
+}
+
+// 子 Agent 的步骤带上前缀，和流程 Agent 自己的轮次区分开
+function childEvent(label: string, event: RunEvent) {
+  if (event.type === 'turn-start') {
+    activeReply?.parts.push({ type: 'step', label: `${label} · 第 ${event.turn} 轮` })
+    return
+  }
+
+  handleEvent(event)
+}
+
+
+// 流程 Agent 只在 setup 里构建一次，把子 Agent 暴露成 tool，
+// 由模型根据「用户输入」选择调用哪个子 Agent。
+const { agent: flowAgent, state: flowState, reset: resetFlow } = createDecorationFlowAgent()
+
+// 审批状态由 Agent 管理，面板只读 agent.approval.pending
+const pendingApproval = computed(() => flowAgent.approval.pending.value ?? null)
+const approvalMessage = computed(() => flowAgent.approval.message.value)
+
+watch(() => props.widgets, () => {
+  if (!props.widgets) return
+
+  flowState.widgets = toLayoutWidgets(props.widgets)
+}, { immediate: true})
 
 async function send(message: string) {
   messages.value.push({
@@ -368,7 +281,12 @@ async function send(message: string) {
     ]
   })
 
-  const config = '{"scenes":[{"name":"叮咚买菜","fee":"2%"},{"name":"大润发小时达","fee":"2%"}],"brand":[{"name":"盒马鲜生","coupon":"米面粮油提货券","faceValue":500,"fee":"2%"},{"name":"盒马鲜生","coupon":"米面粮油提货券","faceValue":200,"fee":"2%"}],"shopPickup":[{"name":"扫码提货","scope":["蛋糕品牌","百果园"]}]}'
+  // mock 数据：仅用于本地调试时手动替换用户输入，运行时不再使用
+  // const config = '{"scenes":[{"name":"叮咚买菜","fee":"2%"},{"name":"大润发小时达","fee":"2%"}],"brand":[{"name":"盒马鲜生","coupon":"米面粮油提货券","faceValue":500,"fee":"2%"},{"name":"盒马鲜生","coupon":"米面粮油提货券","faceValue":200,"fee":"2%"}],"shopPickup":[{"name":"扫码提货","scope":["蛋糕品牌","百果园"]}]}'
+  // const businessElements = {
+  //   scenes: [{ id: 1, name: '大润发小时达' }, { id: 2, name: '叮咚买菜' }],
+  //   // coupon: [{ id: 1, name: '盒马', faceValue: 500 }],
+  // }
 
   // 每一步都作为 message part 实时展示
   const reply = reactive<{ id: string, role: 'copilot', parts: MessagePart[] }>({
@@ -378,87 +296,30 @@ async function send(message: string) {
   })
   messages.value.push(reply)
 
-  let textPart: Extract<MessagePart, { type: 'text' }> | null = null
-
-  function onEvent(event: RunEvent) {
-    switch (event.type) {
-      case 'turn-start':
-        textPart = null
-        reply.parts.push({ type: 'step', label: `第 ${event.turn} 轮 · 模型` })
-        break
-
-      case 'assistant-text':
-        if (!textPart) {
-          textPart = { type: 'text', text: '' }
-          reply.parts.push(textPart)
-        }
-        textPart.text += event.text
-        break
-
-      case 'tool-call':
-        textPart = null
-        reply.parts.push({
-          type: 'tool-call',
-          call: { callId: event.callId, name: event.name, args: event.args },
-        })
-        break
-
-      case 'approval-request':
-        textPart = null
-        reply.parts.push({
-          type: 'approval',
-          call: { callId: event.callId, name: event.name, args: event.args },
-        })
-        break
-
-      case 'approval-result': {
-        const part = reply.parts.find(
-          item => item.type === 'approval' && (item.call as any)?.callId === event.callId,
-        )
-        if (part && part.type === 'approval')
-          part.decision = event.approved ? 'approved' : 'rejected'
-        break
-      }
-
-      case 'tool-result': {
-        const part = reply.parts.find(
-          item => item.type === 'tool-call' && (item.call as any)?.callId === event.callId,
-        )
-        if (part && part.type === 'tool-call')
-          part.result = describeCallOutput(event)
-        break
-      }
-    }
-  }
+  // activeReply = reply
+  // activeTextPart = null
+  // resetFlow()
+  // 宿主侧的可用组件注入共享 state，供布局子 Agent 调用时使用
 
   isRunning.value = true
   try {
-    // 模型调 check 拿到状态后会对未开通场景调用 enable_scene，
-    // 该工具声明了 needsApproval，runtime 会逐个暂停等用户确认。
-    await run(verifyAgent, config, { onApproval: requestApproval, onEvent })
+    // 输入完全来自用户：直接把用户消息交给流程 Agent，
+    // 由模型决定调用哪个子 Agent（tool）以及给它什么参数。
+    await run(flowAgent, message, { onEvent: handleEvent })
   }
   catch (error) {
     reply.parts.push({ type: 'text', text: `⚠️ ${toMessage(error)}` })
   }
   finally {
     isRunning.value = false
+    activeReply = null
+    activeTextPart = null
   }
 
-  const res = await run(normalizeLayoutInputAgent, JSON.stringify({
-    scenes: [{ id: 1, name: '大润发小时达' }, { id: 2, name: '叮咚买菜'}],
-    // coupon: [{ id: 1, name: '盒马', faceValue: 500 }],
-  }))
-  const elements = JSON.parse(res.text)
-
-  console.log(elements)
-
-  const layoutIR = await run(layoutAgent, JSON.stringify({
-    elements,
-    widgets: toLayoutWidgets(props.widgets),
-  }))
-
   // TODO: 在这里要对数据做处理，最终抛出去的应该是根据数据索引，组件索引替换过的数据
-  emit('init', JSON.parse(layoutIR.text), data.value)
+  if (flowState.layout !== undefined) {
+    emit('init', flowState.layout, data.value)
+  }
 }
 
 const suggestions = ref<Array<{ title: string, label?: string, prompt: string }>>([])
@@ -532,6 +393,10 @@ function describeToolResult(result: unknown): string {
 function describeCallOutput(call: { name?: string, result?: unknown, error?: string }): { ok: boolean, message: string } {
   if (call.error)
     return { ok: false, message: call.error }
+
+  // 子 Agent 作为 tool 调用时，返回的是它自己的最终文本
+  if (typeof call.result === 'string')
+    return { ok: true, message: call.result }
 
   if (call.name === 'check_scenes_enabled') {
     const scenes = (call.result as { scenes?: Array<{ name: string, enabled: boolean }> } | undefined)?.scenes ?? []

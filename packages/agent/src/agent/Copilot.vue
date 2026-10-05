@@ -15,12 +15,10 @@
 </template>
 
 <script setup lang="ts">
-import AssistantThread from './AssistantThread.vue';
-import { ref } from 'vue';
+import AssistantThread from './AssistantThread.vue'
+import { ref } from 'vue'
 
-const props = defineProps({
-  widgets: Object
-})
+const props = defineProps<{ widgets?: any[] }>()
 
 const emit = defineEmits(['init'])
 

@@ -511,3 +511,113 @@ pnpm -C packages/agent dev
 `playground/responders.ts` 里的 `Responder` 是模型接入点，替换它即可接入其它模型，
 不需要改动 Agent 自身。`Agent` 的 `runtime.messages` / `runtime.isRunning` 就是
 playground 与运行时之间唯一的接口。
+
+---
+
+## 12. Agent as Tool
+
+`Agent.asTool()` 把一个子 Agent 包装成一个 `FunctionTool`，注册到「负责流程」的父
+Agent 上。父 Agent 的模型会在自己的 tools 列表里看到这些子 Agent，并依据
+`toolName` / `toolDescription` 自行决定调用哪个、按什么顺序调用。
+
+```ts
+const flowAgent = new Agent({
+  name: 'decoration flow',
+  instructions: '先校验、再标准化、最后生成布局，每一步都通过调用子 Agent 完成。',
+  tools: [
+    verifyAgent.asTool({
+      toolName: 'verify_configuration',
+      toolDescription: '校验业务配置，查询并开通未开通的场景。',
+      // 子 Agent 内部的步骤 / 审批继续冒泡给宿主
+      runOptions: { onEvent, onApproval },
+    }),
+    normalizeAgent.asTool({ toolName: 'normalize_layout_input' }),
+    layoutAgent.asTool({
+      toolName: 'generate_layout',
+      // 调用前把宿主侧的运行数据补进子 Agent 的入参
+      buildInput: input => JSON.stringify({ elements: JSON.parse(input), widgets }),
+      // 把子 Agent 的结果转成返回给上层模型的字符串
+      extractOutput: result => result.text,
+    }),
+  ],
+})
+
+await run(flowAgent, userRequest)
+```
+
+`asTool` 的选项：
+
+| 选项               | 说明                                                        |
+| ---------------- | --------------------------------------------------------- |
+| `toolName`       | 暴露给上层模型的函数名，默认由 `agent.name` 规整成合法 function name    |
+| `toolDescription`| 模型据此判断何时调用该子 Agent，默认取 `handoffDescription`            |
+| `maxTurns`       | 子 Agent 单次运行的最大轮数                                       |
+| `needsApproval`  | 调用该子 Agent 前是否需要人工确认                                   |
+| `runOptions`     | 透传 `onEvent` / `onApproval`，让子 Agent 的步骤和审批冒泡到宿主         |
+| `buildInput`     | 调用子 Agent 前加工入参，例如注入组件表、页面上下文                     |
+| `extractOutput`  | 把子 Agent 的运行结果转成返回给上层模型的字符串                        |
+
+也可以不使用类方法，直接调用导出的 `createAgentTool(agent, options)`，
+或在需要时用 `toToolName(name)` 把任意名字转成合法 function name。
+
+本仓库的装修流程就是按这个方式组织的：`flow.ts` 在模块加载时用 `registerAgent`
+把 `normalize_layout_input` / `generate_layout` 两个子 Agent 注册成工具，
+工具之间通过模块级共享 state 传递中间结果；setup 阶段调用 `createDecorationFlowAgent()`
+（不需要传参）构建一次流程 Agent，工具直接从注册表取。`send` 只把用户输入原样交给它，
+由模型选择调用顺序与参数，宿主再从共享 state 拿布局结果。
+
+### 12.1 外部注册：`registerAgent`
+
+外部能力方不需要拿到流程 Agent，也不需要改流程 Agent 的 `tools`，
+只要调用 `registerAgent` 把自己的子 Agent 注册成 agent tool 即可：
+
+```ts
+import { registerAgent } from '@agent/sdk'
+
+registerAgent(couponAgent, {
+  toolName: 'configure_coupon',
+  toolDescription: '配置优惠券组件的标题、数据源与展示方式。',
+})
+```
+
+流程 Agent 在构建时会自动把注册表里的工具并进 `tools`（显式配置的同名工具优先），
+之后模型就能像调用内置子 Agent 一样选择它。注册表 API：
+
+| API                        | 说明                              |
+| -------------------------- | ------------------------------- |
+| `registerAgent(agent, opt)`| 注册并返回对应的 `FunctionTool`，同名覆盖     |
+| `unregisterAgent(name)`    | 取消注册，返回是否移除成功                  |
+| `listRegisteredAgents()`   | 当前已注册的工具名                      |
+| `getRegisteredAgentTools(names?)` | 取出工具，传 `names` 可按给定顺序过滤 |
+| `clearRegisteredAgents()`  | 清空注册表                          |
+
+### 12.2 审批：状态在 Agent，配置在 tool
+
+工具声明 `needsApproval` 后，运行时会在调用前暂停等用户决定。审批的**文案与回调**
+和 `needsApproval` 一样写在 tool 上，**状态**（待处理请求、暂停 / 恢复）由 Agent 管理：
+
+```ts
+const enableSceneTool = tool({
+  name: 'enable_scene',
+  parameters: z.object({ id: z.number(), name: z.string() }),
+  needsApproval: true,
+  approval: {
+    message: input => `场景「${input.name}」未开通，是否需要开通？`,
+    onApprove: input => console.log('同意开通', input),
+    onReject: input => console.log('拒绝开通', input),
+  },
+  invoke: async input => { /* ... */ },
+})
+```
+
+| 位置                          | 说明                                                    |
+| --------------------------- | ----------------------------------------------------- |
+| `tool.approval.message/onApprove/onReject` | 审批文案与同意 / 拒绝后的回调（业务侧配置）                    |
+| `agent.approval.pending`    | 当前待确认请求（Agent 内部状态），没有则为 null                     |
+| `agent.approval.message`    | 当前请求的文案（来自 tool 的 `approval.message`）              |
+| `agent.approval.approve()` / `reject()` | 给出决定，随后触发 tool 的 `onApprove` / `onReject`        |
+
+UI（`MpdAgent` / `AssistantThread`）直接读 `agent.approval.pending` 渲染审批面板，
+按钮调用 `approve` / `reject`。`run(agent, input, { onApproval })` 可以临时覆盖审批处理；
+`asTool` 的子 Agent 默认沿用父级 Agent 的审批，所以注册的子 Agent 里 `needsApproval`
+的工具也会冒泡到同一个面板。
