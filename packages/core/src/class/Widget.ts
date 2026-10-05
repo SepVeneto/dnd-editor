@@ -113,6 +113,10 @@ export class Widget {
     return this._data.data
   }
 
+  get agent() {
+    return this._data.agent
+  }
+
   get draggable() {
     return this._data.meta?.draggable ?? true
   }

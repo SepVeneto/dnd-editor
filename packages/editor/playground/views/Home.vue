@@ -439,7 +439,11 @@ const serviceWidgets: IWidget[] = [
         direction: 'row',
         density: 'high',
         priority: 'large',
-      }
+      },
+      // 组件创建完成后，业务侧决定数据怎么写入组件
+      update: (node, item) => {
+        node.data.list = item.items
+      },
     }
   }),
   widget.create({
@@ -454,7 +458,11 @@ const serviceWidgets: IWidget[] = [
         direction: 'row',
         density: 'low',
         priority: 'large',
-      }
+      },
+      // 组件创建完成后，业务侧决定数据怎么写入组件
+      update: (node, item) => {
+        node.data.list = item.items
+      },
     }
   })
 ]

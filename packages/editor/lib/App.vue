@@ -120,18 +120,17 @@ provide(EditorKey, {
 })
 
 function onInit({ layout, data }: any) {
-  console.log('layout', layout, data, app.widgetMap)
+  layout.forEach((item: any) => {
+    const w = app.widgetMap.get(item.widget)
+    if (!w)
+      return
 
-  // layout.forEach(item => {
-  //   console.log(item)
-  //   const w = app.widgetMap.get(item.widget)
-  //   if (!w) return
-  //   const node = new Node(w, JSON.parse(JSON.stringify({ props: w.defaultData, style: w.defaultStyle })))
-  //   node.data.list = item.items
+    const node = new Node(w, JSON.parse(JSON.stringify({ props: w.defaultData, style: w.defaultStyle })))
+    // 数据如何写入组件由业务侧通过 widget 的 agent.update 决定
+    w.agent?.update?.(node, item, data)
 
-  //   editor.rootNode.list.push(node)
-  // })
-
+    editor.rootNode.list.push(node)
+  })
 }
 
 // TODO: 需要优化
