@@ -1,9 +1,7 @@
-import { Agent } from './Agent'
-import { run } from './core/run'
-import type { RunEvent } from './core/run'
+import { Agent } from '@openai/agents'
+import { getModel, runAgent } from './core/sdk'
+import type { LayoutIR, NormalizedElements } from './ir'
 import { parseJson } from './extract'
-import { layoutIrSchema } from './ir'
-import type { LayoutIR } from './ir'
 
 export interface LayoutWidgetDescriptor {
   typeId: string
@@ -14,42 +12,39 @@ export interface LayoutWidgetDescriptor {
 const LAYOUT_INSTRUCTIONS = `
 你是布局 IR 生成器。根据标准化元素和可用组件生成 Layout IR。
 
-输入格式：
-{ "elements": [...], "widgets": [{ "typeId", "description", "layout" }, ...] }
+输入：
+- elements: [{ "kind": "分类", "items": [{ "name": "元素名", "id": 元素在该分类下的序号 }] }]
+- widgets: [{ "typeId", "description", "layout" }]
 
-输出是一个数组，每个元素表示一个组件及其承载的元素：
-[
-  { "widget": "组件 typeId", "items": [{ "category": "元素分类", "id": 元素索引 }] }
-]
+只输出一个 JSON 对象：
+{ "layout": [{ "widget": "组件 typeId", "items": [{ "category": "元素的 kind", "id": 元素的 id }] }] }
 
 硬性要求：
-1. 组件 typeId 必须从 widgets 里原样选取，不得编造。
-2. 元素数据必须来自 elements，不得自行编造、补充或合并。
-3. 布局策略：少量元素优先低密度、大面积、一个元素一个组件；元素较多时才考虑高密度组件分组。
-4. 组件能否承载多个元素只表示能力，不表示必须合并。
-5. 当多个组件都满足需求时，优先选择能带来更大视觉面积、更舒展的方案。
+1. 必须覆盖 elements 中的所有元素，不得遗漏、合并或编造。
+2. category 取元素的 kind，id 取元素自身的 id，一一对应。
+3. 组件 typeId 必须从 widgets 里原样选取。
+4. 少量元素优先低密度、大面积、一个元素一个组件；元素较多时才考虑高密度组件分组。
 `
 
 export function createLayoutAgent(): Agent<any, any> {
   return new Agent({
     name: 'layout',
+    model: getModel(),
     handoffDescription: '根据标准化元素与可用组件生成 Layout IR。',
     instructions: LAYOUT_INSTRUCTIONS,
-    outputType: layoutIrSchema,
   })
 }
 
 export interface GenerateLayoutIROptions {
-  elements: unknown
+  elements: NormalizedElements
   widgets: LayoutWidgetDescriptor[]
-  onEvent?: (event: RunEvent) => void
 }
 
 export async function generateLayoutIR(options: GenerateLayoutIROptions): Promise<LayoutIR> {
   const agent = createLayoutAgent()
   const input = JSON.stringify({ elements: options.elements, widgets: options.widgets })
-  const result = await run(agent, input, { onEvent: options.onEvent })
+  const result = await runAgent(agent, input)
 
-  const parsed = parseJson(result.text)
-  return Array.isArray(parsed) ? parsed as LayoutIR : []
+  const output = parseJson(String(result.finalOutput ?? '')) as { layout?: unknown } | undefined
+  return Array.isArray(output?.layout) ? output.layout as LayoutIR : []
 }

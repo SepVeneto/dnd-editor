@@ -1,38 +1,80 @@
+import { Agent } from '@openai/agents'
 import { z } from 'zod'
-import { Agent } from './Agent'
-import { run } from './core/run'
-import type { RunEvent } from './core/run'
+import { getModel, runAgent } from './core/sdk'
 
 export interface StructuredExtractOptions {
-  /** 描述需要抽取的结构与字段含义（业务数据描述，不是 Agent 编排）。 */
   instructions: string
   schema: z.ZodType
   input: string
-  onEvent?: (event: RunEvent) => void
 }
 
-/**
- * 平台提供的结构化抽取原语。
- *
- * 业务侧在 Workflow Step 中只需要给出 schema 与字段说明，
- * 不需要创建 Agent、维护 Prompt 或处理模型循环。
- */
 export async function structuredExtract(options: StructuredExtractOptions): Promise<unknown> {
   const agent = new Agent({
     name: 'structured-extract',
-    instructions: options.instructions,
-    outputType: options.schema,
+    model: getModel(),
+    instructions: buildExtractInstructions(options),
   })
 
-  const result = await run(agent, options.input, { onEvent: options.onEvent })
-  return parseJson(result.text)
+  const result = await runAgent(agent, options.input)
+  return parseJson(String(result.finalOutput ?? ''))
+}
+
+function buildExtractInstructions(options: StructuredExtractOptions): string {
+  const example = schemaToExample(options.schema)
+  return [
+    options.instructions,
+    example ? `输出 JSON，结构示例（值请替换为真实数据）：\n${example}` : '',
+    '只输出 JSON，不要输出任何其它文字。',
+  ].filter(Boolean).join('\n\n')
+}
+
+function schemaToExample(schema: z.ZodType): string {
+  try {
+    const json = (schema as any).toJSONSchema?.()
+    if (!json) {
+      return ''
+    }
+    return JSON.stringify(jsonSchemaToExample(json))
+  }
+  catch {
+    return ''
+  }
+}
+
+function jsonSchemaToExample(node: any): any {
+  if (!node || typeof node !== 'object') {
+    return '字符串'
+  }
+  let type = node.type
+  if (Array.isArray(type)) {
+    type = type[0]
+  }
+  if (node.enum) {
+    return node.enum[0]
+  }
+  if (type === 'object') {
+    const out: Record<string, any> = {}
+    for (const [key, value] of Object.entries(node.properties ?? {})) {
+      out[key] = jsonSchemaToExample(value)
+    }
+    return out
+  }
+  if (type === 'array') {
+    return [jsonSchemaToExample(node.items)]
+  }
+  if (type === 'number' || type === 'integer') {
+    return 0
+  }
+  if (type === 'boolean') {
+    return true
+  }
+  return '字符串'
 }
 
 export function parseJson(text: string): unknown {
   if (!text) {
     return undefined
   }
-
   const trimmed = text.trim()
   try {
     return JSON.parse(trimmed)

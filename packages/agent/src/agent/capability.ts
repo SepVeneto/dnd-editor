@@ -1,25 +1,20 @@
+import { tool } from '@openai/agents'
+import type { FunctionTool, RunContext } from '@openai/agents'
 import { z } from 'zod'
-import type {
-  FunctionTool,
-  JsonObjectSchema,
-  ToolApprovalHandler,
-  ToolApprovalOptions,
-  ToolRunContext,
-} from './Agent'
+import type { AppContext, ToolApprovalHandler } from './context'
 
-/** 业务能力入参 / 出参的 schema，业务侧可以用 zod 描述。 */
 export type CapabilitySchema = z.ZodType
 
-/** Capability 执行时由平台注入的上下文。 */
 export interface CapabilityContext {
-  /** 运行事件钩子：把内部步骤继续上抛给宿主。 */
-  onEvent?: ToolRunContext['onEvent']
-  /** 审批处理器：需要人工确认时由平台调用。 */
   onApproval?: ToolApprovalHandler
-  /** 中断信号。 */
   signal?: AbortSignal
-  /** 运行时共享状态。 */
   state?: Record<string, unknown>
+}
+
+export interface ToolApprovalOptions {
+  message?: (input: any) => string
+  onApprove?: (input: any) => void
+  onReject?: (input: any) => void
 }
 
 export interface CapabilityDefinition<TInput = unknown, TOutput = unknown> {
@@ -37,94 +32,96 @@ export interface Capability<TInput = unknown, TOutput = unknown>
   kind: 'capability'
 }
 
-/**
- * 定义业务能力。
- *
- * 业务侧只需要描述能力本身（名称、描述、schema、execute），
- * 不需要编写 Agent、Prompt、Tool 或 Runtime。
- */
 export function defineCapability<TInput, TOutput>(
   definition: CapabilityDefinition<TInput, TOutput>,
 ): Capability<TInput, TOutput> {
-  return {
-    kind: 'capability',
-    ...definition,
-  }
+  return { kind: 'capability', ...definition }
 }
 
-export function capabilitySchemaToJsonSchema(schema?: CapabilitySchema): JsonObjectSchema<any> {
-  if (!schema) {
-    return {
-      type: 'object',
-      properties: {},
-      required: [],
-      additionalProperties: true,
-    }
+function capabilityParameters(capability: Capability<any, any>): z.ZodObject<any> {
+  if (capability.inputSchema && capability.inputSchema instanceof z.ZodObject) {
+    return capability.inputSchema as z.ZodObject<any>
   }
-
-  const instance = schema as unknown as { toJSONSchema?: () => unknown }
-  if (typeof instance.toJSONSchema === 'function') {
-    return instance.toJSONSchema() as JsonObjectSchema<any>
-  }
-
-  return schema as unknown as JsonObjectSchema<any>
+  return z.object({ input: z.string().optional() })
 }
 
-/**
- * 把 Capability 包装成 Agent Tool。
- *
- * 注意：这里的 `needsApproval` 由 Agent Runtime（core/run）统一处理，
- * `invoke` 本身不重复处理审批；工作流步骤直接调用时应使用 `invokeCapability`。
- */
-export function createCapabilityTool<TInput = unknown, TOutput = unknown>(
-  capability: Capability<TInput, TOutput>,
-): FunctionTool {
-  return {
-    type: 'function',
+/** Capability -> OpenAI Agents SDK FunctionTool（V2 的 Capability Adapter）。 */
+export function createCapabilityTool(capability: Capability<any, any>): FunctionTool<any, any, any> {
+  return tool({
     name: capability.name,
     description: capability.description,
-    parameters: capabilitySchemaToJsonSchema(capability.inputSchema),
-    needsApproval: capability.needsApproval,
-    approval: capability.approval,
-    async invoke(input: TInput, context?: ToolRunContext): Promise<string | TOutput> {
-      const result = await capability.execute(input, context ?? {})
-      return result as string | TOutput
+    parameters: capabilityParameters(capability) as any,
+    strict: true,
+    async execute(input: any, runContext?: RunContext<any>) {
+      const context = runContext?.context as AppContext | undefined
+      const capabilityContext: CapabilityContext = {
+        state: context?.state,
+        onApproval: context?.onApproval,
+        signal: context?.signal,
+      }
+
+      // 需要人工确认的能力，先走审批，用户不同意就不执行。
+      const approved = await ensureCapabilityApproval(capability, input, capabilityContext)
+      if (!approved) {
+        return { ok: false, rejected: true, message: `用户不同意执行 ${capability.name}` }
+      }
+
+      try {
+        return await capability.execute(input, capabilityContext)
+      }
+      catch (error) {
+        // 不向模型抛异常，返回结构化错误，避免模型反复重试同一个工具调用。
+        return {
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        }
+      }
     },
-  }
+  })
 }
 
 let capabilityCallSeq = 0
 
-/**
- * 直接执行一个 Capability（工作流步骤、宿主手动调用等场景），统一处理审批。
- */
+/** 工作流 Step 里直接调用能力时使用，统一处理审批。 */
 export async function invokeCapability<TInput = unknown, TOutput = unknown>(
   capability: Capability<TInput, TOutput>,
   input: TInput,
   context: CapabilityContext = {},
 ): Promise<TOutput> {
+  const approved = await ensureCapabilityApproval(capability, input, context)
+  if (!approved) {
+    throw new Error(`用户不同意执行 ${capability.name}`)
+  }
+  return await capability.execute(input, context)
+}
+
+async function ensureCapabilityApproval(
+  capability: Capability<any, any>,
+  input: any,
+  context: CapabilityContext,
+): Promise<boolean> {
   const requires = await resolveCapabilityApproval(capability.needsApproval, input)
-  if (requires) {
-    const message = capability.approval?.message?.(input) ?? `是否执行 ${capability.name}？`
-    const onApproval = context.onApproval
-    const approved = onApproval
-      ? await onApproval({
+  if (!requires) {
+    return true
+  }
+
+  const message = capability.approval?.message?.(input) ?? `是否执行 ${capability.name}？`
+  const approved = context.onApproval
+    ? await context.onApproval({
         callId: `cap-${++capabilityCallSeq}`,
         name: capability.name,
         args: input,
         message,
       })
-      : false
+    : false
 
-    if (!approved) {
-      capability.approval?.onReject?.(input)
-      throw new Error(`用户不同意执行 ${capability.name}`)
-    }
-
+  if (approved) {
     capability.approval?.onApprove?.(input)
   }
-
-  return await capability.execute(input, context)
+  else {
+    capability.approval?.onReject?.(input)
+  }
+  return approved
 }
 
 async function resolveCapabilityApproval<TInput>(

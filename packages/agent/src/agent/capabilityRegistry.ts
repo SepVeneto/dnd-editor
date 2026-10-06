@@ -1,4 +1,4 @@
-import type { FunctionTool } from './Agent'
+import type { FunctionTool } from '@openai/agents'
 import type { Capability } from './capability'
 import { createCapabilityTool } from './capability'
 

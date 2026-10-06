@@ -113,7 +113,6 @@ const initializeWorkflow = defineWorkflow({
 只解析用户提供的信息，不补充、不合并、不核查，未提供的字段使用 null。`,
           schema: businessConfigSchema,
           input: String(context.input),
-          onEvent: context.onAgentEvent,
         })
       },
     },
@@ -155,7 +154,9 @@ const initializeWorkflow = defineWorkflow({
         const config = (context.state.verifyScenario ?? context.state.parseScenario) as any
         return ['scenes', 'brand', 'shopPickup'].flatMap((kind) => {
           const list = config?.[kind] ?? []
-          return list.length ? [{ kind, items: list }] : []
+          return list.length
+            ? [{ kind, items: list.map((item: any, index: number) => ({ name: item.name, id: index })) }]
+            : []
         })
       },
     },

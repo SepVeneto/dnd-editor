@@ -4,31 +4,41 @@ export * as z from 'zod'
 
 export const MpdAgent = Copilot
 
-export { Agent } from './agent/Agent'
-export type {
-  AgentApproval,
-  AgentConfiguration,
-  AgentOutputType,
-  FunctionTool,
-  JsonObjectSchema,
-  JsonObjectSchemaNonStrict,
-  JsonObjectSchemaStrict,
-  JsonSchemaDefinitionEntry,
-  Tool,
-  ToolApprovalHandler,
-  ToolApprovalOptions,
-  ToolApprovalRequest,
-  ToolInputParameters,
-  ToolRunContext,
-  UnknownContext,
-  ZodObjectLike,
-} from './agent/Agent'
+// Agent Loop / Tool Calling / Session / Context：由 OpenAI Agents SDK 提供。
+export {
+  Agent,
+  MemorySession,
+  Runner,
+  run,
+  tool,
+} from '@openai/agents'
 
-export type { AgentAsToolOptions } from './agent/core/agentTool'
-export { createAgentTool, toToolName } from './agent/core/agentTool'
-export { tool } from './agent/core/tool'
-export { run, Runner } from './agent/core/run'
-export type { RunEvent, RunResult, ToolCallResult } from './agent/core/run'
+export type {
+  FunctionTool,
+  RunContext,
+  RunResult,
+  Session,
+  Tool,
+} from '@openai/agents'
+
+// 模型接口调用：走原来的 chat.completions（服务器代理），并作为 SDK 的 Model 适配器接入。
+export {
+  configureModel,
+  getModel,
+  getModelConfig,
+  getModelName,
+  runAgent,
+  runAgentStreamed,
+  setMockClient,
+} from './agent/core/sdk'
+export type { ModelConfig, RunAgentOptions } from './agent/core/sdk'
+
+// 平台上下文。
+export type {
+  AppContext,
+  ToolApprovalHandler,
+  ToolApprovalRequest,
+} from './agent/context'
 
 // Capability
 export type {
@@ -36,9 +46,9 @@ export type {
   CapabilityContext,
   CapabilityDefinition,
   CapabilitySchema,
+  ToolApprovalOptions,
 } from './agent/capability'
 export {
-  capabilitySchemaToJsonSchema,
   createCapabilityTool,
   defineCapability,
   invokeCapability,
@@ -74,13 +84,16 @@ export type {
   LayoutIR,
   LayoutWidgetItem,
   MoveComponentIR,
+  NormalizedElement,
+  NormalizedElementItem,
+  NormalizedElements,
   UpdateComponentIR,
 } from './agent/ir'
 export { editIrSchema, layoutIrSchema } from './agent/ir'
 
 // Agents
 export type { FlowClassification, FlowType } from './agent/flowAgent'
-export { createFlowAgent } from './agent/flowAgent'
+export { createFlowAgent, flowOutputSchema } from './agent/flowAgent'
 export { createEditAgent } from './agent/editAgent'
 export { createCapabilityAgent } from './agent/capabilityAgent'
 export type { LayoutWidgetDescriptor } from './agent/layout'

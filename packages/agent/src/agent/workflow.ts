@@ -1,5 +1,4 @@
-import type { ToolApprovalHandler } from './Agent'
-import type { RunEvent } from './core/run'
+import type { ToolApprovalHandler } from './context'
 
 export type WorkflowEvent =
   | { type: 'workflow-start', workflow: string }
@@ -19,8 +18,6 @@ export interface WorkflowContext {
   onEvent?: (event: WorkflowEvent) => void
   /** 审批处理器：step 内通过 invokeCapability 调用需要确认的能力时使用。 */
   onApproval?: ToolApprovalHandler
-  /** step 内如果嵌套 Agent，可把其运行事件继续上抛。 */
-  onAgentEvent?: (event: RunEvent) => void
 }
 
 export interface StepResult {
@@ -67,7 +64,6 @@ export interface WorkflowRunOptions {
   signal?: AbortSignal
   onEvent?: (event: WorkflowEvent) => void
   onApproval?: ToolApprovalHandler
-  onAgentEvent?: (event: RunEvent) => void
   /** 恢复执行：从第几个 step 继续（0-based）。 */
   resumeFrom?: number
   /** 恢复执行：带入已有 state。 */
@@ -112,7 +108,6 @@ export class WorkflowRuntime {
         signal: options.signal,
         onEvent: options.onEvent,
         onApproval: options.onApproval,
-        onAgentEvent: options.onAgentEvent,
       }
 
       try {

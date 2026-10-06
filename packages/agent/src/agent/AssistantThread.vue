@@ -98,7 +98,7 @@
       <textarea
         v-model="draft"
         rows="2"
-        placeholder="例如：生成一个包含盒马鲜生和大润发小时达的页面"
+        placeholder="描述你的需求，例如：生成一个页面、删除一个组件、查询一个数据"
         @keydown="onKeydown"
       />
       <button type="button" :disabled="isRunning || !draft.trim()" @click="submit">发送</button>
@@ -113,7 +113,7 @@ import type { AgentRuntime, AgentRuntimeEvent } from './runtime'
 import type { Capability } from './capability'
 import type { Workflow } from './workflow'
 import type { EditIR, LayoutIR } from './ir'
-import type { ToolApprovalHandler, ToolApprovalRequest } from './Agent'
+import type { ToolApprovalHandler, ToolApprovalRequest } from './context'
 import type { MessagePart } from './type'
 
 const props = defineProps<{
@@ -151,9 +151,9 @@ const draft = ref('')
 const viewport = ref<HTMLElement | null>(null)
 
 const suggestions = ref<Array<{ title: string, label?: string, prompt: string }>>([
-  { title: '初始化页面', label: 'initialize', prompt: '生成一个包含盒马鲜生和大润发小时达的页面' },
-  { title: '修改页面', label: 'edit', prompt: '删除首页的金刚区' },
-  { title: '业务能力', label: 'capability', prompt: '检查一下大润发小时达是否已经开通' },
+  { title: '初始化页面', label: 'initialize', prompt: '根据下面的配置生成一个页面' },
+  { title: '修改页面', label: 'edit', prompt: '删除页面里的一个组件' },
+  { title: '业务能力', label: 'capability', prompt: '查询一下某个数据的状态' },
 ])
 
 // 审批状态由 UI 管理，运行时通过 onApproval 回调进来。
@@ -198,17 +198,17 @@ function handleEvent(event: AgentRuntimeEvent) {
     return
 
   switch (event.type) {
-    case 'turn-start':
-      activeTextPart = null
-      reply.parts.push({ type: 'step', label: `第 ${event.turn} 轮 · 模型` })
-      break
-
-    case 'assistant-text':
+    case 'text-delta':
       if (!activeTextPart) {
         activeTextPart = { type: 'text', text: '' }
         reply.parts.push(activeTextPart)
       }
       activeTextPart.text += event.text
+      break
+
+    case 'agent-updated':
+      activeTextPart = null
+      reply.parts.push({ type: 'step', label: `Agent：${event.agent}` })
       break
 
     case 'tool-call':
@@ -222,23 +222,6 @@ function handleEvent(event: AgentRuntimeEvent) {
         reply.parts[reply.parts.length - 1] as Extract<MessagePart, { type: 'tool-call' }>,
       )
       break
-
-    case 'approval-request':
-      activeTextPart = null
-      reply.parts.push({
-        type: 'approval',
-        call: { callId: event.callId, name: event.name, args: event.args, message: event.message },
-      })
-      break
-
-    case 'approval-result': {
-      const part = reply.parts.find(
-        item => item.type === 'approval' && (item.call as any)?.callId === event.callId,
-      )
-      if (part && part.type === 'approval')
-        part.decision = event.approved ? 'approved' : 'rejected'
-      break
-    }
 
     case 'tool-result': {
       const part = toolCallParts.get(event.callId)
@@ -315,10 +298,6 @@ async function send(message: string) {
     }
     else if (result.flow === 'capability' && result.capability) {
       emit('capability', result.capability)
-    }
-
-    if (result.text) {
-      reply.parts.push({ type: 'text', text: result.text })
     }
   }
   catch (error) {

@@ -25,6 +25,7 @@ const capabilities = [
       scenarios: z.array(z.object({ name: z.string() })),
     }),
     async execute(input: { scenarios: Array<{ name: string }> }) {
+      console.log('check', input)
       return input.scenarios.map(scene => ({ name: scene.name, opened: true }))
     },
   }),
@@ -46,7 +47,6 @@ const workflows = [
             schema: parseSchema,
             instructions: '抽取用户提到的场景名称，输出 { scenes: [{ name }] }。',
             input: String(context.input),
-            onEvent: context.onAgentEvent,
           })
         },
       },
