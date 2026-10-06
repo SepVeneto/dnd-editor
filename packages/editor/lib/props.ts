@@ -14,5 +14,13 @@ export const editorProps = {
     type: Object as PropType<Record<string, any>>,
     default: () => ({}),
   },
-  agent: Boolean
+  agent: Boolean,
+  capabilities: {
+    type: Array as PropType<any[]>,
+    default: () => ([]),
+  },
+  workflows: {
+    type: Array as PropType<any[]>,
+    default: () => ([]),
+  },
 } as const

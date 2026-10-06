@@ -14,6 +14,8 @@
     ref="editorRef"
     :widgets="widgets"
     agent
+    :capabilities="capabilities"
+    :workflows="workflows"
     @change="onUpdate"
   />
   <pre>config: {{ config }}</pre>
@@ -21,204 +23,147 @@
 
 <script setup lang="ts">
 import type { IWidget } from '@sepveneto/dnde-core'
+import type { Capability, Workflow } from '@agent/sdk'
 import type { EditorInstance } from '@/main'
 import { schema, widget } from '@sepveneto/dnde-core/helper'
 // import { register } from '../dist/editor.js'
 import { onMounted, ref, useTemplateRef, watchEffect } from 'vue'
 import { register } from '@/main'
-import { Agent, registerAgent, tool, z } from '@agent/sdk'
+import { defineCapability, defineWorkflow, invokeCapability, structuredExtract, z } from '@agent/sdk'
 
 /**
  * 业务侧（playground）：
- * docsAgent / verifyAgent 与审批实现都属于业务，注册后由 @agent/sdk 的流程 Agent 当工具调用。
+ * 通过编辑器提供的公开原语 defineCapability / defineWorkflow 定义业务能力与流程，
+ * 不需要编写 Agent、Prompt 或 Tool。
  */
 
 const businessConfigSchema = z.object({
-  scenes: z.array(
-    z.object({
-      name: z.string(),
-      fee: z.string(),
-    })
-  ),
+  scenes: z.array(z.object({ name: z.string(), fee: z.string().nullable() })),
   brand: z.array(
     z.object({
       name: z.string(),
-      coupon: z.string(),
+      coupon: z.string().nullable(),
       faceValue: z.number().nullable(),
-      fee: z.string(),
-    })
+      fee: z.string().nullable(),
+    }),
   ),
-  shopPickup: z.array(
-    z.object({
-      name: z.string(),
-      scope: z.array(z.string()),
-    })
-  ),
+  shopPickup: z.array(z.object({ name: z.string(), scope: z.array(z.string()).optional() })),
 })
 
-const docsAgent = new Agent({
-  name: 'parse desc',
-  instructions: `
-你是一个业务配置文档解析器。
-
-你的任务是将用户提供的自然语言、表格、Word 文档文本或混合格式内容，
-解析成结构化业务配置。
-
-规则：
-
-1. 只解析用户提供的信息。
-2. 不调用任何工具。
-3. 不补充用户没有提供的信息。
-4. 不删除重复记录。
-5. 不合并重复行。
-6. 用户没有提供的字段使用 null。
-7. 保留用户输入中的原始名称、数值和描述。
-8. 表格每一行都必须独立解析。
-9. 手续费保持原始百分比形式，例如 "2%"。
-10. 面值是数字时输出 number。
-11. 不进行业务查询。
-12. 不判断配置是否正确。
-13. 不进行名称匹配。
-
-需要解析三类配置：
-
-H5外接场景：
-- name
-- fee
-
-品牌商户：
-- name
-- coupon
-- faceValue
-- fee
-
-扫码提货：
-- name
-- scope
-
-最终只输出结构化数据。
-  `,
-  outputType: businessConfigSchema,
-})
-
-/** 校验过程中拿到的业务数据 */
-const businessData = ref<any>({})
-
-const checkScenesTool = tool({
-  name: 'check_scenes_enabled',
-  description: `
-查询业务系统中指定场景的开通状态。
-
-输入场景名称列表，调用业务接口查询这些场景是否已经开通。
-只负责查询，不修改配置，不进行业务判断。
-返回每个场景对应的开通状态以及业务系统返回的信息。
-  `,
-  parameters: z.object({
-    scenes: z.array(z.object({ name: z.string() })),
-  }),
-  // mock 查询接口：只负责返回各场景的开通状态
-  invoke: async (input: { scenes: Array<{ name: string }> }) => {
+/** 查询指定场景的业务数据，供编辑流程补全组件内容。 */
+const queryScenario = defineCapability({
+  name: 'query_scenario',
+  description: '查询指定场景的业务数据，用于编辑时补全组件内容。',
+  inputSchema: z.object({ name: z.string() }),
+  async execute(input: { name: string }) {
     const res = await fetch('http://localhost:4000/v1/business/scenes')
     const resJson = await res.json()
-    const scenes: any[] = input.scenes.map((item) => {
-      const target = resJson.data.find((each: any) => each.name === item.name)
-      if (!target) {
-        throw new Error('cannot find scene ' + item.name)
-      }
-      return {
-        id: target.id,
-        name: target.name,
-        enabled: !!target.status,
-        message: target.status
-          ? '业务系统返回：场景已开通'
-          : '业务系统返回：场景未开通',
-      }
-    })
-
-    businessData.value['scenes'] = scenes
-
-    const disabled = scenes.filter(scene => !scene.enabled).map(scene => scene.name)
-    return {
-      scenes,
-      message: disabled.length
-        ? `以下场景未开通：${disabled.join('、')}。需要自行开通。`
-        : '所有场景均已开通。',
-    }
+    return resJson.data.find((each: any) => each.name === input.name) ?? null
   },
 })
 
-// 开通属于写操作：调用本工具后运行时会自动暂停并请用户确认，
-// 所以模型应当直接调用，而不是在文本里询问用户。
-const enableSceneTool = tool({
-  name: 'enable_scene',
-  description: `
-开通业务系统中指定的场景。
-  `,
-  parameters: z.object({
-    id: z.number(),
-    name: z.string(),
-  }),
+/** 查询场景是否已经开通（只读）。 */
+const checkScenario = defineCapability({
+  name: 'check_scenario',
+  description: '查询业务系统中指定场景的开通状态，只查询不修改。',
+  inputSchema: z.object({ scenarios: z.array(z.object({ name: z.string() })) }),
+  async execute(input: { scenarios: Array<{ name: string }> }) {
+    const res = await fetch('http://localhost:4000/v1/business/scenes')
+    const resJson = await res.json()
+    return input.scenarios.map((item) => {
+      const target = resJson.data.find((each: any) => each.name === item.name)
+      if (!target)
+        throw new Error(`cannot find scene ${item.name}`)
+      return { id: target.id, name: target.name, enabled: !!target.status }
+    })
+  },
+})
+
+/** 开通场景（写操作，需要人工确认）。 */
+const enableScenario = defineCapability({
+  name: 'enable_scenario',
+  description: '开通业务系统中指定的场景。',
+  inputSchema: z.object({ id: z.number(), name: z.string() }),
   needsApproval: true,
-  // 审批文案与同意 / 拒绝回调，和 needsApproval 一样写在 tool 上
   approval: {
     message: (input: { id: number, name: string }) => `场景「${input.name}」未开通，是否需要开通？`,
-    onApprove: (input: { id: number, name: string }) => {
-      console.log('[business] 同意开通', input)
-    },
-    onReject: (input: { id: number, name: string }) => {
-      console.log('[business] 拒绝开通', input)
-    },
   },
-  // mock 开通逻辑
-  invoke: async (input: { id: number, name: string }) => {
+  async execute(input: { id: number, name: string }) {
     const res = await fetch('http://localhost:4000/v1/business/scene', { method: 'post' })
     const resJson = await res.json()
-    if (resJson.code !== 0) {
+    if (resJson.code !== 0)
       throw new Error(resJson.message ?? `场景 ${input.name} 开通失败`)
-    }
-    return {
-      id: input.id,
-      name: input.name,
-      enabled: true,
-      message: `业务系统返回：场景 ${input.name} 已开通`,
-    }
+    return { id: input.id, name: input.name, enabled: true }
   },
 })
 
-const verifyAgent = new Agent({
-  name: 'verify configuration',
-  instructions: `
-你是业务配置校验器。
+const initializeWorkflow = defineWorkflow({
+  name: 'initialize',
+  description: '根据用户输入初始化页面。',
+  steps: [
+    {
+      name: 'parseScenario',
+      async execute(context) {
+        return structuredExtract({
+          instructions: `你是业务配置解析器。将用户输入解析成结构化业务配置。
+需要解析三类配置：
+- H5外接场景：name、fee
+- 品牌商户：name、coupon、faceValue、fee
+- 扫码提货：name、scope
+只解析用户提供的信息，不补充、不合并、不核查，未提供的字段使用 null。`,
+          schema: businessConfigSchema,
+          input: String(context.input),
+          onEvent: context.onAgentEvent,
+        })
+      },
+    },
+    {
+      name: 'verifyScenario',
+      async execute(context) {
+        const parsed = context.state.parseScenario as any
+        const scenarios = (parsed?.scenes ?? []).map((item: any) => ({ name: item.name }))
+        if (!scenarios.length)
+          return parsed
 
-你的输入是 Parser Agent 解析得到的结构化业务配置。
+        const result = await invokeCapability(checkScenario, { scenarios }, {
+          onApproval: context.onApproval,
+          signal: context.signal,
+          state: context.state,
+        })
 
-你的任务是：
+        for (const scene of result as Array<{ id: number, name: string, enabled: boolean }>) {
+          if (!scene.enabled) {
+            try {
+              await invokeCapability(enableScenario, { id: scene.id, name: scene.name }, {
+                onApproval: context.onApproval,
+                signal: context.signal,
+                state: context.state,
+              })
+            }
+            catch {
+              // 用户不同意开通：跳过该场景，继续处理下一个
+            }
+          }
+        }
 
-1. 根据输入中的场景信息，调用 check_scenes_enabled 工具。
-2. 将用户提供的场景名称传给工具。
-3. 根据工具返回的真实业务数据判断每个场景是否已开通。
-4. 不修改用户提供的原始配置。
-5. 不自行假设业务系统中不存在的数据。
-6. 如果工具返回的信息不足以判断，则明确说明无法判断。
-7. 对每个「未开通」的场景，直接调用 enable_scene 发起开通，一次可以请求多个。
-   用户确认由工具自动触发，禁止在回复文本里询问「是否要开通」，直接调用工具即可。
-8. 如果某个场景用户不同意开通，不要重试，继续处理下一个未开通的场景。
-9. 最终汇总所有场景的检查结果。
-
-必须调用 check_scenes_enabled 工具获取真实业务数据，
-不能仅根据用户输入直接判断场景是否开通。
-  `,
-  tools: [checkScenesTool, enableSceneTool],
+        return parsed
+      },
+    },
+    {
+      name: 'normalizeScenario',
+      async execute(context) {
+        const config = (context.state.verifyScenario ?? context.state.parseScenario) as any
+        return ['scenes', 'brand', 'shopPickup'].flatMap((kind) => {
+          const list = config?.[kind] ?? []
+          return list.length ? [{ kind, items: list }] : []
+        })
+      },
+    },
+  ],
 })
 
-registerAgent(verifyAgent, {
-  toolName: 'verify_agent',
-  toolDescription: '校验业务配置，检查并开通未开通的场景。',
-})
-registerAgent(docsAgent, {
-  toolName: 'docs_agent',
-  toolDescription: '把用户提供的自然语言 / 表格 / 文档文本解析成结构化业务配置。',
-})
+const capabilities: Capability<any, any>[] = [queryScenario, checkScenario, enableScenario]
+const workflows: Workflow[] = [initializeWorkflow]
 
 const config = ref({})
 function onUpdate(val: CustomEvent) {

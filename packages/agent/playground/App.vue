@@ -1,62 +1,58 @@
 <template>
   <div class="playground">
-    <Copilot />
+    <Copilot
+      :capabilities="capabilities"
+      :workflows="workflows"
+      :context="context"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import type { ModelConfig } from './responders'
-import { computed, reactive, ref, triggerRef, watch } from 'vue'
-import { Agent } from '@/agent/Agent'
-import ChatPanel from './ChatPanel.vue'
-import { createMockResponder, createOpenAIResponder, defaultModelConfig } from './responders'
 import Copilot from '@/agent/Copilot.vue'
+import {
+  defineCapability,
+  defineWorkflow,
+  structuredExtract,
+  z,
+} from '@/index'
 
-const STORAGE_KEY = 'agent-playground:model'
+const capabilities = [
+  defineCapability({
+    name: 'check_scenario',
+    description: '检查指定场景是否已经开通',
+    inputSchema: z.object({
+      scenarios: z.array(z.object({ name: z.string() })),
+    }),
+    async execute(input: { scenarios: Array<{ name: string }> }) {
+      return input.scenarios.map(scene => ({ name: scene.name, opened: true }))
+    },
+  }),
+]
 
-const tabs = [
-  { id: 'runtime', label: '运行时' },
-  { id: 'model', label: '模型' },
-] as const
-
-// const agent = new Agent()
-const activeTab = ref<'runtime' | 'model'>('runtime')
-const mode = ref<'mock' | 'openai'>('mock')
-const config = reactive<ModelConfig>(loadConfig())
-
-const isRunning = ref(true)
-// const messageCount = computed(() => agent.runtime.messages.value.length)
-// const snapshot = computed(() => {
-//   // 依赖 messages ref，triggerRef 后能刷新快照
-//   return JSON.stringify(agent.runtime.messages.value, null, 2)
-// })
-
-const responder = computed(() => {
-  return mode.value === 'mock' ? createMockResponder() : createOpenAIResponder()
+const parseSchema = z.object({
+  scenes: z.array(z.object({ name: z.string() })),
 })
 
-watch(config, persistConfig, { deep: true })
+const workflows = [
+  defineWorkflow({
+    name: 'initialize',
+    description: '根据用户输入初始化页面。',
+    steps: [
+      {
+        name: 'parseScenario',
+        async execute(context) {
+          return structuredExtract({
+            schema: parseSchema,
+            instructions: '抽取用户提到的场景名称，输出 { scenes: [{ name }] }。',
+            input: String(context.input),
+            onEvent: context.onAgentEvent,
+          })
+        },
+      },
+    ],
+  }),
+]
 
-function loadConfig(): ModelConfig {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw)
-      return { ...defaultModelConfig, ...JSON.parse(raw) }
-  }
-  catch {
-    // ignore malformed storage
-  }
-
-  return { ...defaultModelConfig }
-}
-
-function persistConfig() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(config))
-}
-
-function reset() {
-  agent.runtime.messages.value = []
-  agent.runtime.isRunning.value = false
-  triggerRef(agent.runtime.messages)
-}
+const context = () => ({ widgets: [] })
 </script>

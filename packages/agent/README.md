@@ -1,623 +1,828 @@
-# Editor Agent + MF Capability 结构
+# H5 DIY Agent 流程与业务能力架构
 
-## 1. 整体结构
+## 1. 设计目标
 
-系统只有三类角色：
+编辑器与业务侧完全解耦：
 
-```text
-                    ┌──────────────┐
-                    │     宿主      │
-                    │   Host App    │
-                    └──────┬───────┘
-                           │ 集成 / 配置
-                           ↓
-                ┌──────────────────────┐
-                │        Editor        │
-                │                      │
-                │   Agent Runtime      │
-                │   Capability Registry│
-                │   Semantic Resolver  │
-                │   IR Executor        │
-                │   DSL / Layout       │
-                └───────┬───────┬──────┘
-                        │       │
-               MF       │       │       MF
-                        ↓       ↓
-                 ┌──────────┐ ┌──────────┐
-                 │ Producer │ │ Producer │
-                 │    A     │ │    B     │
-                 └──────────┘ └──────────┘
-```
+* 编辑器不感知具体业务。
+* 编辑器不定义业务流程。
+* 业务侧可以根据自身业务定义任意流程。
+* 业务侧可以提供任意业务能力，例如接口调用、数据解析、数据核查、数据标准化等。
+* 业务侧不需要直接编写 Agent 或 Prompt。
+* 编辑器负责提供通用的 Agent Runtime、流程执行能力以及编辑能力。
+* 模型负责用户意图识别、流程路由，以及开放式编辑场景下的业务能力选择。
 
-角色职责：
+整体原则：
 
-| 角色       | 职责                                   |
-| -------- | ------------------------------------ |
-| 宿主       | 集成和使用 Editor                         |
-| Editor   | Agent Runtime、能力编排、语义解析、IR 执行、页面布局执行 |
-| Producer | 通过 MF 向 Editor 提供组件及其相关能力            |
-
-不存在独立的 `Consumer Capability`。
+> **业务侧定义业务流程和业务能力，编辑器负责 Agent 基础设施和编辑能力。**
 
 ---
 
-## 2. 宿主 → Editor
-
-宿主负责集成 Editor。
+## 2. 整体架构
 
 ```text
-Host
-  ↓
-Editor
-```
-
-宿主关注的是：
-
-* 创建和配置 Editor
-* 提供 Editor 所需的运行环境
-* 管理 Editor 生命周期
-* 获取 Editor 的编辑结果
-
-宿主不负责：
-
-```text
-组件语义解析
-组件能力注册
-Agent Loop
-LLM 调用
-DSL 执行
-```
-
-这些都归 Editor。
-
-因此宿主与 Editor 是：
-
-```text
-应用层
-  ↓
-编辑器能力层
+                              用户输入
+                                  │
+                                  ▼
+                         ┌─────────────────┐
+                         │    Flow Agent   │
+                         │   顶层流程路由   │
+                         └────────┬────────┘
+                                  │
+                 ┌────────────────┼────────────────┐
+                 │                │                │
+                 ▼                ▼                ▼
+            INITIALIZE           EDIT          CAPABILITY
+                 │                │                │
+                 ▼                ▼                ▼
+        业务侧定义的 Workflow   Edit Agent   Capability Agent
+                 │                │                │
+                 │                │                ▼
+                 │                │        选择业务能力并执行
+                 │                │                │
+                 │                ▼                │
+                 │          编辑器当前内容         │
+                 │                │                │
+                 │                ▼                │
+                 │             Edit IR             │
+                 │                │                │
+                 ▼                │                │
+          Workflow Runtime       │                │
+                 │                │                │
+                 ▼                ▼                ▼
+          业务能力 / Agent / API / Function
 ```
 
 ---
 
-## 3. Producer → Editor
+## 3. 三种执行模式
 
-Producer 通过 MF 接入 Editor。
-
-现有结构：
-
-```text
-Producer
-├── ./remote
-├── ./setup
-└── ./agent
-```
-
-职责：
-
-```text
-./remote
-    → 组件渲染
-
-./setup
-    → Editor Runtime 所需的插件、样式
-
-./agent
-    → 组件的 Agent Capability
-```
-
-Producer 只需要描述自己提供的组件能力，不需要管理整个 Agent。
-
----
-
-## 4. Producer Agent Capability
-
-`./agent` 提供的能力主要包括：
-
-```text
-semantic
-tools
-skills
-layout / composition
-resources
-```
-
-### semantic
-
-描述组件实例的业务语义：
-
-```text
-Component Instance
-      ↓
-semantic
-      ↓
-“优惠券 / 卡券 / 可用数量 / 去使用”
-```
-
-### tools
-
-描述组件可以执行什么操作：
-
-```text
-coupon.setTitle
-coupon.setDataSource
-coupon.setDisplayMode
-```
-
-### skills
-
-描述复杂业务操作如何完成。
-
-例如：
-
-```text
-coupon-config
-```
-
-用于告诉 Agent 如何完成一组与优惠券相关的配置操作。
-
-### layout / composition
-
-描述组件适合怎样参与布局或组合。
-
-例如：
-
-```text
-split-entry
-grid-entry
-banner-entry
-```
-
-以及对应的约束：
-
-```text
-split-entry
-  适合 2 个入口
-  横向并列
-  图片型展示
-
-grid-entry
-  适合 4～12 个入口
-  多列网格
-  图标型展示
-```
-
-这类信息同样由 Producer 提供，而不是由 Editor 针对业务组件硬编码。
-
----
-
-## 5. Editor 是 Agent Host
-
-Editor 自己拥有通用能力：
-
-```text
-Editor
-├── Agent Runtime
-├── Capability Registry
-├── Semantic Resolver
-├── Layout Planner
-├── IR Executor
-└── DSL / Layout API
-```
-
-Editor 提供的是通用能力：
-
-```text
-layout.move
-layout.insert
-layout.delete
-layout.update
-
-page.query
-component.query
-component.select
-```
-
-Producer 提供的是组件/业务能力。
-
-因此：
-
-```text
-Editor
-    = Agent Host + 通用编辑能力
-
-Producer
-    = Component Capability Provider
-```
-
----
-
-## 6. Capability Registry
-
-Producer 加载后，Editor 将其能力注册到统一 Registry：
-
-```text
-Capability Registry
-├── Editor Core
-│   ├── layout.*
-│   ├── page.*
-│   └── component.*
-│
-├── Producer A
-│   ├── semantic
-│   ├── tools
-│   ├── skills
-│   └── layout patterns
-│
-└── Producer B
-    ├── semantic
-    ├── tools
-    ├── skills
-    └── layout patterns
-```
-
-这样 Editor 不需要预先知道具体业务组件是什么。
-
----
-
-## 7. 用户编辑已有页面
-
-例如：
-
-> 把卖卡券的那块移到商品列表前面。
-
-流程：
-
-```text
-用户
- ↓
-LLM
- ↓
-Intent IR
- ↓
-Semantic Resolver
- ├── 当前页面组件树
- ├── schema / 实例数据
- ├── Producer semantic
- ├── Candidate Retrieval
- └── LLM Grounding
- ↓
-Resolved IR
- ↓
-Capability Binding
- ↓
-Editor / Producer Capability
- ↓
-DSL / Layout API
-```
-
-其中：
-
-```text
-“卖卡券的那块”
-        ↓
-Producer semantic
-        ↓
-具体组件实例
-```
-
-而：
-
-```text
-“移动”
-        ↓
-Editor.layout.move
-```
-
----
-
-## 8. 根据用户需求生成新布局
-
-例如：
-
-> 首页需要展示 A 卡券和 B 场景两个入口。
-
-流程与“修改已有页面”不同：
-
-```text
-用户需求
-   ↓
-LLM
-   ↓
-Requirement IR
-   ↓
-Layout Pattern Retrieval
-   ↓
-LLM Layout Planning
-   ↓
-Layout Plan IR
-   ↓
-Semantic Resolution
-   ↓
-Capability Binding
-   ↓
-IR Executor
-   ↓
-DSL / Layout API
-```
-
-例如：
-
-```text
-需求
-“两个入口”
-
-    ↓
-
-Producer 提供的候选布局
-├── split-entry
-│   └── 适合 2 个入口横向展示
-│
-└── grid-entry
-    └── 适合多个入口网格展示
-
-    ↓
-
-LLM 选择
-split-entry
-
-    ↓
-
-解析内容
-A 卡券 → Producer A
-B 场景 → Producer B
-
-    ↓
-
-Editor 执行布局
-```
-
-这里 Editor 负责：
-
-```text
-发现能力
-召回候选
-组织计划
-执行
-```
-
-而 Producer 负责：
-
-```text
-提供组件
-提供组件语义
-提供组件操作
-提供适用的布局/组合方式
-```
-
----
-
-## 9. LLM 与 DSL 的边界
-
-LLM 永远不直接输出：
-
-```js
-layout.move(...)
-```
-
-而输出 IR：
-
-```text
-Intent IR
-      ↓
-Resolved IR
-      ↓
-Layout Plan IR
-```
-
-Editor 再把 IR 绑定到实际 Capability，并最终执行现有 DSL。
-
-因此：
-
-```text
-LLM
- ↓
-IR
- ↓
-Editor
- ↓
-Capability
- ↓
-DSL
-```
-
-DSL 是 Editor 的执行实现，不是 LLM 协议。
-
----
-
-## 10. 最终结构
-
-```text
-                         ┌──────────────┐
-                         │     宿主      │
-                         │   Host App    │
-                         └──────┬───────┘
-                                │
-                                ↓
-              ┌────────────────────────────────┐
-              │              Editor             │
-              │                                 │
-              │       Agent Runtime             │
-              │             │                   │
-              │      Capability Registry        │
-              │             │                   │
-              │      ┌──────┴──────┐            │
-              │      ↓             ↓            │
-              │ Semantic Resolver  Layout Planner│
-              │      │             │            │
-              │      └──────┬──────┘            │
-              │             ↓                   │
-              │          IR Executor            │
-              │             ↓                   │
-              │       DSL / Layout API          │
-              └─────────────┬───────────────────┘
-                            │
-                    MF      │      MF
-                            ↓
-                 ┌────────────────────┐
-                 │      Producer      │
-                 │                    │
-                 │ remote             │
-                 │ setup              │
-                 │ agent              │
-                 │                    │
-                 │ semantic           │
-                 │ tools              │
-                 │ skills              │
-                 │ layout patterns    │
-                 └────────────────────┘
-```
-
-核心边界：
-
-> **宿主负责使用 Editor；Editor 负责 Agent 和页面执行；Producer 负责向 Editor 提供组件及组件相关能力。**
-
-这样就不再存在 `Consumer Capability` 这个概念。宿主和生产者是 Editor 的两类外部角色，但只有 Producer 向 Editor 提供组件级/布局级 Agent Capability。
-
----
-
-## 11. Playground
-
-`playground/` 是 Agent 的本地调试页，用来在不接入宿主的情况下跑通
-`Agent` 的 runtime、消息结构和四种 message part 的渲染。
-
-```bash
-# 仓库根目录
-pnpm dev:agent
-# 或者
-pnpm -C packages/agent dev
-```
-
-默认地址为 <http://localhost:8083>。
-
-页面分两栏：
-
-```text
-┌──────────────────────────┬───────────────┐
-│  ChatPanel               │  Inspector    │
-│  · 直接驱动 Agent runtime │  · 运行时快照  │
-│  · text / action /       │  · 消息 JSON   │
-│    tool-call / raw       │  · 模型配置    │
-└──────────────────────────┴───────────────┘
-```
-
-模型有两档：
-
-| 模式             | 说明                                                       |
-| -------------- | -------------------------------------------------------- |
-| `mock`         | 离线可用，用预置回复演示各类 part，输入「卡券 / 工具 / 布局」会触发不同 part |
-| `openai`       | 走 OpenAI 兼容的 `/chat/completions` 流式接口，配置只存在浏览器 localStorage |
-
-`playground/responders.ts` 里的 `Responder` 是模型接入点，替换它即可接入其它模型，
-不需要改动 Agent 自身。`Agent` 的 `runtime.messages` / `runtime.isRunning` 就是
-playground 与运行时之间唯一的接口。
-
----
-
-## 12. Agent as Tool
-
-`Agent.asTool()` 把一个子 Agent 包装成一个 `FunctionTool`，注册到「负责流程」的父
-Agent 上。父 Agent 的模型会在自己的 tools 列表里看到这些子 Agent，并依据
-`toolName` / `toolDescription` 自行决定调用哪个、按什么顺序调用。
+Flow Agent 对用户输入进行顶层分类，输出三种执行类型：
 
 ```ts
-const flowAgent = new Agent({
-  name: 'decoration flow',
-  instructions: '先校验、再标准化、最后生成布局，每一步都通过调用子 Agent 完成。',
-  tools: [
-    verifyAgent.asTool({
-      toolName: 'verify_configuration',
-      toolDescription: '校验业务配置，查询并开通未开通的场景。',
-      // 子 Agent 内部的步骤 / 审批继续冒泡给宿主
-      runOptions: { onEvent, onApproval },
-    }),
-    normalizeAgent.asTool({ toolName: 'normalize_layout_input' }),
-    layoutAgent.asTool({
-      toolName: 'generate_layout',
-      // 调用前把宿主侧的运行数据补进子 Agent 的入参
-      buildInput: input => JSON.stringify({ elements: JSON.parse(input), widgets }),
-      // 把子 Agent 的结果转成返回给上层模型的字符串
-      extractOutput: result => result.text,
-    }),
+type FlowType =
+  | 'initialize'
+  | 'edit'
+  | 'capability'
+```
+
+### 3.1 initialize
+
+用于根据用户输入初始化页面。
+
+该流程完全由业务侧定义。
+
+例如某个业务可以定义：
+
+```text
+用户输入
+  ↓
+解析
+  ↓
+数据核查
+  ↓
+数据标准化
+  ↓
+生成 Layout IR
+```
+
+另一个业务也可以只有：
+
+```text
+用户输入
+  ↓
+解析
+  ↓
+生成 Layout IR
+```
+
+编辑器不对流程中的步骤做任何业务假设。
+
+业务侧可以自由决定：
+
+* 是否需要解析
+* 是否需要数据核查
+* 是否需要标准化
+* 是否需要多个业务步骤
+* 步骤执行顺序
+* 步骤之间的数据传递
+* 条件分支
+* 是否需要 Agent
+* 是否直接调用 API
+* 最终如何生成编辑器能够执行的 IR
+
+---
+
+### 3.2 edit
+
+用于修改当前编辑器内容。
+
+该流程由编辑器提供，是固定的编辑流程。
+
+```text
+用户输入
+   ↓
+Edit Agent
+   ↓
+理解用户意图
+   ↓
+按需调用业务能力
+   ↓
+生成 Edit IR
+   ↓
+编辑器执行
+```
+
+例如：
+
+```text
+“删除首页的金刚区”
+```
+
+直接生成：
+
+```text
+DeleteComponentIR
+```
+
+例如：
+
+```text
+“把大润发小时达添加进去”
+```
+
+Edit Agent 可以根据需要：
+
+```text
+queryScenario
+      ↓
+获取业务数据
+      ↓
+生成 AddComponentIR
+```
+
+编辑流程本身不要求业务侧提供固定步骤。
+
+业务能力是否被调用、调用哪个能力、调用参数是什么，由模型根据当前用户输入和上下文决定。
+
+---
+
+### 3.3 capability
+
+当用户输入没有匹配初始化或编辑流程时，尝试直接执行对应的业务能力。
+
+例如：
+
+```text
+“检查一下大润发小时达是否已经开通”
+```
+
+进入：
+
+```text
+Capability Agent
+      ↓
+选择 checkScenario
+      ↓
+调用业务接口
+      ↓
+返回结果
+```
+
+该模式主要用于业务侧已经提供能力，但用户操作并不属于页面初始化或页面编辑的情况。
+
+---
+
+## 4. 业务能力
+
+业务侧向编辑器注册的是 **Capability**，而不是 Agent。
+
+Capability 表示：
+
+> 业务系统能够完成的一项具体能力。
+
+例如：
+
+```text
+queryScenario
+checkScenario
+queryMerchant
+queryCoupon
+normalizeScenario
+```
+
+Capability 不限制具体实现方式。
+
+可以是：
+
+```text
+Capability
+   │
+   ├── 普通函数
+   ├── HTTP API
+   ├── 数据库查询
+   ├── LLM
+   └── Agent
+```
+
+因此业务侧无需关心编辑器内部采用什么 Agent 框架。
+
+---
+
+## 5. Capability 定义
+
+建议提供统一的能力描述：
+
+```ts
+interface CapabilityDefinition {
+  name: string
+
+  description: string
+
+  inputSchema: Schema
+
+  outputSchema: Schema
+
+  execute(input: unknown, context: CapabilityContext): Promise<unknown>
+}
+```
+
+例如：
+
+```ts
+defineCapability({
+  name: 'checkScenario',
+  description: '检查指定场景是否已经开通',
+
+  inputSchema: z.object({
+    scenarios: z.array(z.object({
+      name: z.string(),
+    })),
+  }),
+
+  outputSchema: z.array(z.object({
+    name: z.string(),
+    opened: z.boolean(),
+  })),
+
+  async execute(input, context) {
+    return await api.checkScenario(input.scenarios)
+  },
+})
+```
+
+业务侧不需要：
+
+```ts
+new Agent(...)
+```
+
+也不需要维护：
+
+```text
+Agent Prompt
+Agent Tool
+Handoff
+Agent Runtime
+```
+
+这些由平台负责。
+
+---
+
+## 6. 业务流程
+
+业务侧可以定义自己的 Workflow。
+
+Workflow 不属于编辑器平台的业务逻辑，而只是一个可执行流程定义。
+
+例如：
+
+```ts
+defineWorkflow({
+  name: 'initialize',
+
+  steps: [
+    parseScenario,
+    verifyScenario,
+    normalizeScenario,
+    generateLayout,
   ],
 })
-
-await run(flowAgent, userRequest)
 ```
 
-`asTool` 的选项：
-
-| 选项               | 说明                                                        |
-| ---------------- | --------------------------------------------------------- |
-| `toolName`       | 暴露给上层模型的函数名，默认由 `agent.name` 规整成合法 function name    |
-| `toolDescription`| 模型据此判断何时调用该子 Agent，默认取 `handoffDescription`            |
-| `maxTurns`       | 子 Agent 单次运行的最大轮数                                       |
-| `needsApproval`  | 调用该子 Agent 前是否需要人工确认                                   |
-| `runOptions`     | 透传 `onEvent` / `onApproval`，让子 Agent 的步骤和审批冒泡到宿主         |
-| `buildInput`     | 调用子 Agent 前加工入参，例如注入组件表、页面上下文                     |
-| `extractOutput`  | 把子 Agent 的运行结果转成返回给上层模型的字符串                        |
-
-也可以不使用类方法，直接调用导出的 `createAgentTool(agent, options)`，
-或在需要时用 `toToolName(name)` 把任意名字转成合法 function name。
-
-本仓库的装修流程就是按这个方式组织的：`flow.ts` 在模块加载时用 `registerAgent`
-把 `normalize_layout_input` / `generate_layout` 两个子 Agent 注册成工具，
-工具之间通过模块级共享 state 传递中间结果；setup 阶段调用 `createDecorationFlowAgent()`
-（不需要传参）构建一次流程 Agent，工具直接从注册表取。`send` 只把用户输入原样交给它，
-由模型选择调用顺序与参数，宿主再从共享 state 拿布局结果。
-
-### 12.1 外部注册：`registerAgent`
-
-外部能力方不需要拿到流程 Agent，也不需要改流程 Agent 的 `tools`，
-只要调用 `registerAgent` 把自己的子 Agent 注册成 agent tool 即可：
+也可以：
 
 ```ts
-import { registerAgent } from '@agent/sdk'
+defineWorkflow({
+  name: 'initialize',
 
-registerAgent(couponAgent, {
-  toolName: 'configure_coupon',
-  toolDescription: '配置优惠券组件的标题、数据源与展示方式。',
+  steps: [
+    parseProduct,
+    generateLayout,
+  ],
 })
 ```
 
-流程 Agent 在构建时会自动把注册表里的工具并进 `tools`（显式配置的同名工具优先），
-之后模型就能像调用内置子 Agent 一样选择它。注册表 API：
+平台不能假设所有业务存在：
 
-| API                        | 说明                              |
-| -------------------------- | ------------------------------- |
-| `registerAgent(agent, opt)`| 注册并返回对应的 `FunctionTool`，同名覆盖     |
-| `unregisterAgent(name)`    | 取消注册，返回是否移除成功                  |
-| `listRegisteredAgents()`   | 当前已注册的工具名                      |
-| `getRegisteredAgentTools(names?)` | 取出工具，传 `names` 可按给定顺序过滤 |
-| `clearRegisteredAgents()`  | 清空注册表                          |
-
-### 12.2 审批：状态在 Agent，配置在 tool
-
-工具声明 `needsApproval` 后，运行时会在调用前暂停等用户决定。审批的**文案与回调**
-和 `needsApproval` 一样写在 tool 上，**状态**（待处理请求、暂停 / 恢复）由 Agent 管理：
-
-```ts
-const enableSceneTool = tool({
-  name: 'enable_scene',
-  parameters: z.object({ id: z.number(), name: z.string() }),
-  needsApproval: true,
-  approval: {
-    message: input => `场景「${input.name}」未开通，是否需要开通？`,
-    onApprove: input => console.log('同意开通', input),
-    onReject: input => console.log('拒绝开通', input),
-  },
-  invoke: async input => { /* ... */ },
-})
+```text
+parse
+verify
+normalize
 ```
 
-| 位置                          | 说明                                                    |
-| --------------------------- | ----------------------------------------------------- |
-| `tool.approval.message/onApprove/onReject` | 审批文案与同意 / 拒绝后的回调（业务侧配置）                    |
-| `agent.approval.pending`    | 当前待确认请求（Agent 内部状态），没有则为 null                     |
-| `agent.approval.message`    | 当前请求的文案（来自 tool 的 `approval.message`）              |
-| `agent.approval.approve()` / `reject()` | 给出决定，随后触发 tool 的 `onApprove` / `onReject`        |
+Workflow 完全由业务侧决定。
 
-UI（`MpdAgent` / `AssistantThread`）直接读 `agent.approval.pending` 渲染审批面板，
-按钮调用 `approve` / `reject`。`run(agent, input, { onApproval })` 可以临时覆盖审批处理；
-`asTool` 的子 Agent 默认沿用父级 Agent 的审批，所以注册的子 Agent 里 `needsApproval`
-的工具也会冒泡到同一个面板。
+---
+
+## 7. Workflow Step
+
+Workflow 中的 Step 是平台执行流程的基本单元。
+
+```ts
+interface WorkflowStep {
+  name: string
+
+  execute(
+    context: WorkflowContext
+  ): Promise<StepResult>
+}
+```
+
+Step 可以内部使用：
+
+```text
+普通代码
+API
+Capability
+Agent
+```
+
+例如：
+
+```text
+Workflow
+   │
+   ├── Step A
+   │      └── API
+   │
+   ├── Step B
+   │      └── Agent
+   │
+   ├── Step C
+   │      └── Capability
+   │
+   └── Step D
+          └── Function
+```
+
+因此 Workflow 不等于 Agent。
+
+---
+
+## 8. Workflow Runtime
+
+编辑器平台提供通用 Workflow Runtime，但不提供任何具体业务流程。
+
+Runtime 只负责执行业务侧传入的 Workflow。
+
+```text
+Workflow Definition
+        ↓
+Workflow Runtime
+        ↓
+Step 1
+        ↓
+Step 2
+        ↓
+Step 3
+        ↓
+...
+```
+
+Runtime 负责基础执行能力：
+
+* Step 顺序执行
+* 上下文传递
+* Step 输入输出
+* 异常处理
+* 中断
+* 恢复
+* 日志
+* 执行状态
+* 必要的重试机制
+
+但 Runtime 不知道：
+
+```text
+什么叫场景
+什么叫商户
+什么叫核查
+什么叫标准化
+```
+
+---
+
+## 9. Flow Agent
+
+Flow Agent 是编辑器提供的顶层 Agent。
+
+它只负责判断用户输入应该进入哪一种执行模式：
+
+```text
+initialize
+edit
+capability
+```
+
+它不负责执行业务流程内部步骤。
+
+例如：
+
+```text
+用户：
+“创建一个包含盒马鲜生和大润发小时达的页面”
+
+Flow Agent：
+→ initialize
+```
+
+然后：
+
+```text
+initialize
+  ↓
+Business Workflow
+```
+
+再例如：
+
+```text
+用户：
+“删除这个卡片”
+
+Flow Agent：
+→ edit
+```
+
+进入：
+
+```text
+Edit Agent
+```
+
+再例如：
+
+```text
+用户：
+“检查一下盒马鲜生有没有开通”
+
+Flow Agent：
+→ capability
+```
+
+进入：
+
+```text
+Capability Agent
+```
+
+---
+
+## 10. Edit Agent
+
+Edit Agent 是编辑器提供的固定 Agent。
+
+它负责当前页面内容的增删改查。
+
+核心输入：
+
+```text
+用户输入
++
+当前编辑器状态
++
+可用业务能力
+```
+
+输出：
+
+```text
+Edit IR
+```
+
+必要时调用业务 Capability。
+
+例如：
+
+```text
+用户：
+“把大润发小时达加到优惠区域下面”
+
+        ↓
+
+Edit Agent
+
+        ↓
+
+queryScenario("大润发小时达")
+
+        ↓
+
+获得业务数据
+
+        ↓
+
+生成 Add IR
+```
+
+Edit Agent 不要求业务侧提供固定的编辑流程。
+
+---
+
+## 11. Capability Agent
+
+Capability Agent 用于开放式业务能力调用。
+
+输入：
+
+```text
+用户输入
++
+Capability Registry
++
+当前上下文
+```
+
+模型负责：
+
+```text
+选择能力
++
+构造参数
+```
+
+平台负责：
+
+```text
+执行 Capability
+```
+
+例如：
+
+```text
+用户：
+“帮我检查一下现在配置的所有场景”
+
+        ↓
+
+Capability Agent
+
+        ↓
+
+checkScenario
+
+        ↓
+
+业务接口
+
+        ↓
+
+检查结果
+```
+
+---
+
+## 12. Agent 与 Capability 的关系
+
+平台内部可以将 Capability 包装为 Agent Tool。
+
+但这是平台实现细节。
+
+逻辑关系是：
+
+```text
+业务侧：
+
+Capability
+     │
+     ▼
+平台 Registry
+     │
+     ▼
+Agent Tool Adapter
+     │
+     ▼
+Agent
+```
+
+而不是要求业务侧自己维护：
+
+```text
+Business Agent
+    ↓
+Tool
+    ↓
+API
+```
+
+这样可以避免业务接入者直接进入 Agent 编排领域。
+
+---
+
+## 13. 完整运行过程
+
+### 初始化
+
+```text
+User Input
+    ↓
+Flow Agent
+    ↓
+initialize
+    ↓
+Business Workflow
+    ↓
+Step 1
+    ↓
+Step 2
+    ↓
+Step 3
+    ↓
+Layout Agent / Layout IR
+    ↓
+Editor
+```
+
+### 编辑
+
+```text
+User Input
+    ↓
+Flow Agent
+    ↓
+edit
+    ↓
+Edit Agent
+    │
+    ├── Business Capability
+    │
+    ├── Business Capability
+    │
+    └── ...
+    ↓
+Edit IR
+    ↓
+Editor
+```
+
+### 零散业务操作
+
+```text
+User Input
+    ↓
+Flow Agent
+    ↓
+capability
+    ↓
+Capability Agent
+    ↓
+Business Capability
+    ↓
+Result
+```
+
+---
+
+## 14. 核心职责边界
+
+| 能力                 | 编辑器平台   | 业务侧      |
+| ------------------ | ------- | -------- |
+| Flow Agent         | 提供      | 不负责      |
+| Edit Agent         | 提供      | 不负责      |
+| Capability Runtime | 提供      | 使用       |
+| Capability 定义      | 提供协议    | 实现       |
+| Workflow Runtime   | 提供      | 使用       |
+| Workflow 定义        | 不负责     | 定义       |
+| 业务流程顺序             | 不负责     | 定义       |
+| 业务解析               | 不负责     | 可选       |
+| 业务核查               | 不负责     | 可选       |
+| 业务标准化              | 不负责     | 可选       |
+| Layout IR          | 定义/执行能力 | 提供业务数据   |
+| Edit IR            | 定义/执行能力 | 提供必要业务能力 |
+
+---
+
+## 15. 设计原则
+
+### 原则一：不预设业务流程
+
+平台不能假设业务一定存在：
+
+```text
+解析 → 核查 → 标准化
+```
+
+每个业务项目可以拥有完全不同的 Workflow。
+
+### 原则二：业务能力与 Agent 解耦
+
+业务侧提供 Capability，而不是 Agent。
+
+Agent 只是 Capability 的一种实现或调用方式。
+
+### 原则三：流程控制与模型决策分离
+
+确定性的流程：
+
+```text
+代码 / Workflow Runtime
+```
+
+开放式决策：
+
+```text
+Agent / LLM
+```
+
+不要让模型负责已经确定的流程顺序。
+
+### 原则四：编辑器不理解业务
+
+编辑器只理解：
+
+```text
+Workflow
+Step
+Capability
+Agent
+IR
+```
+
+不理解：
+
+```text
+场景
+商户
+卡券
+核查
+标准化
+```
+
+### 原则五：业务接入者不需要理解 Agent
+
+业务侧主要面对：
+
+```text
+defineCapability()
+defineWorkflow()
+```
+
+而不是：
+
+```text
+Agent
+Prompt
+Tool
+Handoff
+Context
+```
+
+---
+
+## 16. 最终模型
+
+整个系统可以抽象为：
+
+```text
+                  ┌──────────────┐
+                  │  用户输入     │
+                  └──────┬───────┘
+                         ↓
+                  ┌──────────────┐
+                  │  Flow Agent  │
+                  └──────┬───────┘
+                         │
+            ┌────────────┼────────────┐
+            ↓            ↓            ↓
+       Initialize       Edit      Capability
+            ↓            ↓            ↓
+     Business        Edit Agent   Capability
+     Workflow             │          Agent
+            │             │            │
+            ↓             ├────────────┤
+       Workflow           ↓
+       Runtime         Business
+            │          Capability
+            ↓             │
+     Business Steps       │
+            │             │
+            └─────────────┴─────────────┐
+                                        ↓
+                              Editor / Business Result
+```
+
+最终边界可以浓缩成一句话：
+
+> **业务侧决定“自己的流程是什么、有哪些业务能力”；编辑器决定“用户输入如何进入流程、如何编辑页面以及如何执行 IR”；模型只在需要语义判断的地方参与决策。**

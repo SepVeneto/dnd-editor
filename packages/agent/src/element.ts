@@ -12,7 +12,7 @@
  * 在 Vue / React 等框架里，只需要 `import '@sepveneto/agent'` 即可完成注册，
  * 也可以调用 `registerAgentElement(tagName)` 换成自己的标签名。
  */
-import type { CustomElementConstructor } from 'vue'
+import type { VueElementConstructor } from 'vue'
 import { defineCustomElement } from 'vue'
 import Copilot from './agent/Copilot.vue'
 
@@ -20,12 +20,12 @@ export * from './index'
 
 const DEFAULT_TAG_NAME = 'dnd-agent'
 
-let cachedElement: CustomElementConstructor | undefined
+let cachedElement: VueElementConstructor | undefined
 
 /**
  * 取自定义元素类（第一次调用时才创建，避免在 SSR / Node 里 import 报错）。
  */
-export function getAgentElement(): CustomElementConstructor {
+export function getAgentElement(): VueElementConstructor {
   if (!cachedElement) {
     cachedElement = defineCustomElement(Copilot)
   }

@@ -105,14 +105,18 @@ export async function* getStreamedResponse(
     temperature: 0.1,
     stream: true,
     ...(responseFormat ? { response_format: responseFormat } : {}),
-    tools: agent.tools.map(item => ({
-      type: 'function',
-      function: {
-        name: item.name,
-        description: item.description,
-        parameters: item.parameters,
-      },
-    })),
+    ...(agent.tools.length
+      ? {
+          tools: agent.tools.map(item => ({
+            type: 'function',
+            function: {
+              name: item.name,
+              description: item.description,
+              parameters: item.parameters,
+            },
+          })),
+        }
+      : {}),
   })
 
   // 流式 tool_calls 按 index 分片返回，这里先累积再统一抛出

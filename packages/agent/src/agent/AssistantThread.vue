@@ -8,7 +8,7 @@
 
     <div ref="viewport" class="thread__viewport">
       <p v-if="!messages.length" class="thread__empty">
-        用一句话把信息说清楚：字段值会变成表单上的 Action，需要查外部数据时我会调用工具。
+        用一句话描述你的需求：初始化页面、修改页面内容，或直接调用业务能力。
       </p>
 
       <div
@@ -72,8 +72,6 @@
           </details>
         </template>
       </div>
-
-      <!-- <p v-if="client.runtime.error.value" class="thread__error">{{ client.runtime.error.value }}</p> -->
     </div>
 
     <div v-if="suggestions.length" class="thread__suggestions">
@@ -91,12 +89,8 @@
     <div v-if="pendingApproval" class="approval">
       <p class="approval__text">{{ approvalMessage }}</p>
       <div class="approval__actions">
-        <button type="button" class="approval__reject" @click="flowAgent.approval.reject()">
-          不同意
-        </button>
-        <button type="button" class="approval__approve" @click="flowAgent.approval.approve()">
-          同意开通
-        </button>
+        <button type="button" class="approval__reject" @click="reject">不同意</button>
+        <button type="button" class="approval__approve" @click="approve">同意</button>
       </div>
     </div>
 
@@ -104,7 +98,7 @@
       <textarea
         v-model="draft"
         rows="2"
-        placeholder="例如：服役期1940.4.28-1948.5.12，添加两个分类：船体（图片）、下水仪式（视频）"
+        placeholder="例如：生成一个包含盒马鲜生和大润发小时达的页面"
         @keydown="onKeydown"
       />
       <button type="button" :disabled="isRunning || !draft.trim()" @click="submit">发送</button>
@@ -114,97 +108,91 @@
 
 <script setup lang="ts">
 import { computed, nextTick, reactive, ref, shallowRef, watch } from 'vue'
-import OpenAI from 'openai'
-import { createDecorationFlowAgent } from './flow'
-import { run } from './core/run'
-import type { RunEvent } from './core/run'
+import { createAgentRuntime } from './runtime'
+import type { AgentRuntime, AgentRuntimeEvent } from './runtime'
+import type { Capability } from './capability'
+import type { Workflow } from './workflow'
+import type { EditIR, LayoutIR } from './ir'
+import type { ToolApprovalHandler, ToolApprovalRequest } from './Agent'
 import type { MessagePart } from './type'
-import { z } from 'zod'
-import { tool } from './core/tool'
 
-const props = defineProps<{ widgets?: any[] }>()
+const props = defineProps<{
+  capabilities?: Capability<any, any>[]
+  workflows?: Workflow[]
+  context?: () => Record<string, unknown>
+}>()
 
-// 将外部传入的 widgets（可能是分组、Widget 实例或原始 IWidget）拍平，
-// 转换成 layoutAgent 需要的 { typeId, description, layout } 列表。
-function toLayoutWidgets(widgets: any[] = []): Array<{ typeId: string, description: string, layout: Record<string, any> }> {
-  const result: Array<{ typeId: string, description: string, layout: Record<string, any> }> = []
-  const visit = (item: any) => {
-    if (!item)
-      return
-    if (Array.isArray(item.list)) {
-      item.list.forEach(visit)
-      return
-    }
-    const data = item._data ?? item
-    const typeId = item.view ?? data._view
-    const agent = data.agent
-    if (!typeId || !agent)
-      return
-    result.push({
-      typeId,
-      description: agent.description ?? '',
-      layout: agent.layout ?? {},
-    })
+const emit = defineEmits<{
+  init: [payload: { layout: LayoutIR }]
+  edit: [payload: { edits: EditIR[] }]
+  capability: [payload: { name: string, result: unknown }]
+}>()
+
+function buildRuntime(): AgentRuntime {
+  return createAgentRuntime({
+    capabilities: props.capabilities ?? [],
+    workflows: props.workflows ?? [],
+    context: () => props.context?.() ?? {},
+  })
+}
+
+const runtime = shallowRef<AgentRuntime>(buildRuntime())
+
+watch(
+  () => [props.capabilities, props.workflows],
+  () => {
+    runtime.value = buildRuntime()
+  },
+)
+
+const messages = ref<any[]>([])
+const isRunning = ref(false)
+const draft = ref('')
+const viewport = ref<HTMLElement | null>(null)
+
+const suggestions = ref<Array<{ title: string, label?: string, prompt: string }>>([
+  { title: '初始化页面', label: 'initialize', prompt: '生成一个包含盒马鲜生和大润发小时达的页面' },
+  { title: '修改页面', label: 'edit', prompt: '删除首页的金刚区' },
+  { title: '业务能力', label: 'capability', prompt: '检查一下大润发小时达是否已经开通' },
+])
+
+// 审批状态由 UI 管理，运行时通过 onApproval 回调进来。
+const pendingApproval = ref<ToolApprovalRequest | null>(null)
+const approvalMessage = computed(() => pendingApproval.value?.message ?? '')
+let approvalResolver: ((approved: boolean) => void) | null = null
+
+const onApproval: ToolApprovalHandler = (request) => {
+  if (approvalResolver) {
+    const previous = approvalResolver
+    approvalResolver = null
+    previous(false)
   }
-  widgets.forEach(visit)
-  console.log(result)
-  return result
+
+  pendingApproval.value = request
+  return new Promise<boolean>((resolve) => {
+    approvalResolver = resolve
+  })
 }
 
-const businessConfigSchema = z.object({
-  scenes: z.array(
-    z.object({
-      name: z.string(),
-      fee: z.string(),
-    })
-  ),
-  brand: z.array(
-    z.object({
-      name: z.string(),
-      coupon: z.string(),
-      faceValue: z.number().nullable(),
-      fee: z.string(),
-    })
-  ),
-  shopPickup: z.array(
-    z.object({
-      name: z.string(),
-      scope: z.array(z.string()),
-    })
-  )
-})
-
-type SceneState = {
-  id: number
-  name: string
-  enabled: boolean
-  message: string
+function approve() {
+  const resolve = approvalResolver
+  approvalResolver = null
+  pendingApproval.value = null
+  resolve?.(true)
 }
 
-const data = shallowRef<any>({})
-
-const client = new OpenAI({
-  baseURL: 'http://localhost:4000/v1',
-  apiKey: 'test',
-  dangerouslyAllowBrowser: true,
-})
-
-
-let streamText = ''
-
-function describeApproval(request: { name: string, args?: unknown, message?: string }): string {
-  return request.message || `是否执行工具 ${request.name}？`
+function reject() {
+  const resolve = approvalResolver
+  approvalResolver = null
+  pendingApproval.value = null
+  resolve?.(false)
 }
 
-const emit = defineEmits(['init'])
-
-// 当前正在渲染的 copilot 消息与文本 part，供运行事件回调写入
 let activeReply: { id: string, role: 'copilot', parts: MessagePart[] } | null = null
 let activeTextPart: Extract<MessagePart, { type: 'text' }> | null = null
-// callId -> 对应的 tool-call part（响应式代理），用于把 tool-result 精确回填
 const toolCallParts = new Map<string, Extract<MessagePart, { type: 'tool-call' }>>()
 
-function handleEvent(event: RunEvent) {
+function handleEvent(event: AgentRuntimeEvent) {
   const reply = activeReply
   if (!reply)
     return
@@ -262,40 +250,45 @@ function handleEvent(event: RunEvent) {
       }
       break
     }
+
+    case 'workflow-start':
+      activeTextPart = null
+      reply.parts.push({ type: 'step', label: `开始流程：${event.workflow}` })
+      break
+
+    case 'step-start':
+      activeTextPart = null
+      reply.parts.push({ type: 'step', label: `步骤 ${event.index + 1}：${event.step}` })
+      break
+
+    case 'step-complete':
+      break
+
+    case 'step-retry':
+      reply.parts.push({ type: 'text', text: `⚠️ ${event.step} 第 ${event.attempt} 次重试：${event.error}` })
+      break
+
+    case 'step-error':
+      reply.parts.push({ type: 'text', text: `✕ ${event.step} 执行失败：${event.error}` })
+      break
+
+    case 'workflow-complete':
+      reply.parts.push({ type: 'step', label: '流程完成' })
+      break
+
+    case 'workflow-abort':
+      reply.parts.push({ type: 'text', text: '流程已中断' })
+      break
   }
 }
-
-// 流程 Agent 只在 setup 里构建一次，把子 Agent 暴露成 tool，
-// 由模型根据「用户输入」选择调用哪个子 Agent。
-const { agent: flowAgent, state: flowState, reset: resetFlow } = createDecorationFlowAgent()
-
-// 审批状态由 Agent 管理，面板只读 agent.approval.pending
-const pendingApproval = computed(() => flowAgent.approval.pending.value ?? null)
-const approvalMessage = computed(() => flowAgent.approval.message.value)
-
-watch(() => props.widgets, () => {
-  if (!props.widgets) return
-
-  flowState.widgets = toLayoutWidgets(props.widgets)
-}, { immediate: true})
 
 async function send(message: string) {
   messages.value.push({
     id: createId(),
     role: 'user',
-    parts: [
-      { type: 'text', text: message }
-    ]
+    parts: [{ type: 'text', text: message }],
   })
 
-  // mock 数据：仅用于本地调试时手动替换用户输入，运行时不再使用
-  // const config = '{"scenes":[{"name":"叮咚买菜","fee":"2%"},{"name":"大润发小时达","fee":"2%"}],"brand":[{"name":"盒马鲜生","coupon":"米面粮油提货券","faceValue":500,"fee":"2%"},{"name":"盒马鲜生","coupon":"米面粮油提货券","faceValue":200,"fee":"2%"}],"shopPickup":[{"name":"扫码提货","scope":["蛋糕品牌","百果园"]}]}'
-  // const businessElements = {
-  //   scenes: [{ id: 1, name: '大润发小时达' }, { id: 2, name: '叮咚买菜' }],
-  //   // coupon: [{ id: 1, name: '盒马', faceValue: 500 }],
-  // }
-
-  // 每一步都作为 message part 实时展示
   const reply = reactive<{ id: string, role: 'copilot', parts: MessagePart[] }>({
     id: createId(),
     role: 'copilot',
@@ -306,15 +299,27 @@ async function send(message: string) {
   activeReply = reply
   activeTextPart = null
   toolCallParts.clear()
-  resetFlow()
-  // 宿主侧的可用组件注入共享 state，供布局子 Agent 调用时使用
-  flowState.widgets = toLayoutWidgets(props.widgets)
 
   isRunning.value = true
   try {
-    // 输入完全来自用户：直接把用户消息交给流程 Agent，
-    // 由模型决定调用哪个子 Agent（tool）以及给它什么参数。
-    await run(flowAgent, message, { onEvent: handleEvent })
+    const result = await runtime.value.run(message, {
+      onEvent: handleEvent,
+      onApproval,
+    })
+
+    if (result.flow === 'initialize' && result.layout) {
+      emit('init', { layout: result.layout })
+    }
+    else if (result.flow === 'edit') {
+      emit('edit', { edits: result.edits ?? [] })
+    }
+    else if (result.flow === 'capability' && result.capability) {
+      emit('capability', result.capability)
+    }
+
+    if (result.text) {
+      reply.parts.push({ type: 'text', text: result.text })
+    }
   }
   catch (error) {
     reply.parts.push({ type: 'text', text: `⚠️ ${toMessage(error)}` })
@@ -324,19 +329,7 @@ async function send(message: string) {
     activeReply = null
     activeTextPart = null
   }
-
-  // TODO: 在这里要对数据做处理，最终抛出去的应该是根据数据索引，组件索引替换过的数据
-  if (flowState.layout !== undefined) {
-    emit('init', flowState.layout, data.value)
-  }
 }
-
-const suggestions = ref<Array<{ title: string, label?: string, prompt: string }>>([])
-const messages = ref<any[]>([])
-const isRunning = ref(false)
-
-const draft = ref('')
-const viewport = ref<HTMLElement | null>(null)
 
 watch(
   messages,
@@ -386,6 +379,10 @@ function describeAction(action: unknown): string {
   return JSON.stringify(action)
 }
 
+function describeApproval(request: { name: string, args?: unknown, message?: string }): string {
+  return request.message || `是否执行工具 ${request.name}？`
+}
+
 function toolName(call: unknown): string {
   return (call as { name?: string } | undefined)?.name ?? ''
 }
@@ -420,16 +417,8 @@ function describeCallOutput(call: { name?: string, result?: unknown, error?: str
   if (call.error)
     return { ok: false, message: call.error }
 
-  // 子 Agent 作为 tool 调用时，返回的是它自己的最终文本
   if (typeof call.result === 'string')
     return { ok: true, message: call.result }
-
-  if (call.name === 'check_scenes_enabled') {
-    const scenes = (call.result as { scenes?: Array<{ name: string, enabled: boolean }> } | undefined)?.scenes ?? []
-    const off = scenes.filter(scene => !scene.enabled).map(scene => scene.name)
-    const on = scenes.filter(scene => scene.enabled).map(scene => scene.name)
-    return { ok: true, message: `未开通：${off.join('、') || '无'}；已开通：${on.join('、') || '无'}` }
-  }
 
   const value = call.result as { message?: string } | undefined
   return { ok: true, message: value?.message ?? JSON.stringify(call.result) }
@@ -551,7 +540,6 @@ function stringifyArgs(args: unknown): string {
   color: #fff;
 }
 
-/* 第 N 轮 / 阶段标题 */
 .message__step {
   display: flex;
   align-items: center;
@@ -569,7 +557,6 @@ function stringifyArgs(args: unknown): string {
   background: #eef2f7;
 }
 
-/* Action 及其执行结果：set(activeTime, [...]) + Form Engine 的反馈 */
 .message__action {
   display: flex;
   flex-direction: column;
@@ -606,7 +593,6 @@ function stringifyArgs(args: unknown): string {
   color: #b45309;
 }
 
-/* Tool Call：和 Action 区分开，蓝色 > Action，紫色 > Tool */
 .message__approval {
   border-color: #fde68a;
   background: #fffbeb;
@@ -616,7 +602,6 @@ function stringifyArgs(args: unknown): string {
   color: #b45309;
 }
 
-/* 执行流程：工具调用的名称 / 输入 / 输出 */
 .flow {
   display: flex;
   flex-direction: column;
@@ -695,7 +680,6 @@ function stringifyArgs(args: unknown): string {
   max-height: 220px;
 }
 
-/* 模型原始输出：对着 Prompt / response_format 排查用 */
 .message__raw {
   font-size: 12px;
   color: #6b7280;

@@ -2,8 +2,12 @@
   <div class="assistant-root">
     <section v-if="open" class="assistant-panel">
       <AssistantThread
-        :widgets="props.widgets"
+        :capabilities="props.capabilities"
+        :workflows="props.workflows"
+        :context="props.context"
         @init="onInit"
+        @edit="onEdit"
+        @capability="onCapability"
       />
     </section>
     <button class="assistant-button" type="button" @click="open = !open">
@@ -17,18 +21,35 @@
 <script setup lang="ts">
 import AssistantThread from './AssistantThread.vue'
 import { ref } from 'vue'
+import type { Capability } from './capability'
+import type { Workflow } from './workflow'
+import type { EditIR, LayoutIR } from './ir'
 
-const props = defineProps<{ widgets?: any[] }>()
+const props = defineProps<{
+  capabilities?: Capability<any, any>[]
+  workflows?: Workflow[]
+  context?: () => Record<string, unknown>
+}>()
 
-const emit = defineEmits(['init'])
-
-console.log(props)
+const emit = defineEmits<{
+  init: [payload: { layout: LayoutIR }]
+  edit: [payload: { edits: EditIR[] }]
+  capability: [payload: { name: string, result: unknown }]
+}>()
 
 const open = ref(false)
 const isRunning = ref(false)
 
-function onInit(layout: any, data: any) {
-  emit('init', { layout, data })
+function onInit(payload: { layout: LayoutIR }) {
+  emit('init', payload)
+}
+
+function onEdit(payload: { edits: EditIR[] }) {
+  emit('edit', payload)
+}
+
+function onCapability(payload: { name: string, result: unknown }) {
+  emit('capability', payload)
 }
 </script>
 
