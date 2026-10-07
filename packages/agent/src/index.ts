@@ -1,7 +1,5 @@
 import Copilot from './agent/Copilot.vue'
 
-export * as z from 'zod'
-
 export const MpdAgent = Copilot
 
 // Agent Loop / Tool Calling / Session / Context：由 OpenAI Agents SDK 提供。
@@ -111,3 +109,5 @@ export { AgentRuntime, createAgentRuntime } from './agent/runtime'
 // Extraction helper
 export type { StructuredExtractOptions } from './agent/extract'
 export { parseJson, structuredExtract } from './agent/extract'
+
+export * from './agent/utils/helper'

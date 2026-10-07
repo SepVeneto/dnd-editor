@@ -29,7 +29,8 @@ import { schema, widget } from '@sepveneto/dnde-core/helper'
 // import { register } from '../dist/editor.js'
 import { onMounted, ref, useTemplateRef, watchEffect } from 'vue'
 import { register } from '@/main'
-import { defineCapability, defineWorkflow, invokeCapability, structuredExtract, z } from '@agent/sdk'
+import { Agent, createAgent, defineCapability, defineWorkflow, invokeCapability, parseJson, runAgent, structuredExtract } from '@agent/sdk'
+import z from 'zod'
 
 /**
  * 业务侧（playground）：
@@ -104,16 +105,19 @@ const initializeWorkflow = defineWorkflow({
     {
       name: 'parseScenario',
       async execute(context) {
-        return structuredExtract({
+        const agent = createAgent({
+          name: 'structured-extract',
           instructions: `你是业务配置解析器。将用户输入解析成结构化业务配置。
 需要解析三类配置：
 - H5外接场景：name、fee
 - 品牌商户：name、coupon、faceValue、fee
 - 扫码提货：name、scope
 只解析用户提供的信息，不补充、不合并、不核查，未提供的字段使用 null。`,
-          schema: businessConfigSchema,
-          input: String(context.input),
+          outputType: businessConfigSchema,
         })
+
+        const res = await runAgent(agent, String(context.input))
+        return res.finalOutput ?? ''
       },
     },
     {

@@ -8,6 +8,7 @@ import type {
   ModelResponse,
   RunResult,
   RunStreamEvent,
+  SerializedOutputType,
   Session,
   StreamEvent,
   StreamedRunResult,
@@ -72,7 +73,7 @@ class ProxyChatCompletionsModel implements Model {
     const stream = await client.chat.completions.create({
       model: this.model,
       messages: messages as any,
-      temperature: 0.1,
+      temperature: 0,
       stream: true,
       ...(tools ? { tools } : {}),
       ...(responseFormat ? { response_format: responseFormat } : {}),
@@ -97,7 +98,7 @@ class ProxyChatCompletionsModel implements Model {
     const stream = await client.chat.completions.create({
       model: this.model,
       messages: messages as any,
-      temperature: 0.1,
+      temperature: 0,
       stream: true,
       ...(tools ? { tools } : {}),
       ...(responseFormat ? { response_format: responseFormat } : {}),
@@ -199,10 +200,30 @@ function buildChatRequest(request: ModelRequest): { messages: any[], tools?: any
       })
     : undefined
 
-  // 无工具时统一 json_object（平台 Agent 的最终输出是 JSON）；有工具时不传，避免与 tools 冲突。
-  const responseFormat = !tools?.length ? { type: 'json_object' } : undefined
+  // 参考 openai-sdk 的 getResponseFormat：无工具时按 outputType 下发 response_format，
+  // Agent 声明了 ZodObject 结构化输出（json_schema）时下发 json_schema，否则退回 json_object
+  // 保证平台 Agent 的最终输出仍是 JSON；有工具时不传，避免与 tools 冲突。
+  const responseFormat = !tools?.length ? buildResponseFormat(request.outputType) : undefined
 
   return { messages, tools, responseFormat }
+}
+
+/**
+ * 参考 openai-sdk 的 getResponseFormat，兼容 ZodObject（序列化为 json_schema）的结构化输出。
+ * 与 openai-sdk 不同的是：text 输出也保留 json_object，因为平台 Agent 的最终输出约定为 JSON。
+ */
+function buildResponseFormat(outputType: SerializedOutputType): any {
+  if (outputType && typeof outputType === 'object' && outputType.type === 'json_schema') {
+    return {
+      type: 'json_schema',
+      json_schema: {
+        name: outputType.name,
+        strict: outputType.strict,
+        schema: outputType.schema,
+      },
+    }
+  }
+  return { type: 'json_object' }
 }
 
 function itemToChatMessage(item: any): any {
