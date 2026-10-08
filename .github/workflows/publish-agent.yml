@@ -42,5 +42,5 @@ jobs:
 
       - name: Build and Publish
         run: sh ./scripts/publish-agent.sh
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+        # env:
+        #   NPM_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
