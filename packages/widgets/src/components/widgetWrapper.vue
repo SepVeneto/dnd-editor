@@ -23,6 +23,7 @@
 
 <script lang="ts" setup>
 import type { CSSProperties, PropType } from 'vue'
+import { editorContextKey } from '@sepveneto/dnde-core'
 import { onClickOutside, useElementBounding } from '@vueuse/core'
 import { computed, inject, nextTick, onMounted, ref, shallowRef, watch, watchEffect } from 'vue'
 import { useNormalizeStyle } from '@/hooks'
@@ -40,8 +41,8 @@ const props = defineProps({
   // }
 })
 const emit = defineEmits(['update:customStyle'])
-const editorContext = inject('Editor', { preview: false })
-const _preview = computed(() => editorContext.preview)
+const editorContext = inject(editorContextKey)
+const _preview = computed(() => editorContext?.preview ?? false)
 const _scale = computed(() => !_preview.value && props.scale)
 const _move = computed(() => !_preview.value && props.move)
 const widgetRef = shallowRef()

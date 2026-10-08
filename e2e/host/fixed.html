@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>DND Editor E2E - fixed</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module">
+      window.__E2E__ = { phase: 'loading' }
+
+      const sleep = ms => new Promise(r => setTimeout(r, ms))
+      async function waitFor(fn, timeout = 20000, step = 100) {
+        const start = Date.now()
+        for (;;) {
+          const v = fn()
+          if (v) return v
+          if (Date.now() - start > timeout) throw new Error('waitFor timeout')
+          await sleep(step)
+        }
+      }
+
+      // 用生产者已有的视图，靠 meta.fixed 区分 header / footer / 普通节点。
+      // ?nofixed=1 时去掉 fixed，作为「落点确实能到该位置」的控制组。
+      const noFixed = new URLSearchParams(location.search).has('nofixed')
+      const widgets = [
+        { _name: '页面', _view: 'page', meta: { visible: false }, schema: { props: [], style: [] }, data: {}, style: {} },
+        { _name: '顶部', _view: 'floatBtn', meta: { visible: false, draggable: false, ...(noFixed ? {} : { fixed: 'header' }) }, schema: { props: [], style: [] }, data: {}, style: {} },
+        { _name: '底部', _view: 'richText', meta: { visible: false, draggable: false, ...(noFixed ? {} : { fixed: 'footer' }) }, schema: { props: [], style: [] }, data: {}, style: {} },
+        { _name: '普通', _view: 'image', meta: { visible: false }, schema: { props: [], style: [] }, data: {}, style: {} },
+      ]
+
+      try {
+        const { register } = await import('/editor/editor.js')
+        await register({ remoteUrl: location.origin })
+
+        const el = document.createElement('mpd-editor')
+        el.id = 'editor'
+        el.widgets = widgets
+        document.getElementById('app').appendChild(el)
+
+        await waitFor(() => el.shadowRoot && el.shadowRoot.querySelector('.mpd-editor'))
+
+        el.setData({
+          _view: 'page',
+          data: {},
+          style: {},
+          // header/footer 比普通节点高，鼠标拖拽才能稳定落到它们「之前/之后」
+          list: [
+            { _uuid: 'header', _view: 'floatBtn', data: {}, style: { height: 140 } },
+            { _uuid: 'a', _view: 'image', data: {}, style: { height: 80 } },
+            { _uuid: 'b', _view: 'image', data: {}, style: { height: 80 } },
+            { _uuid: 'footer', _view: 'richText', data: {}, style: { height: 140 } },
+          ],
+        })
+
+        await waitFor(() => el.shadowRoot.querySelectorAll('.mpd-node').length === 4)
+
+        const rectOf = (id) => {
+          const node = el.shadowRoot.querySelector(`.mpd-node[data-id="${id}"]`)
+          if (!node)
+            throw new Error(`找不到节点 ${id}`)
+          const r = node.getBoundingClientRect()
+          return { x: r.x + r.width / 2, y: r.y + r.height / 2, top: r.top, bottom: r.bottom, height: r.height }
+        }
+
+        window.__E2E__ = {
+          phase: 'ready',
+          getOrder: () => el.getData().list.map(n => n._uuid),
+          rectOf,
+          draggableIds: () => [...el.shadowRoot.querySelectorAll('.mpd-node.draggable')].map(n => n.dataset.id),
+        }
+      }
+      catch (err) {
+        window.__E2E__ = { phase: 'error', error: String((err && err.stack) || err) }
+      }
+    </script>
+  </body>
+</html>

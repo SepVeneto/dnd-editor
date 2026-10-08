@@ -1,8 +1,5 @@
-@forward 'element-plus/theme-chalk/src/mixins/config.scss' with (
-  $namespace: 'mpd'
-);
-@use 'element-plus/theme-chalk/src/index.scss' as *;
-
+// element-plus 主题不在这里引入：它由 main.ts 统一注入一次，
+// 同时供给 shadow root（编辑器内部）和 document.head（teleport 出去的弹层）。
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

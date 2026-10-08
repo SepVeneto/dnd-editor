@@ -198,14 +198,22 @@ export const useEditor = defineStore('editor', () => {
     node.parent = pNode
     manual && pNode.list.push(node)
   }
+  /** 递归注销节点及其子树，避免被删除的节点残留在 nodeMap 中造成泄漏 */
+  function unregister(node: Node) {
+    nodeMap.delete(node.wid)
+    node.list.forEach(item => unregister(item))
+  }
+
   function delNode(wid: string) {
     const node = nodeMap.get(wid)
-    const index = node?.parent?.list.findIndex(item => item.wid === wid)
-    if (index == null) {
+    const parent = node?.parent
+    const index = parent?.list.findIndex(item => item.wid === wid) ?? -1
+    // 根节点没有父级，不允许删除
+    if (!node || !parent || index === -1) {
       throw new Error(`找不到节点 ${wid}`)
     }
-    node?.parent?.list.splice(index, 1)
-    nodeMap.delete(wid)
+    parent.list.splice(index, 1)
+    unregister(node)
     selected.value = rootNode.value.wid
   }
 
@@ -237,6 +245,14 @@ export const useEditor = defineStore('editor', () => {
       }
     })
   }
+  /** 替换整棵文档树：先注销旧树，避免 rootNode 变更后旧节点滞留在 nodeMap 中 */
+  function setRoot(node: Node) {
+    unregister(rootNode.value)
+    rootNode.value = node
+    selected.value = node.wid
+    nodeMap.set(node.wid, node)
+  }
+
   function setData(data: any) {
     const widget = app.widgetMap.get(data._view) as Widget || defaultPage
 
@@ -247,11 +263,7 @@ export const useEditor = defineStore('editor', () => {
       style,
       list: [],
     }
-    rootNode.value = new Node(widget, info)
-
-    nodeMap.delete(selected.value)
-    selected.value = rootNode.value.wid
-    nodeMap.set(rootNode.value.wid, rootNode.value)
+    setRoot(new Node(widget, info))
 
     createNodes(list)
   }
@@ -273,6 +285,7 @@ export const useEditor = defineStore('editor', () => {
     selectedNodeOperates,
     addNode,
     delNode,
+    setRoot,
     // nodeList,
     isPreview,
     dragging,

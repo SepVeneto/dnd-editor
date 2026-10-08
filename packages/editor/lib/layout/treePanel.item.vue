@@ -37,8 +37,8 @@
         handle=".node-wrap.draggable"
         ghost-class="dragging-ghost"
         item-key="wid"
-        @update:model-value="onInput"
-        @add="onAdd"
+        @update:model-value="drag.onInput"
+        @add="drag.onAdd"
         @end="editor.dragging = null"
       >
         <template #item="{ element }">
@@ -55,11 +55,10 @@
 
 <script lang="ts" setup>
 import type { Node } from '@sepveneto/dnde-core/class'
-import type { DraggableEvt } from '@/type'
-import { nextTick } from 'vue'
 import Vuedraggable from 'vuedraggable'
 import IconContainer from '@/assets/container.vue'
 import IconItem from '@/assets/puzzle.vue'
+import { useNodeListDrag } from '@/composables/useNodeListDrag'
 import { useEditor } from '@/store'
 // eslint-disable-next-line import/no-self-import
 import TreePanelItem from './treePanel.item.vue'
@@ -67,61 +66,15 @@ import TreePanelItem from './treePanel.item.vue'
 const props = defineProps<{ node: Node }>()
 
 const editor = useEditor()
-function onAdd(evt: DraggableEvt) {
-  const list = [...props.node.list]
-  const nextNode = list[evt.newIndex + 1]
-  if (nextNode && nextNode.widget.isFixed) {
-    const deletedNode = list.splice(0, 1)[0]
-
-    // 跨容器移动触发fixed时需要手动还原到旧容器中
-    if (evt.to !== evt.from) {
-      const oldContainer = editor.nodeMap.get(evt.from.dataset.id!)!
-      ;(oldContainer.list as Node[]).splice(evt.oldIndex, 0, deletedNode)
-    }
-
-    onInput(list)
-    return
-  }
-  const node = props.node.list[evt.newDraggableIndex]
-  node && editor.addNode(node, props.node)
-}
-
-function onInput(val: Node[]) {
-  if (props.node.list.length === val.length) {
-    props.node.setList(val)
-  }
-  else {
-    const wid = findExistWid(val)
-    const originIndex = props.node.list.findIndex(node => node.wid === wid)
-    if (originIndex === -1) {
-      props.node.setList(val)
-      return
-    }
-    // 只处理同级同节点跨组件移动节点消失的情况
-    if (wid === val[originIndex].wid) {
-      val.splice(originIndex, 1)
-    }
-    else {
-      val.splice(originIndex + 1, 1)
-    }
-    nextTick().then(() => {
-      props.node.setList(val)
-    })
-  }
-}
-
-function findExistWid(list: Node[]) {
-  const wids: string[] = []
-  for (const item of list) {
-    const exist = wids.includes(item.wid)
-    if (exist) {
-      return item.wid
-    }
-    else {
-      wids.push(item.wid)
-    }
-  }
-}
+const drag = useNodeListDrag({
+  get list() {
+    return props.node.list
+  },
+  get parent() {
+    return props.node
+  },
+  setList: list => props.node.setList(list),
+})
 </script>
 
 <style lang="scss" scoped>

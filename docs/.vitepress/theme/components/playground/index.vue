@@ -20,7 +20,6 @@
     v-if="editor.render.value"
     :key="remoteUrl"
     ref="refEditor"
-    :remote-url="remoteUrl"
     :widgets="widgets"
     :extra="editor.extra"
   />

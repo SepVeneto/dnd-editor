@@ -2,14 +2,15 @@ import { nextTick, ref } from 'vue'
 
 export function useEditor() {
   // 由于编辑器的js较大，使用异步加载可以显著提升首屏速度
-  const dnde = import('@sepveneto/dnde/core')
+  const dnde = import('@sepveneto/dnde')
   // 这里可以替换成loading让用户体验更友好
   const render = ref(false)
   // 区分开发环境，不推荐跨域部署
   const mode = import.meta.env.MODE
-  const remoteUrl = mode === 'development'
-    ? 'http://localhost:8090'
-    : `${window.location.origin}/design-widgets`
+  const remoteUrl = ref(
+    window.localStorage.getItem('remote-url')
+    || (mode === 'development' ? 'http://localhost:8090' : `${window.location.origin}/design-widgets`),
+  )
 
   // 通过接口获取编辑器数据和编辑器初始化都是异步操作
   // 而设置数据需要等两者都完成
@@ -21,7 +22,8 @@ export function useEditor() {
   }
 
   async function register() {
-    (await dnde).register()
+    // remoteUrl 指向生产者（组件视图）的部署地址，由 register 统一注册
+    (await dnde).register({ remoteUrl: remoteUrl.value })
     render.value = true
     nextTick().then(resolve)
   }
