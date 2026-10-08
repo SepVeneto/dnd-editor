@@ -316,6 +316,10 @@ const baseWidgets: IWidget[] = [
         label: '背景色',
         key: 'backgroundColor',
       }),
+      schema.styleNumber({
+        label: '1',
+        key: 'width',
+      })
     ],
   }),
   widget.columnContainer({
@@ -348,6 +352,17 @@ const baseWidgets: IWidget[] = [
   }),
 ]
 const serviceWidgets: IWidget[] = [
+  widget.create({
+    name: '回到顶部',
+    type: 'top',
+    defaultStyle: {
+      position: 'fixed',
+      bottom: 20,
+      right: 20,
+      width: 100,
+      height: 100,
+    }
+  }),
   widget.create({
     name: '菜单',
     type: 'menuItem',

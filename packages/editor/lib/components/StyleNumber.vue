@@ -1,9 +1,10 @@
 <template>
-  <div class="mpd-flex">
+  <div class="mpd-flex mpd-w-full">
     <ElSelect
       v-model="type"
       :append-to="appendTo"
-      class="mpd-w-24 mpd-shrink-0"
+      style="width: 96px;"
+      class="mpd-shrink-0"
       @change="onChange"
     >
       <ElOption
@@ -18,12 +19,13 @@
     <ElInputNumber
       v-if="type === 'manual'"
       v-model="value as number"
-      class="mpd-flex-1"
+      class="mpd-shrink-0"
       controls-position="right"
     />
     <ElInput
       v-else-if="type === 'auto'"
-      class="mpd-flex-1"
+      class="mpd-shrink-0"
+      style="width: 150px;"
       model-value="100%"
       disabled
     />
