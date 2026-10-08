@@ -19,8 +19,12 @@
     "resolveJsonModule": true,
     "types": [
       "./global.d.ts",
+      "node",
     ],
     "strict": true,
+    // 单元测试用 node:test + Node 原生类型擦除，需要允许带 .ts 扩展名导入
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
     "sourceMap": true,
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,

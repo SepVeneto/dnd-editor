@@ -12,13 +12,9 @@ export default createModuleFederationConfig({
       singleton: true,
       requiredVersion: '^3.5.40',
     },
-    'vue-router': {
-      singleton: true,
-      requiredVersion: '^4.5.0',
-    },
     'element-plus': {
       singleton: true,
-      requiredVersion: '^2.x',
+      requiredVersion: '^2.14.1',
     },
   },
 });

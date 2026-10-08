@@ -30,17 +30,25 @@ npm i @sepveneto/dnde @sepveneto/dnde-core
 ```
 :::
 
+其中`@sepveneto/dnde`是编辑器（消费者），`@sepveneto/dnde-core`提供`widget`、`schema`等用于描述组件的工具函数。
+
 ## 用法
 
-```ts
-import dnde from '@sepveneto/dnde-core'
+编辑器通过`register`注册`<mpd-editor>`自定义元素，`register`需要传入生产者（组件视图）的部署地址：
 
-dnde.register()
+```ts
+import { register } from '@sepveneto/dnde'
+
+await register({ remoteUrl: 'http://localhost:8090' })
 ```
 
 ```html
 <mpd-editor></mpd-editor>
 ```
+
+::: tip
+`register`是幂等的，同一个`remoteUrl`重复调用会复用同一次注册结果，不会重复注册自定义元素。
+:::
 
 ### 最佳实践
 
@@ -52,14 +60,13 @@ dnde.register()
   <mpd-editor
     v-if="editor.render.value"
     ref="editor"
-    :remote-url="editor.remoteUrl"
     :widgets="widgets"
     :extra="editor.extra"
   />
 </template>
 
 <script setup lang="ts">
-import { ref, useTemplateRef } from 'vue'
+import { useTemplateRef } from 'vue'
 import { useEditor } from './composable.ts'
 import { widgets } from './widgets.ts'
 
@@ -69,7 +76,7 @@ const editor = useEditor()
 mockApi().then((res) => {
   editor.waitForMounted.then(() => {
     // 设置编辑器数据
-    refEditor.value.setData(res)
+    editorRef.value.setData(res)
   })
 })
 
@@ -95,7 +102,7 @@ import { nextTick, ref } from 'vue'
 
 export function useEditor() {
   // 由于编辑器的js较大，使用异步加载可以显著提升首屏速度
-  const dnde = import('@sepveneto/dnde/core')
+  const dnde = import('@sepveneto/dnde')
   // 这里可以替换成loading让用户体验更友好
   const render = ref(false)
   // 区分开发环境，不推荐跨域部署
@@ -114,7 +121,8 @@ export function useEditor() {
   }
 
   async function register() {
-    (await dnde).register()
+    // remoteUrl 指向生产者（组件视图）的部署地址
+    (await dnde).register({ remoteUrl })
     render.value = true
     nextTick().then(resolve)
   }
@@ -123,7 +131,6 @@ export function useEditor() {
     waitForMounted: promise,
     render,
     register,
-    remoteUrl,
     extra,
   }
 }
@@ -133,6 +140,7 @@ export function useEditor() {
 import { schema, widget } from '@sepveneto/dnde-core'
 
 // 这里是指定页面的配置，也就是默认的根节点
+// 根节点必须使用 type: 'page'
 const rootPage = widget.create({
   name: '活动设置',
   type: 'page',
@@ -164,7 +172,6 @@ const richText = widget.create({
   defaultStyle: { width: 355, minHeight: 32, marginBottom: 10 },
   defaultData: { isShow: 1 },
   attributes: [
-    showSchema,
     schema.custom({
       label: '',
       type: 'richText',

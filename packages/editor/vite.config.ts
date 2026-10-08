@@ -10,7 +10,7 @@ export default defineConfig({
   plugins: [
     visualizer({
       filename: 'stats.html',
-      open: true,
+      open: false,
       gzipSize: true,
       brotliSize: true,
     }),
@@ -25,6 +25,11 @@ export default defineConfig({
       },
     }),
   ],
+  // Vite 库模式不会替换 process.env.NODE_ENV，产物作为浏览器 ESM 直接加载时
+  // 会因 process 未定义而崩溃，这里显式替换（同时让 Vue 走生产分支、去掉开发告警代码）
+  define: {
+    'process.env.NODE_ENV': JSON.stringify('production'),
+  },
   server: {
     port: 8082,
     fs: {
@@ -40,7 +45,7 @@ export default defineConfig({
 
   },
   build: {
-    minify: false,
+    minify: 'esbuild',
     target: 'esnext',
     lib: {
       formats: ['es'],

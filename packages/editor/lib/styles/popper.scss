@@ -1,0 +1,6 @@
+// 只编译 element-plus 主题（不含 Tailwind preflight），供投放到 light DOM 使用。
+// 命名空间必须与编辑器保持一致（mpd），否则弹层的类名对不上。
+@forward 'element-plus/theme-chalk/src/mixins/config.scss' with (
+  $namespace: 'mpd'
+);
+@use 'element-plus/theme-chalk/src/index.scss' as *;

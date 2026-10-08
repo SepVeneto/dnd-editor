@@ -14,14 +14,13 @@ title: 消费者
   <mpd-editor
     v-if="editor.render.value"
     ref="editor"
-    :remote-url="editor.remoteUrl"
     :widgets="widgets"
     :extra="editor.extra"
   />
 </template>
 
 <script setup lang="ts">
-import { ref, useTemplateRef } from 'vue'
+import { useTemplateRef } from 'vue'
 import { useEditor } from './composable.ts'
 import { widgets } from './widgets.ts'
 
@@ -31,7 +30,7 @@ const editor = useEditor()
 mockApi().then((res) => {
   editor.waitForMounted.then(() => {
     // 设置编辑器数据
-    refEditor.value.setData(res)
+    editorRef.value.setData(res)
   })
 })
 
@@ -57,7 +56,7 @@ import { nextTick, ref } from 'vue'
 
 export function useEditor() {
   // 由于编辑器的js较大，使用异步加载可以显著提升首屏速度
-  const dnde = import('@sepveneto/dnde/core')
+  const dnde = import('@sepveneto/dnde')
   // 这里可以替换成loading让用户体验更友好
   const render = ref(false)
   // 区分开发环境，不推荐跨域部署
@@ -76,7 +75,8 @@ export function useEditor() {
   }
 
   async function register() {
-    (await dnde).register()
+    // remoteUrl 指向生产者（组件视图）的部署地址
+    (await dnde).register({ remoteUrl })
     render.value = true
     nextTick().then(resolve)
   }
@@ -85,7 +85,6 @@ export function useEditor() {
     waitForMounted: promise,
     render,
     register,
-    remoteUrl,
     extra,
   }
 }
@@ -95,6 +94,7 @@ export function useEditor() {
 import { schema, widget } from '@sepveneto/dnde-core'
 
 // 这里是指定页面的配置，也就是默认的根节点
+// 根节点必须使用 type: 'page'
 const rootPage = widget.create({
   name: '活动设置',
   type: 'page',
@@ -126,7 +126,6 @@ const richText = widget.create({
   defaultStyle: { width: 355, minHeight: 32, marginBottom: 10 },
   defaultData: { isShow: 1 },
   attributes: [
-    showSchema,
     schema.custom({
       label: '',
       type: 'richText',
@@ -143,12 +142,31 @@ export const widgets = [
 ```
 :::
 
+## 注册
+
+编辑器的自定义元素需要先通过`register`注册，`remoteUrl`指向生产者（组件视图）的部署地址：
+
+```ts
+import { register } from '@sepveneto/dnde'
+
+await register({ remoteUrl: 'http://localhost:8090' })
+```
+
+`register`的可选配置：
+
+| 名称 | 类型 | 默认值 | 说明 |
+| ---- | ---- | ------ | ---- |
+| injectGlobalStyle | boolean | true | 是否把 element-plus 主题再挂一份到宿主页面的`document.head`，用于兜住 teleport 到`document.body`的弹层（`ElDialog`、`ElSelect` 下拉、`ElTooltip` 等） |
+
+::: tip
+弹层会被 teleport 到`document.body`，不在编辑器的`shadow dom`内，因此需要一份挂在宿主页面上的样式。默认开启；如果宿主已有自己的 element-plus 全局样式、不希望页面里再多一份，可以关闭（关闭后需自行保证这些弹层的样式，也可以稍后手动调用导出的`injectPopperStyles`）。
+:::
+
 ## 属性
 
 | 名称 | 类型 | 必填 | 默认值 | 说明 |
-| ---- | --- | ---- | ----- | ---- |
-| remoteUrl | string | √ | - | 视图的远程地址 |
-| name | string | × | widgets | 视图的名称，这里用于删除缓存 |
+| ---- | ---- | ---- | ----- | ---- |
+| name | string | × | widgets | 视图的名称，用于删除缓存 |
 | widgets | LikeWidget[] | × | [] | 组件区中展示的组件 |
 | extra | Object | × | {} | 宿主中需要传递给编辑器的数据 |
 
@@ -156,13 +174,13 @@ export const widgets = [
 
 | 名称 | 参数 | 说明 |
 | :--- | :-- | :--- |
-| onChange | <Desc desc="any">data</Desc> | 配置区/编辑区数据变化时触发 |
+| change | <Desc desc="any">data</Desc> | 配置区/编辑区数据变化时触发（内部做 1s 防抖） |
 
 ## 方法
 
 | 名称 | 类型 | 说明 |
-| :--- | :-- | :--- |
-| register | <Desc desc="(fn: (ctx: Editor) => void) => { init: () => void }">Function</Desc> | 注册扩展 |
-| validate | <Desc desc="() => Promise<void>" :raw="false">Function</Desc> | 验证配置区数据 |
+| ---- | ---- | ---- |
+| register | <Desc desc="(fn: (ctx: Editor) => { init: () => void }) => void">Function</Desc> | 注册扩展 |
+| validate | <Desc desc="() => Promise<void>" :raw="false">Function</Desc> | 验证配置区数据，校验失败时抛出异常 |
 | getData | <Desc desc="() => any">Function</Desc> | 获取编辑区的数据 |
 | setData | <Desc desc="(data: any) => void">Function</Desc> | 设置编辑区的数据 |

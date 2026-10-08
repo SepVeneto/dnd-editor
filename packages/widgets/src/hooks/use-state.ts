@@ -1,9 +1,10 @@
+import { editorContextKey } from '@sepveneto/dnde-core'
 import { customRef, getCurrentInstance, inject, ref, watch } from 'vue'
 
 export function useState<T>(data: T, key: string) {
   const inst = getCurrentInstance()
   const _data = ref()
-  const editorContext = inject('Editor', { updateConfig: (data: T) => { } })
+  const editorContext = inject(editorContextKey)
 
   watch(() => data, () => {
     _data.value = data[key]
@@ -17,7 +18,7 @@ export function useState<T>(data: T, key: string) {
     set(val) {
       trigger()
       data[key] = val
-      inst && editorContext.updateConfig(inst.props.config as T)
+      inst && editorContext?.updateConfig?.(inst.props.config as T)
     },
   }))
 }

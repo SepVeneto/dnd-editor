@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>DND Editor E2E</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module">
+      const state = { phase: 'loading', warnings: [], errors: [] }
+      // @ts-ignore
+      window.__E2E__ = state
+
+      const origWarn = console.warn.bind(console)
+      const origError = console.error.bind(console)
+      console.warn = (...args) => { state.warnings.push(args.map(String).join(' ')); origWarn(...args) }
+      console.error = (...args) => { state.errors.push(args.map(String).join(' ')); origError(...args) }
+
+      const sleep = ms => new Promise(r => setTimeout(r, ms))
+      async function waitFor(fn, timeout = 20000, step = 100) {
+        const start = Date.now()
+        for (;;) {
+          const v = fn()
+          if (v) return v
+          if (Date.now() - start > timeout) throw new Error('waitFor timeout')
+          await sleep(step)
+        }
+      }
+
+      // 1x1 透明 gif，用来触发生产者 card.view 里的 <el-image>
+      const IMG = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+
+      const widgets = [
+        { _name: '页面', _view: 'page', meta: { visible: false }, schema: { props: [], style: [] }, data: {}, style: {} },
+        { _name: '栅格容器', _view: 'containerGrid', container: true, meta: { visible: false }, schema: { props: [], style: [] }, data: {}, style: {} },
+        {
+          _name: '卡片',
+          _view: 'card',
+          meta: { visible: false },
+          schema: {
+            // 生产者的 element.config.vue：ElButton + ElDialog + ElSelect，全部依赖全局注册，
+            // 弹层会 teleport 到 document.body（用于验证逃出 shadow 的弹层样式）
+            props: [{
+              type: 'custom',
+              name: 'element',
+              label: 'Element 演示',
+              key: 'elementDemo',
+            }, {
+              type: 'select',
+              label: '选择器',
+              key: 'opt',
+              rules: [],
+              options: [{ label: '选项一', value: 'a' }, { label: '选项二', value: 'b' }],
+            }],
+            style: [],
+          },
+          data: { opt: 'a' },
+          style: {},
+        },
+      ]
+
+      try {
+        // 先探测远端 manifest 是否可达，便于区分网络/CORS 与渲染问题
+        try {
+          const r = await fetch('/mf-manifest.json')
+          state.manifestStatus = r.status
+        }
+        catch (e) {
+          state.manifestStatus = `fetch-error: ${e}`
+        }
+
+        const { register } = await import('/editor/editor.js')
+        await register({
+          remoteUrl: location.origin,
+          // ?nogstyle=1 用于验证「不往宿主 head 注入全局主题」的开关
+          injectGlobalStyle: !new URLSearchParams(location.search).has('nogstyle'),
+        })
+
+        const el = document.createElement('mpd-editor')
+        el.id = 'editor'
+        el.widgets = widgets
+        document.getElementById('app').appendChild(el)
+
+        await waitFor(() => el.shadowRoot && el.shadowRoot.querySelector('.mpd-editor'))
+        state.mounted = true
+
+        const hasCardImg = () => [...el.shadowRoot.querySelectorAll('img')]
+          .some(i => (i.getAttribute('src') || '').startsWith('data:image/gif'))
+
+        const setData = el.setData || (el._instance && el._instance.exposed && el._instance.exposed.setData)
+        if (typeof setData !== 'function')
+          throw new Error('setData 未暴露在自定义元素上')
+        setData.call(el, {
+          _view: 'page',
+          data: {},
+          style: {},
+          list: [{
+            _uuid: 'grid-1',
+            _view: 'containerGrid',
+            data: { grid: 1, style: { columnGap: 10 } },
+            style: { width: 375 },
+            list: [{
+              _uuid: 'card-1',
+              _view: 'card',
+              data: { isShow: 1, defaultImg: IMG, style: {} },
+              style: {},
+            }],
+          }],
+        })
+
+        // 等远端的 card.view 真正渲染出 ElImage 的 <img>（用 DOM 判定，避免匹配到注入的 CSS 文本）
+        try {
+          await waitFor(hasCardImg, 15000)
+          state.hasElImage = true
+        }
+        catch {
+          state.hasElImage = false
+        }
+        const cardImg = [...el.shadowRoot.querySelectorAll('img')]
+          .find(i => (i.getAttribute('src') || '').startsWith('data:image/gif'))
+        state.cardImgHtml = cardImg ? cardImg.outerHTML.slice(0, 160) : null
+        // element-plus 的 namespace 通过它内部的 injection key 传递：
+        // 只有宿主与远端用的是同一个模块实例，远端组件才会拿到宿主配置的 mpd- 前缀
+        state.cardImgClass = cardImg ? cardImg.className : null
+        state.shadowHtmlLength = el.shadowRoot.innerHTML.length
+
+        const styleTags = [...el.shadowRoot.querySelectorAll('style')]
+        state.styleTagCount = styleTags.length
+        // setup.ts 里注入的 element-plus 样式（证明远端 setup 通过模块联邦加载成功）
+        state.styleHasElCss = styleTags.some(s => (s.textContent || '').includes('--el-color-primary'))
+
+        // MF 运行时内部结构，用于校验 element-plus 是共享单例
+        state.federation = (() => {
+          const f = globalThis.__FEDERATION__
+          if (!f) return null
+          const instances = f.__INSTANCES__ || []
+          const mapped = instances.map((inst) => {
+            const share = inst.shareScopeMap && inst.shareScopeMap.default
+            return {
+              name: inst.name,
+              keys: Object.keys(inst),
+              shared: share ? Object.keys(share) : null,
+              elementPlus: share && share['element-plus'] ? Object.keys(share['element-plus']) : null,
+              elementPlusProvider: (share && share['element-plus'] && share['element-plus']['2.14.3']) || null,
+            }
+          })
+          return {
+            keys: Object.keys(f),
+            instances: mapped,
+            // 提供 element-plus 的一方：共享生效时是宿主 'editor'；
+            // 未共享时远端会自带一份，这里会是 'widgets'
+            elementPlusFrom: (mapped[0] && mapped[0].elementPlusProvider && mapped[0].elementPlusProvider.from) || null,
+          }
+        })()
+
+        // 回归检查：节点操作栏 tooltip 用的是编辑器自己的 mpd 命名空间样式，
+        // 而不是靠生产者注入的默认 el- 命名空间样式兜底
+        await (async () => {
+          const wrap = el.shadowRoot.querySelector('.mpd-node .node-wrap')
+          if (!wrap) {
+            state.tooltip = { found: false, reason: 'no node-wrap' }
+            return
+          }
+          wrap.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+          await sleep(250)
+
+          const helper = el.shadowRoot.querySelector('.node-helper')
+          if (!helper) {
+            state.tooltip = { found: false, reason: 'no .node-helper' }
+            return
+          }
+          helper.dispatchEvent(new MouseEvent('mouseenter'))
+          await sleep(400)
+
+          const popper = el.shadowRoot.querySelector('.mpd-popper, .el-popper')
+          if (!popper) {
+            state.tooltip = { found: false, reason: 'no popper rendered' }
+            return
+          }
+          const cs = getComputedStyle(popper)
+          state.tooltip = {
+            found: true,
+            cls: popper.className,
+            background: cs.backgroundColor,
+            color: cs.color,
+            padding: cs.padding,
+          }
+        })()
+
+        // 回归检查：配置区 ElSelect 的下拉必须留在 shadow DOM 内，
+        // 并且由编辑器自身的 mpd 命名空间样式着色
+        await (async () => {
+          const cardWrap = el.shadowRoot.querySelector('.mpd-node[data-id="card-1"] .node-wrap')
+          if (!cardWrap) {
+            state.select = { found: false, reason: 'no card node' }
+            return
+          }
+          cardWrap.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+          await sleep(300)
+
+          const trigger = el.shadowRoot.querySelector('.mpd-select__wrapper')
+            || el.shadowRoot.querySelector('.mpd-select')
+          if (!trigger) {
+            state.select = { found: false, reason: 'no select in config panel' }
+            return
+          }
+          trigger.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+          await sleep(500)
+
+          const dropdown = el.shadowRoot.querySelector('.mpd-select-dropdown, .el-select-dropdown')
+          if (!dropdown) {
+            state.select = { found: false, reason: 'dropdown not opened' }
+            return
+          }
+          const popper = dropdown.parentElement
+          const cs = getComputedStyle(popper)
+          const item = el.shadowRoot.querySelector('.mpd-select-dropdown__item')
+          state.select = {
+            found: true,
+            inShadow: dropdown.getRootNode() === el.shadowRoot,
+            popperClass: popper.className,
+            popperBackground: cs.backgroundColor,
+            popperBoxShadow: cs.boxShadow,
+            itemHeight: item ? getComputedStyle(item).height : null,
+          }
+          // 关掉下拉，避免挡住后面的按钮
+          el.shadowRoot.querySelector('.mpd-editor').dispatchEvent(new MouseEvent('click', { bubbles: true }))
+          await sleep(300)
+        })()
+
+        const shadowSheets = [...el.shadowRoot.querySelectorAll('style')].map(s => s.textContent || '')
+        const shadowCss = shadowSheets.join('\n')
+        state.shadowCss = {
+          total: shadowCss.length,
+          mpdVars: (shadowCss.match(/--mpd-[a-z-]+:/g) || []).length,
+          elVars: (shadowCss.match(/--el-[a-z-]+:/g) || []).length,
+        }
+
+        const popperStyle = document.getElementById('mpd-popper-styles')
+        state.popperStyle = popperStyle
+          ? { len: popperStyle.textContent.length, head: popperStyle.textContent.slice(0, 40) }
+          : null
+
+        state.phase = 'done'
+      }
+      catch (err) {
+        state.phase = 'error'
+        state.error = String((err && err.stack) || err)
+      }
+    </script>
+  </body>
+</html>
