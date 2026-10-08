@@ -95,29 +95,28 @@ importers:
         version: 30.0.0(@babel/parser@7.29.7)(vue@3.5.23(typescript@6.0.3))
 
   packages/agent:
-    dependencies:
+    devDependencies:
       '@openai/agents':
         specifier: ^0.19.0
         version: 0.19.0(undici@7.28.0)(ws@8.22.0)(zod@4.6.5)
-      openai:
-        specifier: ^7.25.0
-        version: 7.25.0(undici@7.28.0)(ws@8.22.0)(zod@4.6.5)
-      vue:
-        specifier: 'catalog:'
-        version: 3.5.40(typescript@6.0.3)
-      zod:
-        specifier: ^4.6.5
-        version: 4.6.5
-    devDependencies:
       '@vitejs/plugin-vue':
         specifier: ^5.2.4
         version: 5.2.4(vite@6.3.5(@types/node@24.10.0)(jiti@2.6.1)(lightningcss@1.30.1)(sass-embedded@1.100.0)(sass@1.100.0)(terser@5.43.1)(yaml@2.8.1))(vue@3.5.40(typescript@6.0.3))
+      openai:
+        specifier: ^7.25.0
+        version: 7.25.0(undici@7.28.0)(ws@8.22.0)(zod@4.6.5)
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
       vite:
         specifier: ^6.3.5
         version: 6.3.5(@types/node@24.10.0)(jiti@2.6.1)(lightningcss@1.30.1)(sass-embedded@1.100.0)(sass@1.100.0)(terser@5.43.1)(yaml@2.8.1)
+      vue:
+        specifier: 'catalog:'
+        version: 3.5.40(typescript@6.0.3)
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
 
   packages/agent-bff:
     dependencies:
@@ -133,13 +132,13 @@ importers:
       async-validator:
         specifier: ^4.2.5
         version: 4.2.5
-      element-plus:
-        specifier: 'catalog:'
-        version: 2.14.3(vue@3.5.40(typescript@6.0.3))
       uuid:
         specifier: ^11.1.0
         version: 11.1.0
     devDependencies:
+      element-plus:
+        specifier: 'catalog:'
+        version: 2.14.3(vue@3.5.40(typescript@6.0.3))
       tsup:
         specifier: ^8.4.0
         version: 8.5.0(@microsoft/api-extractor@7.52.10(@types/node@24.10.0))(@swc/core@1.13.3(@swc/helpers@0.5.23))(jiti@2.6.1)(postcss@8.5.24)(typescript@6.0.3)(yaml@2.8.1)
@@ -161,6 +160,9 @@ importers:
       '@module-federation/enhanced':
         specifier: 'catalog:'
         version: 2.8.1(@rspack/core@2.1.7(@module-federation/runtime-tools@2.8.1)(@swc/helpers@0.5.23))(typescript@6.0.3)(vue-tsc@3.0.6(typescript@6.0.3))(webpack@5.101.3(@swc/core@1.13.3(@swc/helpers@0.5.23)))
+      '@sepveneto/dnde-agent':
+        specifier: 'workspace: *'
+        version: link:../agent
       '@sepveneto/dnde-core':
         specifier: 'workspace: *'
         version: link:../core
@@ -230,10 +232,6 @@ importers:
       vuedraggable:
         specifier: ^4.1.0
         version: 4.1.0(vue@3.5.40(typescript@6.0.3))
-    optionalDependencies:
-      '@sepveneto/dnde-agent':
-        specifier: 'workspace: *'
-        version: link:../agent
 
   packages/plugins:
     devDependencies:

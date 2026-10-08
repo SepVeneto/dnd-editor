@@ -14,8 +14,7 @@
  * 需要 `<dnd-agent>` 时走本入口（或显式调用 `registerAgentElement`）。
  */
 import type { VueElementConstructor } from 'vue'
-import { defineCustomElement } from 'vue'
-import { MpdAgent } from './index'
+import { createAgentElement } from './index'
 
 export * from './index'
 
@@ -28,7 +27,8 @@ let cachedElement: VueElementConstructor | undefined
  */
 export function getAgentElement(): VueElementConstructor {
   if (!cachedElement) {
-    cachedElement = defineCustomElement(MpdAgent)
+    // 走库入口的工厂，复用 index.js 内打包的同一份 vue 实例。
+    cachedElement = createAgentElement()
   }
   return cachedElement
 }

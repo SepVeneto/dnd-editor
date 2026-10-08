@@ -32,7 +32,8 @@ function rewriteIndexImport(): Plugin {
  *
  * - 只包含“注册自定义元素”这一薄层，具体实现（组件、runtime、能力方法）来自库入口 `index.js`，
  *   保证业务侧 import 的方法与 `<dnd-agent>` 共享同一份模块实例；
- * - `index` 与运行时依赖全部保持 external，交给宿主打包器解析。
+ * - 只保留 `index`（包名）为 external，交给宿主打包器解析；`vue` 等运行时依赖由 `index.js`
+ *   打包并复用，本入口不再直接依赖它们。
  */
 export default defineConfig({
   plugins: [rewriteIndexImport(), vue()],

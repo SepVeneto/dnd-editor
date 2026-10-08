@@ -1,6 +1,18 @@
+import type { VueElementConstructor } from 'vue'
+import { defineCustomElement } from 'vue'
 import Copilot from './agent/Copilot.vue'
 
 export const MpdAgent = Copilot
+
+/**
+ * 基于库内同一份 `vue` 实例创建 `<dnd-agent>` 的自定义元素类。
+ *
+ * `vue` 随库本体一起打进 dist，这里集中导出创建逻辑，`/element` 入口只需 `import` 本函数，
+ * 就不会各自打包一份 `vue`，从而保证组件定义与 `defineCustomElement` 用的是同一个实例。
+ */
+export function createAgentElement(): VueElementConstructor {
+  return defineCustomElement(MpdAgent)
+}
 
 // Agent Loop / Tool Calling / Session / Context：由 OpenAI Agents SDK 提供。
 export {

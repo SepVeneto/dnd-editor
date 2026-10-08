@@ -43,11 +43,11 @@
   },
   "changelog": "https://github.com/SepVeneto/miniprogram-design/blob/master/packages/core/CHANGELOG.md",
   "dependencies": {
-    "element-plus": "catalog:",
     "async-validator": "^4.2.5",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
+    "element-plus": "catalog:",
     "tsup": "^8.4.0",
     "vite": "^4.5.5",
     "vitest": "^0.28.5",
