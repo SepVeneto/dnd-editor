@@ -1,0 +1,28 @@
+{
+  "name": "@agent/sdk",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build -c vite.config.element.ts",
+    "build:playground": "vite build",
+    "preview": "vite preview",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.33.2",
+  "dependencies": {
+    "@openai/agents": "^0.19.0",
+    "openai": "^7.25.0",
+    "vue": "catalog:",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.4",
+    "typescript": "catalog:",
+    "vite": "^6.3.5"
+  }
+}

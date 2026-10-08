@@ -73,17 +73,27 @@
         </ElScrollbar>
       </aside>
     </div>
+
+    <MpdAgent
+      v-if="agent"
+      :capabilities="capabilities"
+      :workflows="workflows"
+      :context="runtimeContext"
+      @init="onInit"
+      @edit="onEdit"
+      @capability="onCapability"
+    />
   </ElConfigProvider>
 </template>
 
 <script lang="ts" setup>
 import LeftArrow from './assets/leftArrow.vue'
-import type { Node } from '@sepveneto/dnde-core/class'
+import { Node } from '@sepveneto/dnde-core/class'
 import { editorContextKey, EventEmitter } from '@sepveneto/dnde-core'
 import { ElConfigProvider, ElScrollbar } from 'element-plus'
 // @ts-expect-error: no def
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
-import { getCurrentInstance, onMounted, onUnmounted, provide, useTemplateRef } from 'vue'
+import { computed, getCurrentInstance, onMounted, onUnmounted, provide, useTemplateRef } from 'vue'
 import VueDraggable from 'vuedraggable'
 import { useNodeListDrag } from './composables/useNodeListDrag'
 import NodeWrap from './components/NodeWrap.vue'
@@ -91,12 +101,16 @@ import ConfigPanel from './layout/configPanel.vue'
 import TreePanel from './layout/treePanel.vue'
 import WidgetsMenu from './layout/widgetsMenu.vue'
 import { editorProps } from './props'
-import { useEditor } from './store'
+import { useApp, useEditor } from './store'
 import { EditorKey, loadFromRemote, normalizeStyle } from './utils'
+import { MpdAgent } from '@agent/sdk'
+import type { EditIR, LayoutIR } from '@agent/sdk'
+import { snapshotNodes, toLayoutWidgets } from './agents/context'
 
 const props = defineProps(editorProps)
 
 const editor = useEditor()
+const app = useApp()
 const inst = getCurrentInstance()
 const bus = new EventEmitter((event: string, ...args: any) => {
   inst?.parent?.emit(event, ...args)
@@ -110,6 +124,78 @@ onMounted(() => {
 provide(EditorKey, {
   root: refRoot,
 })
+
+const capabilities = computed(() => (props.capabilities ?? []) as any[])
+const workflows = computed(() => (props.workflows ?? []) as any[])
+const runtimeContext = () => ({
+  widgets: toLayoutWidgets(app.widgets ?? []),
+  nodes: snapshotNodes(editor.rootNode.list),
+})
+
+function onInit({ layout }: { layout: LayoutIR }) {
+  layout.forEach((item: any) => {
+    const w = app.widgetMap.get(item.widget)
+    if (!w)
+      return
+
+    const node = new Node(w, JSON.parse(JSON.stringify({ props: w.defaultData, style: w.defaultStyle })))
+    // 数据如何写入组件由业务侧通过 widget 的 agent.update 决定
+    w.agent?.update?.(node, item, {})
+
+    editor.rootNode.list.push(node)
+  })
+}
+
+function onEdit({ edits }: { edits: EditIR[] }) {
+  for (const ir of edits) {
+    if (ir.type === 'add-component') {
+      const w = app.widgetMap.get(ir.widget)
+      if (!w)
+        continue
+
+      const node = new Node(w, JSON.parse(JSON.stringify({ props: w.defaultData, style: w.defaultStyle })))
+      w.agent?.update?.(node, { widget: ir.widget, items: ir.items } as any, {})
+      editor.rootNode.list.push(node)
+      continue
+    }
+
+    const index = findNodeIndex(ir.target)
+    if (index < 0)
+      continue
+
+    if (ir.type === 'delete-component') {
+      editor.rootNode.list.splice(index, 1)
+    }
+    else if (ir.type === 'update-component') {
+      Object.assign(editor.rootNode.list[index]!.data, ir.changes)
+    }
+    else if (ir.type === 'move-component') {
+      const [node] = editor.rootNode.list.splice(index, 1)
+      const before = ir.before ? findNodeIndex(ir.before) : -1
+      const after = ir.after ? findNodeIndex(ir.after) : -1
+      let insertAt = editor.rootNode.list.length
+      if (before >= 0)
+        insertAt = before
+      else if (after >= 0)
+        insertAt = after + 1
+      editor.rootNode.list.splice(insertAt, 0, node!)
+    }
+  }
+}
+
+function findNodeIndex(target: string): number {
+  const list = editor.rootNode.list
+  const numeric = Number.parseInt(target, 10)
+  if (!Number.isNaN(numeric) && list[numeric])
+    return numeric
+
+  return list.findIndex(node => node.wid === target || node.type === target || node.name === target)
+}
+
+function onCapability({ name, result }: { name: string, result: unknown }) {
+  // 业务能力结果已经在助手面板里展示，这里不修改编辑器。
+  console.log('[editor] capability result', name, result)
+}
 
 // TODO: 需要优化
 // 目前由于mf在引入时force对于web components在不重新导入的情况下没办法再次加载，导致从其它页面切换回来时不会重新加载样式

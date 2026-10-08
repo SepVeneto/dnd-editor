@@ -1,6 +1,6 @@
 import type { FormItemRule, UploadRequestOptions } from 'element-plus'
 import type { CSSProperties } from 'vue'
-import type { SchemaItem } from './class'
+import type { Node, SchemaItem } from './class'
 
 // region Widget
 export interface WidgetPos {
@@ -8,6 +8,29 @@ export interface WidgetPos {
   y?: number
   width?: number
   height?: number
+}
+
+/** 布局子 Agent 的输出项：选中的组件 + 要放进去的元素 */
+export interface WidgetLayoutItem {
+  widget: string
+  items: Array<{ category: string, id: any }>
+}
+
+export interface WidgetAgent {
+  description: string
+  layout?: {
+    direction: 'row' | 'column',
+    density: 'low' | 'medium' | 'high',
+    priority: 'large'
+  }
+  /**
+   * 布局子 Agent 结束、组件创建完成后，由业务侧决定数据如何更新到组件里。
+   *
+   * @param node 已创建的组件节点
+   * @param item 布局结果项（选中的组件 + 元素引用）
+   * @param data 生成布局用到的业务数据
+   */
+  update?: (node: Node, item: WidgetLayoutItem, data: Record<string, any>) => void
 }
 
 export interface Base {
@@ -29,6 +52,8 @@ export interface Base {
   }
   style?: CSSProperties & WidgetPos
   data?: Record<string, any> | any[]
+
+  agent?: WidgetAgent
 }
 
 type BaseKey

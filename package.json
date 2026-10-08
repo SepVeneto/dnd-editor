@@ -16,6 +16,7 @@
     "build:editor": "pnpm -C packages/editor build",
     "bootstrap": "pnpm build:core && pnpm build:plugin && pnpm build:editor",
     "dev": "pnpm -C packages/editor dev",
+    "dev:agent": "pnpm -C packages/agent dev",
     "test:core": "pnpm -C packages/core test",
     "test:editor": "pnpm -C packages/editor test",
     "test:e2e": "node e2e/run.mjs",
@@ -31,7 +32,8 @@
     "@antfu/eslint-config": "^4.19.0",
     "bumpp": "^10.3.1",
     "eslint": "^9.39.0",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "zod": "^4.6.5"
   },
   "pnpm": {
     "overrides": {
