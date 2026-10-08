@@ -19,30 +19,25 @@ jobs:
           fetch-depth: 0
 
       - name: Setup node
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@v3
         with:
-          node-version: 24.15.0
+          node-version: 20.17.0
           registry-url: https://registry.npmjs.org
           scope: '@sepveneto'
-          package-manager-cache: false
-
-      - name: Remove npm token config
-        run: |
-          npmrc="${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}"
-          sed -i '/_authToken/d' "$npmrc"
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v2
         with:
           version: 10
 
       - name: Update npm
-        run: npm install npm@11.6.2 -g
+        run: npm install npm@11.6.1 -g
 
       - name: Get Version
         run: echo "TAG_VERSION=${GITHUB_REF#refs/*/agent@}" >> $GITHUB_ENV
 
       - name: Build and Publish
         run: sh ./scripts/publish-agent.sh
-        # env:
-        #   NPM_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+        env:
+          NODE_AUTH_TOKEN: ''
+          NPM_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
