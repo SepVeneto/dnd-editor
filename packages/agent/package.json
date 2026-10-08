@@ -1,12 +1,34 @@
 {
-  "name": "@agent/sdk",
-  "version": "1.0.0",
+  "name": "@sepveneto/dnde-agent",
+  "version": "0.1.0",
+  "type": "module",
   "description": "",
-  "main": "src/index.ts",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./element": {
+      "types": "./dist/element.d.ts",
+      "import": "./dist/element.js",
+      "default": "./dist/element.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "dev": "vite",
-    "build": "vite build -c vite.config.element.ts",
-    "build:playground": "vite build",
+    "build": "pnpm run build:lib && pnpm run build:element && pnpm run build:types",
+    "build:lib": "vite build -c vite.config.lib.ts",
+    "build:element": "vite build -c vite.config.element.ts",
+    "build:types": "tsc -p tsconfig.build.json",
+    "build:playground": "vite build --outDir dist-playground",
     "preview": "vite preview",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

@@ -1,4 +1,4 @@
-import { getModel } from "../../element";
+import { getModel } from "../core/sdk";
 import { Agent, AgentConfiguration, AgentOutputType } from "@openai/agents";
 
 type AgentOptions<TContext = unknown, TOutput extends AgentOutputType = "text"> =

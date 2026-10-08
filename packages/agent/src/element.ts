@@ -1,20 +1,21 @@
 /**
  * Agent 的 web component 出口。
  *
- * 这个文件把现有的 `Copilot.vue` 包装成一个原生自定义元素，注册后就可以在任意
- * 页面里直接使用：
+ * 把库入口暴露的 `MpdAgent` 包装成一个原生自定义元素 `<dnd-agent>`：
  *
- * ```html
- * <script type="module" src="./dnd-agent.js"></script>
- * <dnd-agent></dnd-agent>
+ * ```ts
+ * import '@sepveneto/dnde-agent/element' // 注册 <dnd-agent>
+ * // 或
+ * import { registerAgentElement } from '@sepveneto/dnde-agent/element'
+ * registerAgentElement('my-agent')
  * ```
  *
- * 在 Vue / React 等框架里，只需要 `import '@sepveneto/agent'` 即可完成注册，
- * 也可以调用 `registerAgentElement(tagName)` 换成自己的标签名。
+ * 注意：库入口 `@sepveneto/dnde-agent` 是纯方法/类型导出，不会注册自定义元素；
+ * 需要 `<dnd-agent>` 时走本入口（或显式调用 `registerAgentElement`）。
  */
 import type { VueElementConstructor } from 'vue'
 import { defineCustomElement } from 'vue'
-import Copilot from './agent/Copilot.vue'
+import { MpdAgent } from './index'
 
 export * from './index'
 
@@ -27,7 +28,7 @@ let cachedElement: VueElementConstructor | undefined
  */
 export function getAgentElement(): VueElementConstructor {
   if (!cachedElement) {
-    cachedElement = defineCustomElement(Copilot)
+    cachedElement = defineCustomElement(MpdAgent)
   }
   return cachedElement
 }
@@ -48,7 +49,7 @@ export function registerAgentElement(tagName: string = DEFAULT_TAG_NAME): string
   return tagName
 }
 
-// 浏览器里 import 即注册，方便直接当脚本引用
+// import 本入口即注册 <dnd-agent>（非浏览器环境会被 registerAgentElement 忽略）
 registerAgentElement()
 
 declare global {

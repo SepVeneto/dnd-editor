@@ -17,7 +17,7 @@ export default defineConfig({
     vue({
       template: {
         compilerOptions: {
-          isCustomElement: tag => tag === 'mpd-editor',
+          isCustomElement: tag => tag === 'mpd-editor' || tag === 'dnd-agent',
         },
       },
       features: {
@@ -52,13 +52,16 @@ export default defineConfig({
       entry: 'lib/main.ts',
       fileName: 'editor',
     },
-    // rollupOptions: {
-    //   output: {
-    //     manualChunks: {
-    //       'stable-vendor': ['vue-router', 'vue', 'pinia', 'vuedraggable', 'lodash-es'],
-    //     },
-    //   },
-    // },
+    rollupOptions: {
+      // 可选的 agent 依赖不参与编辑器构建：业务侧不安装它也能正常打包。
+      // 加载方式由宿主在 register({ agent }) 时注入（见 lib/agents/loader.ts）。
+      external: [/^@sepveneto\/dnde-agent(\/.*)?$/],
+      // output: {
+      //   manualChunks: {
+      //     'stable-vendor': ['vue-router', 'vue', 'pinia', 'vuedraggable', 'lodash-es'],
+      //   },
+      // },
+    },
     emptyOutDir: true,
   },
 })

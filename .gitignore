@@ -1,5 +1,6 @@
 node_modules
 dist
+dist-playground
 docs/.vitepress/cache
 docs/.vitepress/.temp
 packages/editor/stats.html

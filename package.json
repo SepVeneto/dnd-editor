@@ -13,8 +13,9 @@
   "scripts": {
     "build:plugin": "pnpm -C packages/plugins build",
     "build:core": "pnpm -C packages/core build",
+    "build:agent": "pnpm -C packages/agent build",
     "build:editor": "pnpm -C packages/editor build",
-    "bootstrap": "pnpm build:core && pnpm build:plugin && pnpm build:editor",
+    "bootstrap": "pnpm build:core && pnpm build:agent && pnpm build:plugin && pnpm build:editor",
     "dev": "pnpm -C packages/editor dev",
     "dev:agent": "pnpm -C packages/agent dev",
     "test:core": "pnpm -C packages/core test",

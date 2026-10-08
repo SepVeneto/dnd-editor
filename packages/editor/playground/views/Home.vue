@@ -23,13 +23,13 @@
 
 <script setup lang="ts">
 import type { IWidget } from '@sepveneto/dnde-core'
-import type { Capability, Workflow } from '@agent/sdk'
+import type { Capability, Workflow } from '@sepveneto/dnde-agent'
 import type { EditorInstance } from '@/main'
 import { schema, widget } from '@sepveneto/dnde-core/helper'
 // import { register } from '../dist/editor.js'
 import { onMounted, ref, useTemplateRef, watchEffect } from 'vue'
 import { register } from '@/main'
-import { Agent, createAgent, defineCapability, defineWorkflow, invokeCapability, parseJson, runAgent, structuredExtract } from '@agent/sdk'
+import { Agent, createAgent, defineCapability, defineWorkflow, invokeCapability, parseJson, runAgent, structuredExtract } from '@sepveneto/dnde-agent'
 import z from 'zod'
 
 /**
@@ -183,7 +183,11 @@ watchEffect(() => {
 
 const refEditor = useTemplateRef<EditorInstance>('editorRef')
 const rendering = ref(false)
-register({ remoteUrl: "http://localhost:8090" }).then(() => {
+register({
+  remoteUrl: 'http://localhost:8090',
+  // 业务侧显式注入 agent 的加载方式；不注入也不影响编辑器本身使用
+  agent: () => import('@sepveneto/dnde-agent/element'),
+}).then(() => {
   rendering.value = true
 })
 

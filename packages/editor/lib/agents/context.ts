@@ -1,4 +1,4 @@
-import type { LayoutWidgetDescriptor } from '@agent/sdk'
+import type { LayoutWidgetDescriptor } from './types'
 
 /**
  * 把编辑器组件列表拍平成 Layout Agent 需要的描述。

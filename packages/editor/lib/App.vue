@@ -74,8 +74,8 @@
       </aside>
     </div>
 
-    <MpdAgent
-      v-if="agent"
+    <dnd-agent
+      v-if="agentReady"
       :capabilities="capabilities"
       :workflows="workflows"
       :context="runtimeContext"
@@ -93,7 +93,7 @@ import { editorContextKey, EventEmitter } from '@sepveneto/dnde-core'
 import { ElConfigProvider, ElScrollbar } from 'element-plus'
 // @ts-expect-error: no def
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
-import { computed, getCurrentInstance, onMounted, onUnmounted, provide, useTemplateRef } from 'vue'
+import { computed, getCurrentInstance, onMounted, onUnmounted, provide, ref, useTemplateRef, watch } from 'vue'
 import VueDraggable from 'vuedraggable'
 import { useNodeListDrag } from './composables/useNodeListDrag'
 import NodeWrap from './components/NodeWrap.vue'
@@ -103,9 +103,9 @@ import WidgetsMenu from './layout/widgetsMenu.vue'
 import { editorProps } from './props'
 import { useApp, useEditor } from './store'
 import { EditorKey, loadFromRemote, normalizeStyle } from './utils'
-import { MpdAgent } from '@agent/sdk'
-import type { EditIR, LayoutIR } from '@agent/sdk'
 import { snapshotNodes, toLayoutWidgets } from './agents/context'
+import { loadAgent } from './agents/loader'
+import type { EditIR, LayoutIR } from './agents/types'
 
 const props = defineProps(editorProps)
 
@@ -127,6 +127,18 @@ provide(EditorKey, {
 
 const capabilities = computed(() => (props.capabilities ?? []) as any[])
 const workflows = computed(() => (props.workflows ?? []) as any[])
+
+// agent 是可选能力：只有业务侧显式开启、且能加载到 <dnd-agent> 时才渲染。
+// 未安装 @sepveneto/dnde-agent 时由 loadAgent 在控制台给出安装提示。
+const agentReady = ref(false)
+watch(
+  () => props.agent,
+  async (enabled) => {
+    agentReady.value = enabled ? await loadAgent() : false
+  },
+  { immediate: true },
+)
+
 const runtimeContext = () => ({
   widgets: toLayoutWidgets(app.widgets ?? []),
   nodes: snapshotNodes(editor.rootNode.list),

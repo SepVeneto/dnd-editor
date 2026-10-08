@@ -1,6 +1,8 @@
 import { defineCustomElement } from 'vue'
 import Main from './Editor.vue'
 import { createPinia } from 'pinia'
+import { setAgentImporter } from './agents/loader.js'
+import type { AgentImporter } from './agents/loader.js'
 import elementPlusCss from './styles/popper.scss?inline'
 import { injectPopperStyles, initMf } from './utils.js'
 
@@ -8,6 +10,7 @@ export type EditorInstance = InstanceType<typeof Main>
 
 // 宿主关闭 injectGlobalStyle 后，也可以在合适时机自行调用
 export { injectPopperStyles }
+export type { AgentImporter } from './agents/loader.js'
 
 let initPromise = new Map<string, Promise<boolean>>()
 
@@ -24,12 +27,29 @@ export interface RegisterOptions {
    * 关闭后需要宿主自行保证这些弹层的样式。
    */
   injectGlobalStyle?: boolean
+  /**
+   * agent（装修助手）的加载方式，可选。
+   *
+   * agent 是独立的 web component，编辑器不强制依赖它：不注入时编辑器照常工作，
+   * 只有业务侧开启了 `<mpd-editor agent>` 时才会在控制台提示安装。需要该能力时在这里
+   * 显式注入，交给宿主打包器解析依赖：
+   *
+   * ```ts
+   * register({ remoteUrl, agent: () => import('@sepveneto/dnde-agent/element') })
+   * ```
+   */
+  agent?: AgentImporter
 }
 
 export function register(options: RegisterOptions): Promise<boolean> {
   // 注意放在缓存判断之前：先关后开时也能补上
   if (options.injectGlobalStyle ?? true)
     injectPopperStyles()
+
+  // agent 是可选的：由宿主显式注入加载方式。不注入时编辑器仍可正常使用，
+  // 只是开启 agent 时会在控制台给出安装提示。
+  if (options.agent)
+    setAgentImporter(options.agent)
 
   const cached = initPromise.get(options.remoteUrl)
   if (cached) return cached
