@@ -144,7 +144,8 @@ const runtimeContext = () => ({
   nodes: snapshotNodes(editor.rootNode.list),
 })
 
-function onInit({ layout }: { layout: LayoutIR }) {
+function onInit(args: any) {
+  const layout = args.detail[0].layout
   layout.forEach((item: any) => {
     const w = app.widgetMap.get(item.widget)
     if (!w)

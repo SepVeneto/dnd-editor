@@ -154,7 +154,7 @@ importers:
         version: 3.5.40(typescript@6.0.3)
 
   packages/editor:
-    dependencies:
+    devDependencies:
       '@element-plus/icons-vue':
         specifier: 'catalog:'
         version: 2.3.2(vue@3.5.40(typescript@6.0.3))
@@ -164,31 +164,6 @@ importers:
       '@sepveneto/dnde-core':
         specifier: 'workspace: *'
         version: link:../core
-      '@vueuse/core':
-        specifier: ^13.3.0
-        version: 13.3.0(vue@3.5.40(typescript@6.0.3))
-      async-validator:
-        specifier: ^4.2.5
-        version: 4.2.5
-      element-plus:
-        specifier: 'catalog:'
-        version: 2.14.3(vue@3.5.40(typescript@6.0.3))
-      pinia:
-        specifier: ^3.0.2
-        version: 3.0.2(typescript@6.0.3)(vue@3.5.40(typescript@6.0.3))
-      uuid:
-        specifier: ^11.1.0
-        version: 11.1.0
-      vue:
-        specifier: 'catalog:'
-        version: 3.5.40(typescript@6.0.3)
-      vue-router:
-        specifier: ^4.5.1
-        version: 4.5.1(vue@3.5.40(typescript@6.0.3))
-      vuedraggable:
-        specifier: ^4.1.0
-        version: 4.1.0(vue@3.5.40(typescript@6.0.3))
-    devDependencies:
       '@types/debug':
         specifier: ^4.1.13
         version: 4.1.13
@@ -198,12 +173,24 @@ importers:
       '@vitejs/plugin-vue':
         specifier: ^5.2.4
         version: 5.2.4(vite@6.3.5(@types/node@22.15.23)(jiti@2.6.1)(lightningcss@1.30.1)(sass-embedded@1.89.2)(sass@1.100.0)(terser@5.43.1)(yaml@2.8.1))(vue@3.5.40(typescript@6.0.3))
+      '@vueuse/core':
+        specifier: ^13.3.0
+        version: 13.3.0(vue@3.5.40(typescript@6.0.3))
+      async-validator:
+        specifier: ^4.2.5
+        version: 4.2.5
       autoprefixer:
         specifier: ^10.4.21
         version: 10.4.21(postcss@8.5.4)
       debug:
         specifier: ^4.4.3
         version: 4.4.3
+      element-plus:
+        specifier: 'catalog:'
+        version: 2.14.3(vue@3.5.40(typescript@6.0.3))
+      pinia:
+        specifier: ^3.0.2
+        version: 3.0.2(typescript@6.0.3)(vue@3.5.40(typescript@6.0.3))
       postcss:
         specifier: ^8.5.4
         version: 8.5.4
@@ -222,15 +209,27 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
+      uuid:
+        specifier: ^11.1.0
+        version: 11.1.0
       vite:
         specifier: ^6.3.5
         version: 6.3.5(@types/node@22.15.23)(jiti@2.6.1)(lightningcss@1.30.1)(sass-embedded@1.89.2)(sass@1.100.0)(terser@5.43.1)(yaml@2.8.1)
       vite-plugin-dts:
         specifier: ^4.5.4
         version: 4.5.4(@types/node@22.15.23)(rollup@4.41.1)(typescript@6.0.3)(vite@6.3.5(@types/node@22.15.23)(jiti@2.6.1)(lightningcss@1.30.1)(sass-embedded@1.89.2)(sass@1.100.0)(terser@5.43.1)(yaml@2.8.1))
+      vue:
+        specifier: 'catalog:'
+        version: 3.5.40(typescript@6.0.3)
+      vue-router:
+        specifier: ^4.5.1
+        version: 4.5.1(vue@3.5.40(typescript@6.0.3))
       vue-tsc:
         specifier: ^3.0.6
         version: 3.0.6(typescript@6.0.3)
+      vuedraggable:
+        specifier: ^4.1.0
+        version: 4.1.0(vue@3.5.40(typescript@6.0.3))
     optionalDependencies:
       '@sepveneto/dnde-agent':
         specifier: 'workspace: *'

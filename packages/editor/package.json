@@ -46,7 +46,7 @@
   "optionalDependencies": {
     "@sepveneto/dnde-agent": "workspace: *"
   },
-  "dependencies": {
+  "devDependencies": {
     "@element-plus/icons-vue": "catalog:",
     "@module-federation/enhanced": "catalog:",
     "@sepveneto/dnde-core": "workspace: *",
@@ -57,9 +57,7 @@
     "uuid": "^11.1.0",
     "vue": "catalog:",
     "vue-router": "^4.5.1",
-    "vuedraggable": "^4.1.0"
-  },
-  "devDependencies": {
+    "vuedraggable": "^4.1.0",
     "sass-embedded": "^1.89.0",
     "@types/debug": "^4.1.13",
     "@types/node": "catalog:",
