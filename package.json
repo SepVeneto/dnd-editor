@@ -26,6 +26,7 @@
     "docs:build": "pnpm -C docs build",
     "docs:deploy": "pnpm bootstrap && pnpm docs:build",
     "release:core": "cd packages/core && bumpp --tag core@",
+    "release:agent": "cd packages/agent && bumpp --tag agent@",
     "release:editor": "cd packages/editor && bumpp --tag editor@",
     "release:plugin": "cd packages/plugins && bumpp --tag plugin@"
   },
