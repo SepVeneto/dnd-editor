@@ -19,23 +19,20 @@ jobs:
           fetch-depth: 0
 
       - name: Setup node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v7
         with:
           node-version: 24.15.0
           registry-url: https://registry.npmjs.org
           scope: '@sepveneto'
-      - name: Fix npm OIDC auth
-        run: |
-          npmrc="${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}"
-          sed -i '/_authToken/d' "$npmrc"
+          package-manager-cache: false
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v2
+        uses: pnpm/action-setup@v4
         with:
           version: 10
 
       - name: Update npm
-        run: npm install npm@11.6.1 -g
+        run: npm install npm@11.6.2 -g
 
       - name: Get Version
         run: echo "TAG_VERSION=${GITHUB_REF#refs/*/agent@}" >> $GITHUB_ENV
