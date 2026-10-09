@@ -1,8 +1,21 @@
 // server.ts
 import express from 'express'
 import cors from 'cors'
+import multer from 'multer'
+
+import mammoth from 'mammoth'
+import TurndownService from 'turndown'
+import turndownPluginGfm from 'turndown-plugin-gfm'
 
 const app = express()
+
+const upload = multer({
+  dest: './uploads/',
+  defParamCharset: 'utf8',
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB
+  }
+})
 
 app.use(cors({
   origin: '*',
@@ -137,11 +150,45 @@ app.post('/v1/business/scene', async (req, res) => {
   res.send(JSON.stringify({ code: 0, success: '开通成功' }))
 })
 
-
+app.post('/upload', upload.single('file'), (req, res) => {
+  res.json({ code: 0, msg: 'success', data: {
+    name: req.file.filename,
+    file: req.file.originalname,
+  }
+  })
+})
 
 
 app.get('/health', (_, res) => {
   res.json({ status: 'ok' })
+})
+
+const turndown = new TurndownService({
+  headingStyle: 'atx',
+  codeBlockStyle: 'fenced',
+  bulletListMarker: '-',
+})
+turndown.use(turndownPluginGfm.gfm)
+
+async function docx2markdown(input) {
+  const source = Buffer.isBuffer(input)
+    ? { buffer: input }
+    : { path: input }
+
+  const result = await mammoth.convertToHtml(source)
+
+  for (const message of result.messages) {
+    if (message.type === 'warning') {
+      console.warn('[DOCX warning]', message.message);
+    }
+  }
+
+  return turndown.turndown(result.value)
+}
+
+app.get('/docx-markdown', async (req, res) => {
+  const _res = await docx2markdown(`./uploads/${req.query.id}`)
+  res.json({ code: 0, data: _res })
 })
 
 app.listen(PORT, () => {

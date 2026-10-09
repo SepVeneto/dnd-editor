@@ -1,5 +1,5 @@
 import { MemorySession } from '@openai/agents'
-import type { Agent, RunStreamEvent } from '@openai/agents'
+import type { Agent, AgentInputItem, RunStreamEvent } from '@openai/agents'
 import { createCapabilityAgent } from './capabilityAgent'
 import type { Capability } from './capability'
 import type { AppContext, ToolApprovalHandler } from './context'
@@ -73,7 +73,7 @@ export class AgentRuntime {
     this.flowSession = new MemorySession()
   }
 
-  async run(input: string, hooks: AgentRuntimeHooks = {}): Promise<AgentRuntimeResult> {
+  async run(input: string | AgentInputItem[], hooks: AgentRuntimeHooks = {}): Promise<AgentRuntimeResult> {
     const appContext: AppContext = {
       state: this.options.context?.() ?? {},
       onApproval: hooks.onApproval,
@@ -112,7 +112,7 @@ export class AgentRuntime {
   }
 
   private async runInitialize(
-    input: string,
+    input: string | AgentInputItem[],
     appContext: AppContext,
     hooks: AgentRuntimeHooks,
   ): Promise<AgentRuntimeResult> {
@@ -140,7 +140,7 @@ export class AgentRuntime {
   }
 
   private async runEdit(
-    input: string,
+    input: string | AgentInputItem[],
     appContext: AppContext,
     hooks: AgentRuntimeHooks,
   ): Promise<AgentRuntimeResult> {
@@ -166,7 +166,7 @@ export class AgentRuntime {
   }
 
   private async runCapability(
-    input: string,
+    input: string | AgentInputItem[],
     appContext: AppContext,
     hooks: AgentRuntimeHooks,
   ): Promise<AgentRuntimeResult> {

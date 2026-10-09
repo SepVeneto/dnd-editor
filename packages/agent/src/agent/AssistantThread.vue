@@ -95,19 +95,44 @@
     </div>
 
     <div class="composer">
-      <textarea
-        v-model="draft"
-        rows="2"
-        placeholder="描述你的需求，例如：生成一个页面、删除一个组件、查询一个数据"
-        @keydown="onKeydown"
+      <div style="display: flex; flex-direction: column; flex: 1;">
+        <div>
+          <div
+            v-for="item in fileUpload.list.value"
+            :key="item.file"
+            style="width: 32px;"
+          >
+            <IconFile style="width: 32px; height: 32px;" />
+            <div style="font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ item.name }}</div>
+          </div>
+        </div>
+        <textarea
+          v-model="draft"
+          rows="2"
+          placeholder="描述你的需求，例如：生成一个页面、删除一个组件、查询一个数据"
+          @keydown="onKeydown"
+        />
+      </div>
+      <button type="button" :disabled="isRunning || (!draft.trim() && !fileUpload.list.value.length)" @click="submit">发送</button>
+      <button
+      type="button"
+      :disabled="isRunning"
+      @click="fileUpload.selectFile"
+      >+</button>
+
+      <input
+        ref="file"
+        type="file"
+        style="display: none;"
+        accept=".docx"
+        @change="fileUpload.handleFileChange"
       />
-      <button type="button" :disabled="isRunning || !draft.trim()" @click="submit">发送</button>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, reactive, ref, shallowRef, watch } from 'vue'
+import { computed, nextTick, reactive, ref, shallowRef, useTemplateRef, watch } from 'vue'
 import { createAgentRuntime } from './runtime'
 import type { AgentRuntime, AgentRuntimeEvent } from './runtime'
 import type { Capability } from './capability'
@@ -115,6 +140,8 @@ import type { Workflow } from './workflow'
 import type { EditIR, LayoutIR } from './ir'
 import type { ToolApprovalHandler, ToolApprovalRequest } from './context'
 import type { MessagePart } from './type'
+import { useFile } from '@/composables'
+import IconFile from '@/assets/file.vue'
 
 const props = defineProps<{
   capabilities?: Capability<any, any>[]
@@ -127,6 +154,9 @@ const emit = defineEmits<{
   edit: [payload: { edits: EditIR[] }]
   capability: [payload: { name: string, result: unknown }]
 }>()
+
+const fileRef = useTemplateRef('file')
+const fileUpload = useFile(fileRef)
 
 function buildRuntime(): AgentRuntime {
   return createAgentRuntime({
@@ -265,7 +295,14 @@ function handleEvent(event: AgentRuntimeEvent) {
   }
 }
 
-async function send(message: string) {
+async function send(message: string, files?: any[]) {
+  let rawMsg = ''
+  if (files?.length) {
+    const response = await fetch(`http://localhost:4000/docx-markdown?id=${files[0].name}`)
+    rawMsg += (await response.json()).data + '\n'
+  } else {
+    fileUpload.reset()
+  }
   messages.value.push({
     id: createId(),
     role: 'user',
@@ -285,7 +322,7 @@ async function send(message: string) {
 
   isRunning.value = true
   try {
-    const result = await runtime.value.run(message, {
+    const result = await runtime.value.run(rawMsg + message, {
       onEvent: handleEvent,
       onApproval,
     })
@@ -328,10 +365,10 @@ function createId(): string {
 
 function submit() {
   const text = draft.value.trim()
-  if (!text || isRunning.value)
+  if ((!text && !fileUpload.list.value.length) || isRunning.value)
     return
 
-  send(text)
+  send(text, fileUpload.list.value)
   draft.value = ''
 }
 

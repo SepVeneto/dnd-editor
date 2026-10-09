@@ -8,5 +8,8 @@ catalog:
   '@rsbuild/core': ^2.1.8
   '@types/node': ^22.15.23
   element-plus: ^2.14.1
+  mammoth: ^1.13.0
+  multer: ^2.4.0
+  turndown: ^7.2.4
   typescript: ^6.0.3
   vue: 3.5.40

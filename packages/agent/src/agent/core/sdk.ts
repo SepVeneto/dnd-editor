@@ -2,6 +2,7 @@ import OpenAI from 'openai'
 import { run as agentsRun, Usage } from '@openai/agents'
 import type {
   Agent,
+  AgentInputItem,
   AgentOutputItem,
   Model,
   ModelRequest,
@@ -375,7 +376,7 @@ export function runAgent<TContext, TAgent extends Agent<any, any>>(
 /** 流式执行，并逐个抛出 SDK 的流式事件。 */
 export async function runAgentStreamed<TContext, TAgent extends Agent<any, any>>(
   agent: TAgent,
-  input: string,
+  input: string | AgentInputItem[],
   options: RunAgentOptions<TContext> = {},
 ): Promise<StreamedRunResult<TContext, TAgent>> {
   return agentsRun(agent, input, {
