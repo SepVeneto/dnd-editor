@@ -328,7 +328,15 @@ async function send(message: string, files?: any[]) {
     })
 
     if (result.flow === 'initialize' && result.layout) {
-      emit('init', { layout: result.layout })
+      const res = await onApproval({
+        callId: 'init',
+        args: '',
+        message: '该操作将会重置整个内容，且无法找回',
+        name: 'test',
+      })
+      if (res) {
+        emit('init', { layout: result.layout })
+      }
     }
     else if (result.flow === 'edit') {
       emit('edit', { edits: result.edits ?? [] })
