@@ -233,6 +233,27 @@ try {
     await sleep(300)
   }
 
+  /** 在宿主 light DOM（document.body）里用真实鼠标事件点击某个元素 */
+  async function clickInBody(selector) {
+    const res = await cdp.send('Runtime.evaluate', {
+      expression: `(() => {
+        const el = document.body.querySelector(${JSON.stringify(selector)})
+        if (!el) return null
+        const r = el.getBoundingClientRect()
+        return JSON.stringify({ x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2) })
+      })()`,
+      returnByValue: true,
+    })
+    const value = res?.result?.value
+    if (!value)
+      throw new Error(`找不到元素：${selector}`)
+    const { x, y } = JSON.parse(value)
+    await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y })
+    await cdp.send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1 })
+    await cdp.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 })
+    await sleep(300)
+  }
+
   const deadline = Date.now() + 45000
   while (Date.now() < deadline) {
     const res = await cdp.send('Runtime.evaluate', {
@@ -259,9 +280,9 @@ try {
     `mpdVars=${state.shadowCss?.mpdVars}`,
   )
   check(
-    '生产者不再注入冗余的 el- 主题（shadow 里没有 --el- 变量）',
-    (state.shadowCss?.elVars || 0) === 0,
-    `elVars=${state.shadowCss?.elVars}, shadowCss=${state.shadowCss?.total}`,
+    '生产者不再注入冗余的 el- 主题（shadow 里没有 element-plus 默认主题变量）',
+    (state.shadowCss?.elThemeVars || 0) === 0,
+    `elThemeVars=${state.shadowCss?.elThemeVars}, elVars=${state.shadowCss?.elVars}, shadowCss=${state.shadowCss?.total}`,
   )
   check('生产者视图在 shadow dom 内渲染 element-plus 组件', state.hasElImage === true)
   const unresolved = (state.warnings || []).filter(w => /resolve component/i.test(w))
@@ -323,24 +344,29 @@ try {
   })
   // element.config.vue 是经模块联邦异步加载的，等按钮出现
   await waitInEditor(`.mpd-button`)
-  // 生产者 element.config.vue：ElButton + ElDialog + ElSelect，全部依赖全局注册。
-  // - ElDialog 默认不 append-to-body，渲染在 shadow DOM 内（因此由 shadow 里的主题负责）
-  // - 弹窗里的 ElSelect 下拉会 teleport 到 document.body（由 light DOM 那份主题负责）
+  // 生产者 element.config.vue：ElButton + 命令式 createDialog(Test)。
+  // createDialog 会把弹窗渲染到 document.body（light DOM）的独立渲染根里，
+  // 它只继承 app 级别的 provide —— 编辑器必须把 mpd 命名空间与业务上下文补到 app 级别，
+  // 否则弹窗会退化成默认的 el- 前缀、且组件内 inject(editorContextKey) 拿到 undefined。
   await clickInEditor(`.mpd-button`)
   await sleep(500)
 
   const dialogInfo = await cdp.send('Runtime.evaluate', {
     expression: `(() => {
-      const sr = document.getElementById('editor').shadowRoot
-      const dialog = sr.querySelector('.mpd-dialog')
-      if (!dialog) return JSON.stringify({ found: false })
+      const dialog = document.body.querySelector('.mpd-dialog') || document.body.querySelector('.el-dialog')
+      if (!dialog) return JSON.stringify({ found: false, bodyEls: [...document.body.children].map(n => n.id || n.className).slice(0, 8) })
       const cs = getComputedStyle(dialog)
+      const header = dialog.querySelector('.bc-dialog-header')
+      const headerStyle = header ? getComputedStyle(header) : null
       return JSON.stringify({
         found: true,
-        inShadow: dialog.getRootNode() === sr,
+        inBody: dialog.getRootNode() === document,
         cls: dialog.className,
         background: cs.backgroundColor,
         width: cs.width,
+        producerStyle: !!document.getElementById('mpd-producer-styles'),
+        headerDisplay: headerStyle ? headerStyle.display : null,
+        headerJustify: headerStyle ? headerStyle.justifyContent : null,
       })
     })()`,
     returnByValue: true,
@@ -348,7 +374,7 @@ try {
   const dialog = JSON.parse(dialogInfo.result.value)
 
   // 点开弹窗里的 select，它的下拉应该出现在 body 里并且仍然有样式
-  await clickInEditor(`.mpd-dialog .mpd-select__wrapper`)
+  await clickInBody(`.mpd-dialog .mpd-select__wrapper`)
   await sleep(500)
   const bodyDropdownInfo = await cdp.send('Runtime.evaluate', {
     expression: `(() => {
@@ -371,18 +397,39 @@ try {
   const bodyDropdown = JSON.parse(bodyDropdownInfo.result.value)
 
   check(
-    '生产者 element.config.vue 的 ElDialog 在编辑器内渲染且被着色',
-    dialog?.found === true && dialog.inShadow === true
+    '生产者 createDialog 弹窗渲染在 light DOM 且使用 mpd 命名空间并被着色',
+    dialog?.found === true && dialog.inBody === true
     && /mpd-dialog/.test(dialog.cls || '')
     && dialog.background !== 'rgba(0, 0, 0, 0)',
     `dialog=${JSON.stringify(dialog)}`,
   )
   check(
-    '生产者弹窗内的 ElSelect 下拉 teleport 到 body 后仍有样式（light DOM 主题兜底）',
+    '生产者自己的样式（setup.styles）已投放到 light DOM，弹窗内的 bc-* 规则生效',
+    dialog?.producerStyle === true
+    && dialog.headerDisplay === 'flex'
+    && dialog.headerJustify === 'space-between',
+    `producerStyle=${dialog?.producerStyle} headerDisplay=${dialog?.headerDisplay} headerJustify=${dialog?.headerJustify}`,
+  )
+  check(
+    '生产者弹窗内的 ElSelect 下拉 teleport 到 body 后仍有样式（mpd 命名空间 + light DOM 主题兜底）',
     bodyDropdown?.found === true && bodyDropdown.inBody === true
     && /mpd-select__popper/.test(bodyDropdown.popperClass || '')
     && bodyDropdown.popperBackground !== 'rgba(0, 0, 0, 0)',
     `dropdown=${JSON.stringify(bodyDropdown)}`,
+  )
+  // createDialog 的组件通过 inject(editorContextKey) 拿到编辑器上下文：
+  // element.config.vue 与弹窗组件 Test.vue 都会打印 ctx.extra.obj，因此应出现两次同样的值；
+  // 若上下文丢失，弹窗组件会打印 undefined。
+  const logsInfo = await cdp.send('Runtime.evaluate', {
+    expression: 'JSON.stringify(window.__E2E__.logs || [])',
+    returnByValue: true,
+  })
+  const logs = JSON.parse(logsInfo.result.value)
+  check(
+    'createDialog 组件内可注入编辑器 context（editorContextKey）',
+    logs.filter(l => l === 'e2e-extra').length >= 2
+    && !logs.includes('undefined'),
+    `logs=${JSON.stringify(logs)}`,
   )
   // injectGlobalStyle: false —— 不往宿主 head 注入主题
   await cdp.send('Page.navigate', { url: `${ORIGIN}/host/?nogstyle=1` })
@@ -404,6 +451,7 @@ try {
   const offInfo = await cdp.send('Runtime.evaluate', {
     expression: `JSON.stringify({
       injected: !!document.getElementById('mpd-popper-styles'),
+      producerStyles: !!document.getElementById('mpd-producer-styles'),
       mounted: !!document.getElementById('editor')?.shadowRoot?.querySelector('.mpd-editor'),
       shadowTheme: [...document.getElementById('editor').shadowRoot.querySelectorAll('style')]
         .some(s => (s.textContent || '').includes('--mpd-color-white')),
@@ -413,8 +461,8 @@ try {
   const off = JSON.parse(offInfo.result.value)
   check(
     'injectGlobalStyle: false 时不向宿主 head 注入主题',
-    off.injected === false && offState?.phase === 'done',
-    `injected=${off.injected}, phase=${offState?.phase}`,
+    off.injected === false && off.producerStyles === false && offState?.phase === 'done',
+    `injected=${off.injected}, producerStyles=${off.producerStyles}, phase=${offState?.phase}`,
   )
   check(
     'injectGlobalStyle: false 时编辑器仍可用（shadow 内主题仍在）',

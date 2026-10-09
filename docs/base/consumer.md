@@ -156,10 +156,12 @@ await register({ remoteUrl: 'http://localhost:8090' })
 
 | 名称 | 类型 | 默认值 | 说明 |
 | ---- | ---- | ------ | ---- |
-| injectGlobalStyle | boolean | true | 是否把 element-plus 主题再挂一份到宿主页面的`document.head`，用于兜住 teleport 到`document.body`的弹层（`ElDialog`、`ElSelect` 下拉、`ElTooltip` 等） |
+| injectGlobalStyle | boolean | true | 是否把 element-plus 主题与生产者声明的 `setup.styles` 再挂一份到宿主页面的`document.head`，用于兜住 teleport 到`document.body`的弹层（`ElDialog`、`ElSelect` 下拉、`ElTooltip`、`createDialog` 等） |
 
 ::: tip
 弹层会被 teleport 到`document.body`，不在编辑器的`shadow dom`内，因此需要一份挂在宿主页面上的样式。默认开启；如果宿主已有自己的 element-plus 全局样式、不希望页面里再多一份，可以关闭（关闭后需自行保证这些弹层的样式，也可以稍后手动调用导出的`injectPopperStyles`）。
+
+命令式弹层（如 `@sepveneto/basic-comp` 的 `createDialog`）会在独立的渲染根里渲染，只继承编辑器 app 级别的 provide；编辑器已经把 element-plus 命名空间（`mpd`）与业务上下文（`editorContextKey`）补到 app 级别，因此这类弹层既能拿到正确的样式命名空间，也能在组件内 `inject(editorContextKey)` 取到编辑器上下文。
 :::
 
 ## 属性

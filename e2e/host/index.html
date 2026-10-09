@@ -7,14 +7,16 @@
   <body>
     <div id="app"></div>
     <script type="module">
-      const state = { phase: 'loading', warnings: [], errors: [] }
+      const state = { phase: 'loading', warnings: [], errors: [], logs: [] }
       // @ts-ignore
       window.__E2E__ = state
 
       const origWarn = console.warn.bind(console)
       const origError = console.error.bind(console)
+      const origLog = console.log.bind(console)
       console.warn = (...args) => { state.warnings.push(args.map(String).join(' ')); origWarn(...args) }
       console.error = (...args) => { state.errors.push(args.map(String).join(' ')); origError(...args) }
+      console.log = (...args) => { state.logs.push(args.map(String).join(' ')); origLog(...args) }
 
       const sleep = ms => new Promise(r => setTimeout(r, ms))
       async function waitFor(fn, timeout = 20000, step = 100) {
@@ -79,6 +81,7 @@
         const el = document.createElement('mpd-editor')
         el.id = 'editor'
         el.widgets = widgets
+        el.extra = { obj: 'e2e-extra' }
         document.getElementById('app').appendChild(el)
 
         await waitFor(() => el.shadowRoot && el.shadowRoot.querySelector('.mpd-editor'))
@@ -234,6 +237,10 @@
           total: shadowCss.length,
           mpdVars: (shadowCss.match(/--mpd-[a-z-]+:/g) || []).length,
           elVars: (shadowCss.match(/--el-[a-z-]+:/g) || []).length,
+          // 只统计「element-plus 默认主题」才会声明的核心变量。
+          // 生产者自己的样式里可能声明零散的 --el-* 局部变量（如 --el-select-width），
+          // 那不代表性注入了一整套 el- 主题。
+          elThemeVars: (shadowCss.match(/--el-(?:color-white|text-color-primary|font-size-base|border-color)\s*:/g) || []).length,
         }
 
         const popperStyle = document.getElementById('mpd-popper-styles')

@@ -32,6 +32,7 @@
   },
   "devDependencies": {
     "@antfu/eslint-config": "^4.19.0",
+    "@sepveneto/basic-comp": "^0.12.4",
     "bumpp": "^10.3.1",
     "eslint": "^9.39.0",
     "typescript": "catalog:",

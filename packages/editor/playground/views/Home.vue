@@ -16,6 +16,7 @@
     agent
     :capabilities="capabilities"
     :workflows="workflows"
+    :extra="{ obj: 'test' }"
     @change="onUpdate"
   />
   <pre>config: {{ config }}</pre>

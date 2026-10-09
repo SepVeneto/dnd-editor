@@ -1,7 +1,7 @@
 <template>
   <ElConfigProvider
     :locale="zhCn"
-    namespace="mpd"
+    :namespace="editorNamespace"
   >
     <div
       ref="rootRef"
@@ -90,7 +90,7 @@
 import LeftArrow from './assets/leftArrow.vue'
 import { Node } from '@sepveneto/dnde-core/class'
 import { editorContextKey, EventEmitter } from '@sepveneto/dnde-core'
-import { ElConfigProvider, ElScrollbar } from 'element-plus'
+import { ElConfigProvider, ElScrollbar, provideGlobalConfig } from 'element-plus'
 // @ts-expect-error: no def
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
 import { computed, getCurrentInstance, onMounted, onUnmounted, provide, ref, useTemplateRef, watch } from 'vue'
@@ -109,6 +109,7 @@ import type { EditIR, LayoutIR } from './agents/types'
 
 const props = defineProps(editorProps)
 
+const editorNamespace = 'mpd'
 const editor = useEditor()
 const app = useApp()
 const inst = getCurrentInstance()
@@ -124,6 +125,13 @@ onMounted(() => {
 provide(EditorKey, {
   root: refRoot,
 })
+
+// 命令式弹层（如 basic-comp 的 createDialog）会在独立的渲染根里渲染，
+// 该渲染根只继承 app 级别的 provide，拿不到模板里实例级 <ElConfigProvider> 的命名空间配置，
+// 于是会退化成 element-plus 默认的 `el-` 前缀；而编辑器注入的主题是按 `mpd-` 编译的，
+// 类名对不上就会让弹窗与其中的 select 下拉完全没有样式。
+// 这里把编辑器的命名空间补到 app 级别，让这类弹层也能命中同一份主题。
+provideGlobalConfig({ namespace: editorNamespace, locale: zhCn }, inst!.appContext.app)
 
 const capabilities = computed(() => (props.capabilities ?? []) as any[])
 const workflows = computed(() => (props.workflows ?? []) as any[])
@@ -229,7 +237,7 @@ onUnmounted(() => {
   // }
 })
 
-provide(editorContextKey, {
+const editorContext = {
   node: editor.selectedNode,
   plugins: editor.plugins,
   bus,
@@ -241,7 +249,12 @@ provide(editorContextKey, {
   // 业务组件的配置对象是按引用共享的，原地修改已能被编辑器的变更监听捕获，
   // 这里保留该钩子，供远端组件显式请求编辑器同步数据
   updateConfig() {},
-})
+}
+provide(editorContextKey, editorContext)
+// 命令式弹层（如 createDialog）在独立渲染根里渲染，只继承 app 级别的 provide，
+// 拿不到这里实例级的 provide，组件内的 inject(editorContextKey) 会拿到 undefined，
+// 因此再补一份到 app 级别。
+inst!.appContext.app.provide(editorContextKey, editorContext)
 
 function onEnd() {
   editor.dragging = null

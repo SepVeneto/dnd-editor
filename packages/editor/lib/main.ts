@@ -14,6 +14,28 @@ export type { AgentImporter } from './agents/loader.js'
 
 let initPromise = new Map<string, Promise<boolean>>()
 
+const PRODUCER_STYLE_ID = 'mpd-producer-styles'
+
+/**
+ * 生产者自己声明的样式（`setup.styles`）默认只进 shadow root。
+ * 但经 `createDialog` 等命令式 API 渲染到 `document.body` 的弹层同样拿不到 shadow DOM 里的样式，
+ * 因此再往 `document.head` 投放一份相同的样式，兜住这部分弹层（含生产者自己的 `bc-*` 规则）。
+ * 与 `injectPopperStyles()` 一样，由 `injectGlobalStyle` 开关统一控制。
+ */
+function injectProducerStyles(styles: string[]) {
+  if (typeof document === 'undefined' || !styles.length)
+    return
+  let style = document.getElementById(PRODUCER_STYLE_ID) as HTMLStyleElement | null
+  if (!style) {
+    style = document.createElement('style')
+    style.id = PRODUCER_STYLE_ID
+    document.head.appendChild(style)
+  }
+  // 与 injectPopperStyles() 同理：shadow root 里作用在 :host 的样式，
+  // 投放到 light DOM 时需要换成 :root。
+  style.textContent = styles.map(item => item.replaceAll(':host', ':root')).join('\n')
+}
+
 export interface RegisterOptions {
   /**
    * 组件视图的远程地址
@@ -24,6 +46,7 @@ export interface RegisterOptions {
    *
    * 弹层（`ElDialog` / `ElSelect` 下拉 / `ElTooltip` 等）会 teleport 到 `document.body`，
    * 不在 shadow DOM 内，拿不到编辑器内部的样式，需要这份 light DOM 的样式兜底。
+   * 除了 element-plus 主题，生产者自己声明的 `setup.styles` 也会一并投放一份。
    * 关闭后需要宿主自行保证这些弹层的样式。
    */
   injectGlobalStyle?: boolean
@@ -60,6 +83,10 @@ export function register(options: RegisterOptions): Promise<boolean> {
       console.error(err)
       return {}
     })
+    // 生产者的样式除注入 shadow root 外，再往 light DOM 投放一份，
+    // 供 teleport 到 document.body 的弹层（createDialog / ElSelect 下拉等）使用。
+    if (options.injectGlobalStyle ?? true)
+      injectProducerStyles(setup?.styles ?? [])
     const Editor = defineCustomElement(Main, {
       configureApp(app) {
         const store = createPinia()
