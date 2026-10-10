@@ -163,7 +163,7 @@ function onInit(args: any) {
     // 数据如何写入组件由业务侧通过 widget 的 agent.update 决定
     w.agent?.update?.(node, item, {})
 
-    editor.rootNode.list.push(node)
+    editor.addNode(node)
   })
 }
 
@@ -176,7 +176,7 @@ function onEdit({ edits }: { edits: EditIR[] }) {
 
       const node = new Node(w, JSON.parse(JSON.stringify({ props: w.defaultData, style: w.defaultStyle })))
       w.agent?.update?.(node, { widget: ir.widget, items: ir.items } as any, {})
-      editor.rootNode.list.push(node)
+      editor.addNode(node)
       continue
     }
 
