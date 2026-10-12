@@ -17,58 +17,121 @@
         class="message"
         :class="`message--${message.role}`"
       >
-        <template v-for="(part, index) in message.parts" :key="index">
-          <div v-if="part.type === 'step'" class="message__step">{{ part.label }}</div>
+        <template v-for="(block, index) in blocksOf(message)" :key="index">
+          <p v-if="block.type === 'text' && block.part.text" class="message__text">{{ block.part.text }}</p>
 
-          <p v-else-if="part.type === 'text' && part.text" class="message__text">{{ part.text }}</p>
+          <details v-else-if="block.type === 'thinking'" class="message__thinking">
+            <summary class="message__thinking-summary">
+              <span
+                class="message__thinking-dot"
+                :class="{ 'message__thinking-dot--active': block.pending }"
+              />
+              <span
+                class="message__thinking-label"
+                :class="{ 'message__thinking-label--active': block.pending }"
+              >{{ block.label }}</span>
+              <span v-if="block.pending" class="message__thinking-ellipsis"><i>.</i><i>.</i><i>.</i></span>
+              <svg
+                class="message__caret"
+                viewBox="0 0 16 16"
+                width="12"
+                height="12"
+                aria-hidden="true"
+              >
+                <path
+                  d="M4 6l4 4 4-4"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </summary>
 
-          <p
-            v-else-if="part.type === 'action'"
-            class="message__action"
-            :class="{ 'message__action--failed': part.result && !part.result.ok }"
-          >
-            <code>{{ describeAction(part.action) }}</code>
-            <span v-if="part.result" class="message__action-result">
-              {{ part.result.ok ? '✓' : '✕' }} {{ part.result.message }}
-            </span>
-          </p>
+            <div class="message__thinking-body">
+              <template v-for="(part, partIndex) in block.parts" :key="partIndex">
+                <div v-if="part.type === 'step'" class="message__step">{{ part.label }}</div>
 
-          <div
-            v-else-if="part.type === 'tool-call'"
-            class="flow"
-            :class="{ 'flow--failed': part.result && !toolOk(part.result) }"
-          >
-            <div class="flow__head">
-              <span class="flow__badge">工具</span>
-              <code class="flow__name">{{ toolName(part.call) }}</code>
-              <span v-if="!part.result" class="flow__status flow__status--pending">执行中…</span>
-              <span v-else class="flow__status">{{ toolOk(part.result) ? '✓ 完成' : '✕ 失败' }}</span>
+                <details v-else-if="part.type === 'workflow-step'" class="message__step-details">
+                  <summary class="message__step-summary">
+                    <span
+                      class="message__step-dot"
+                      :class="{ 'message__step-dot--active': part.status === 'running' }"
+                    />
+                    <span>{{ part.label }}</span>
+                    <span v-if="part.status === 'error'" class="message__step-badge message__step-badge--failed">失败</span>
+                    <span v-else-if="part.status === 'running'" class="message__step-badge">进行中…</span>
+                    <svg
+                      class="message__caret"
+                      viewBox="0 0 16 16"
+                      width="12"
+                      height="12"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M4 6l4 4 4-4"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.6"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                  </summary>
+                  <pre class="message__step-output">{{ stepOutput(part) }}</pre>
+                </details>
+
+                <p
+                  v-else-if="part.type === 'action'"
+                  class="message__action"
+                  :class="{ 'message__action--failed': !!part.result && !toolOk(part.result) }"
+                >
+                  <code>{{ describeAction(part.action) }}</code>
+                  <span v-if="part.result" class="message__action-result">
+                    {{ toolOk(part.result) ? '✓' : '✕' }} {{ formatPayload(toolOutput(part.result)) }}
+                  </span>
+                </p>
+
+                <div
+                  v-else-if="part.type === 'tool-call'"
+                  class="flow"
+                  :class="{ 'flow--failed': part.result && !toolOk(part.result) }"
+                >
+                  <div class="flow__head">
+                    <span class="flow__badge">工具</span>
+                    <code class="flow__name">{{ toolName(part.call) }}</code>
+                    <span v-if="!part.result" class="flow__status flow__status--pending">执行中…</span>
+                    <span v-else class="flow__status">{{ toolOk(part.result) ? '✓ 完成' : '✕ 失败' }}</span>
+                  </div>
+                  <div class="flow__row">
+                    <span class="flow__label">输入</span>
+                    <pre class="flow__code">{{ formatPayload(toolArgs(part.call)) }}</pre>
+                  </div>
+                  <div class="flow__row">
+                    <span class="flow__label">输出</span>
+                    <pre class="flow__code">{{ part.result ? formatPayload(toolOutput(part.result)) : '等待输出…' }}</pre>
+                  </div>
+                </div>
+
+                <p
+                  v-else-if="part.type === 'approval'"
+                  class="message__action message__approval"
+                  :class="{ 'message__action--failed': part.decision === 'rejected' }"
+                >
+                  <code>{{ describeApproval(part.call) }}</code>
+                  <span v-if="part.decision" class="message__action-result">
+                    {{ part.decision === 'approved' ? '✓ 已同意' : '✕ 已拒绝' }}
+                  </span>
+                  <span v-else class="message__action-result message__action-result--pending">等待确认…</span>
+                </p>
+
+                <details v-else-if="part.type === 'raw' && part.text" class="message__raw">
+                  <summary>模型原始输出{{ part.label ? `（${part.label}）` : '' }}</summary>
+                  <pre>{{ part.text }}</pre>
+                </details>
+              </template>
             </div>
-            <div class="flow__row">
-              <span class="flow__label">输入</span>
-              <pre class="flow__code">{{ formatPayload(toolArgs(part.call)) }}</pre>
-            </div>
-            <div class="flow__row">
-              <span class="flow__label">输出</span>
-              <pre class="flow__code">{{ part.result ? formatPayload(toolOutput(part.result)) : '等待输出…' }}</pre>
-            </div>
-          </div>
-
-          <p
-            v-else-if="part.type === 'approval'"
-            class="message__action message__approval"
-            :class="{ 'message__action--failed': part.decision === 'rejected' }"
-          >
-            <code>{{ describeApproval(part.call) }}</code>
-            <span v-if="part.decision" class="message__action-result">
-              {{ part.decision === 'approved' ? '✓ 已同意' : '✕ 已拒绝' }}
-            </span>
-            <span v-else class="message__action-result message__action-result--pending">等待确认…</span>
-          </p>
-
-          <details v-else-if="part.type === 'raw' && part.text" class="message__raw">
-            <summary>模型原始输出{{ part.label ? `（${part.label}）` : '' }}</summary>
-            <pre>{{ part.text }}</pre>
           </details>
         </template>
       </div>
@@ -139,7 +202,7 @@ import type { Capability } from './capability'
 import type { Workflow } from './workflow'
 import type { EditIR, LayoutIR } from './ir'
 import type { ToolApprovalHandler, ToolApprovalRequest } from './context'
-import type { MessagePart } from './type'
+import type { MessagePart, ThreadMessage } from './type'
 import { useFile } from '@/composables'
 import IconFile from '@/assets/file.vue'
 
@@ -220,7 +283,69 @@ function reject() {
 
 let activeReply: { id: string, role: 'copilot', parts: MessagePart[] } | null = null
 let activeTextPart: Extract<MessagePart, { type: 'text' }> | null = null
+// 正在生成的回复 id，用于把「正在思考」占位只挂在当前回复上。
+const activeReplyId = ref<string | null>(null)
 const toolCallParts = new Map<string, Extract<MessagePart, { type: 'tool-call' }>>()
+const workflowStepParts = new Map<string, Extract<MessagePart, { type: 'workflow-step' }>>()
+
+function stepKey(workflow: string, index: number): string {
+  return `${workflow}:${index}`
+}
+
+type MessageBlock
+  = | { type: 'text', part: Extract<MessagePart, { type: 'text' }> }
+    | { type: 'thinking', parts: MessagePart[], pending: boolean, label: string }
+
+/**
+ * 把一条回复拆成按顺序排列的文本块与「思考」块。
+ * 所有非 text 的内容（步骤、工具调用、审批、原始输出）都会被归入同一个折叠区块。
+ */
+function blocksOf(message: ThreadMessage): MessageBlock[] {
+  const blocks: MessageBlock[] = []
+  let thinking: Extract<MessageBlock, { type: 'thinking' }> | null = null
+
+  for (const part of message.parts) {
+    if (part.type === 'text') {
+      thinking = null
+      blocks.push({ type: 'text', part })
+      continue
+    }
+
+    if (!thinking) {
+      thinking = { type: 'thinking', parts: [], pending: false, label: '' }
+      blocks.push(thinking)
+    }
+    thinking.parts.push(part)
+  }
+
+  // 只要这一轮还在生成，就显示「正在思考」；结束后换成「用时」。
+  const pending = message.role === 'copilot' && message.id === activeReplyId.value
+  if (pending) {
+    if (!thinking) {
+      thinking = { type: 'thinking', parts: [], pending: true, label: '' }
+      blocks.push(thinking)
+    }
+  }
+
+  for (const block of blocks) {
+    if (block.type !== 'thinking')
+      continue
+    block.pending = pending
+    block.label = pending
+      ? '正在思考'
+      : message.duration != null
+        ? `用时 ${formatDuration(message.duration)}`
+        : '思考过程'
+  }
+
+  return blocks
+}
+
+function formatDuration(ms: number): string {
+  if (ms < 1000)
+    return `${Math.max(1, Math.round(ms))}ms`
+  return `${(ms / 1000).toFixed(1)}s`
+}
 
 function handleEvent(event: AgentRuntimeEvent) {
   const reply = activeReply
@@ -271,19 +396,43 @@ function handleEvent(event: AgentRuntimeEvent) {
 
     case 'step-start':
       activeTextPart = null
-      reply.parts.push({ type: 'step', label: `步骤 ${event.index + 1}：${event.step}` })
+      {
+        const part: Extract<MessagePart, { type: 'workflow-step' }> = {
+          type: 'workflow-step',
+          label: `步骤 ${event.index + 1}：${event.step}`,
+          status: 'running',
+        }
+        reply.parts.push(part)
+        // 存回响应式代理，后续 step-complete / step-error 直接改它才能触发刷新。
+        workflowStepParts.set(
+          stepKey(event.workflow, event.index),
+          reply.parts[reply.parts.length - 1] as Extract<MessagePart, { type: 'workflow-step' }>,
+        )
+      }
       break
 
-    case 'step-complete':
+    case 'step-complete': {
+      const part = workflowStepParts.get(stepKey(event.workflow, event.index))
+      if (part) {
+        part.status = 'done'
+        part.output = event.output
+      }
       break
+    }
 
     case 'step-retry':
       reply.parts.push({ type: 'text', text: `⚠️ ${event.step} 第 ${event.attempt} 次重试：${event.error}` })
       break
 
-    case 'step-error':
+    case 'step-error': {
+      const part = workflowStepParts.get(stepKey(event.workflow, event.index))
+      if (part) {
+        part.status = 'error'
+        part.error = event.error
+      }
       reply.parts.push({ type: 'text', text: `✕ ${event.step} 执行失败：${event.error}` })
       break
+    }
 
     case 'workflow-complete':
       reply.parts.push({ type: 'step', label: '流程完成' })
@@ -309,16 +458,19 @@ async function send(message: string, files?: any[]) {
     parts: [{ type: 'text', text: message }],
   })
 
-  const reply = reactive<{ id: string, role: 'copilot', parts: MessagePart[] }>({
+  const reply = reactive<{ id: string, role: 'copilot', parts: MessagePart[], duration?: number }>({
     id: createId(),
     role: 'copilot',
     parts: [],
   })
   messages.value.push(reply)
 
+  const startedAt = Date.now()
   activeReply = reply
   activeTextPart = null
   toolCallParts.clear()
+  workflowStepParts.clear()
+  activeReplyId.value = reply.id
 
   isRunning.value = true
   try {
@@ -349,9 +501,11 @@ async function send(message: string, files?: any[]) {
     reply.parts.push({ type: 'text', text: `⚠️ ${toMessage(error)}` })
   }
   finally {
+    reply.duration = Date.now() - startedAt
     isRunning.value = false
     activeReply = null
     activeTextPart = null
+    activeReplyId.value = null
   }
 }
 
@@ -403,8 +557,9 @@ function describeAction(action: unknown): string {
   return JSON.stringify(action)
 }
 
-function describeApproval(request: { name: string, args?: unknown, message?: string }): string {
-  return request.message || `是否执行工具 ${request.name}？`
+function describeApproval(call: unknown): string {
+  const request = call as { name?: string, message?: string } | undefined
+  return request?.message || `是否执行工具 ${request?.name ?? ''}？`
 }
 
 function toolName(call: unknown): string {
@@ -435,6 +590,14 @@ function formatPayload(value: unknown): string {
   catch {
     return String(value)
   }
+}
+
+function stepOutput(part: { output?: unknown, error?: string }): string {
+  if (part.error)
+    return part.error
+  if (part.output === undefined)
+    return '该步骤没有输出'
+  return formatPayload(part.output)
 }
 
 function describeCallOutput(call: { name?: string, result?: unknown, error?: string }): { ok: boolean, message: string } {
@@ -579,6 +742,183 @@ function stringifyArgs(args: unknown): string {
   flex: 1;
   height: 1px;
   background: #eef2f7;
+}
+
+.message__step-details {
+  border: 1px solid #eef2f7;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.message__step-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #94a3b8;
+  list-style: none;
+  user-select: none;
+}
+
+.message__step-summary::-webkit-details-marker {
+  display: none;
+}
+
+.message__step-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #cbd5e1;
+  flex-shrink: 0;
+}
+
+.message__step-dot--active {
+  background: #6366f1;
+  animation: thinking-pulse 1s ease-in-out infinite;
+}
+
+.message__step-badge {
+  font-weight: 500;
+  color: #94a3b8;
+}
+
+.message__step-badge--failed {
+  color: #b91c1c;
+}
+
+.message__step-output {
+  margin: 0;
+  padding: 8px 10px;
+  border-top: 1px solid #eef2f7;
+  background: #111827;
+  color: #d1fae5;
+  font-size: 11.5px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  overflow: auto;
+  max-height: 220px;
+}
+
+.message__thinking {
+  width: 100%;
+  border: 1px solid #eceef3;
+  border-radius: 10px;
+  background: #fbfbfd;
+  overflow: hidden;
+}
+
+.message__thinking-summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #64748b;
+  user-select: none;
+  list-style: none;
+}
+
+.message__thinking-summary::-webkit-details-marker {
+  display: none;
+}
+
+.message__thinking-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #c7d2fe;
+  flex-shrink: 0;
+}
+
+.message__thinking-dot--active {
+  background: #6366f1;
+  animation: thinking-pulse 1s ease-in-out infinite;
+}
+
+.message__thinking-label {
+  display: inline-block;
+}
+
+.message__thinking-label--active {
+  background: linear-gradient(90deg, #cbd5e1 0%, #4f46e5 50%, #cbd5e1 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: thinking-shimmer 1.6s linear infinite;
+}
+
+.message__caret {
+  flex-shrink: 0;
+  opacity: 0;
+  color: #94a3b8;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.message__thinking-summary:hover > .message__caret,
+.message__step-summary:hover > .message__caret {
+  opacity: 1;
+}
+
+.message__thinking[open] > .message__thinking-summary > .message__caret,
+.message__step-details[open] > .message__step-summary > .message__caret {
+  opacity: 1;
+  transform: rotate(180deg);
+}
+
+.message__thinking-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 2px 10px 10px;
+}
+
+.message__thinking-ellipsis i {
+  font-style: normal;
+  animation: thinking-blink 1.2s infinite;
+}
+
+.message__thinking-ellipsis i:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.message__thinking-ellipsis i:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes thinking-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.75);
+  }
+}
+
+@keyframes thinking-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes thinking-blink {
+  0%, 100% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 .message__action {
