@@ -141,7 +141,7 @@ app.post('/v1/chat/completions', async (req, res) => {
 app.get('/v1/business/scenes', async (req, res) => {
   res.send(JSON.stringify({
     code: 0,
-    data: [{id: 1, name: '叮咚买菜', status: true }, { id: 2, name: '大润发小时达', status: false }],
+    data: [{id: 1, name: '叮咚买菜', status: true }, { id: 2, name: '大润发', status: false }],
     msg: ''
   }))
 })

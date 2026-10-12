@@ -56,7 +56,6 @@ function onCapability(payload: { name: string, result: unknown }) {
 <style lang="scss" scoped>
 .assistant-root {
   position: fixed;
-  top: 24px;
   bottom: 24px;
   right: 10px;
   z-index: 20;
