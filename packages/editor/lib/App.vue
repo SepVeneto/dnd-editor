@@ -159,11 +159,12 @@ function onInit(args: any) {
     if (!w)
       return
 
+    // @ts-ignore
     const node = new Node(w, JSON.parse(JSON.stringify({ props: w.defaultData, style: w.defaultStyle })))
     // 数据如何写入组件由业务侧通过 widget 的 agent.update 决定
-    w.agent?.update?.(node, item, {})
+    w.agent?.update?.(node, item)
 
-    editor.addNode(node)
+    editor.addNode(node, editor.rootNode, true)
   })
 }
 
@@ -174,8 +175,9 @@ function onEdit({ edits }: { edits: EditIR[] }) {
       if (!w)
         continue
 
+      // @ts-ignore
       const node = new Node(w, JSON.parse(JSON.stringify({ props: w.defaultData, style: w.defaultStyle })))
-      w.agent?.update?.(node, { widget: ir.widget, items: ir.items } as any, {})
+      w.agent?.update?.(node, { widget: ir.widget, items: ir.items } as any)
       editor.addNode(node)
       continue
     }
