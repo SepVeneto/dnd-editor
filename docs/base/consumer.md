@@ -164,6 +164,20 @@ await register({ remoteUrl: 'http://localhost:8090' })
 命令式弹层（如 `@sepveneto/basic-comp` 的 `createDialog`）会在独立的渲染根里渲染，只继承编辑器 app 级别的 provide；编辑器已经把 element-plus 命名空间（`mpd`）与业务上下文（`editorContextKey`）补到 app 级别，因此这类弹层既能拿到正确的样式命名空间，也能在组件内 `inject(editorContextKey)` 取到编辑器上下文。
 :::
 
+## 开发态的热更新
+
+开发态（宿主跑着带 HMR 的开发服务器）下，编辑器的数据与组件定义都支持热更新。产物自带 Vue 与其余依赖，
+宿主不需要（也用不到）自己装 Vue；宿主自己若也是 Vue 应用，两份 Vue 各自注册的组件由编辑器内部的转发器
+分别转发，互不影响。产物里的 `process.env.NODE_ENV` 交给宿主的打包器替换：开发服务器会替换成开发模式，
+编辑器自带的 Vue 于是带上 HMR 运行时；直接以浏览器 ESM 加载（没有打包器替换）时默认按生产模式跑。
+
+| 改动内容 | 效果 |
+| -------- | ---- |
+| 生产者的组件视图（`*.view.vue`） | 画布上的组件原地更新，编辑中的数据保留 |
+| 业务侧下发的组件配置（`widgets`/`schema`） | 配置面板用上新定义；编辑器数据不变，宿主页面热更新导致的重新挂载也会从快照恢复数据 |
+
+回归用例：`node e2e/hmr.mjs`（会自己拉起生产者的 rsbuild dev 与宿主的 vite dev）。
+
 ## 属性
 
 | 名称 | 类型 | 必填 | 默认值 | 说明 |

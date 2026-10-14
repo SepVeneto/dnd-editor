@@ -22,6 +22,7 @@
     "test:editor": "pnpm -C packages/editor test",
     "test:e2e": "node e2e/run.mjs",
     "test:e2e:fixed": "node e2e/playwright-fixed.mjs",
+    "test:e2e:hmr": "node e2e/hmr.mjs",
     "docs:dev": "pnpm -C docs dev",
     "docs:build": "pnpm -C docs build",
     "docs:deploy": "pnpm bootstrap && pnpm docs:build",

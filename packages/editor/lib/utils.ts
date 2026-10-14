@@ -48,7 +48,9 @@ export function initMf(url: string) {
     // shadow DOM 里的样式 —— 这部分由 injectPopperStyles() 投放到 light DOM 的主题样式兜底。
     shared: {
       vue: {
-        version: '3.5.40',
+        // 按实际加载到的那份 vue 声明版本：写死字符串在升级依赖后会与真实实例不一致，
+        // 版本差异（宿主/生产者）交给模块联邦自己判断
+        version: Vue.version,
         lib: () => Vue,
         shareConfig: {
           singleton: true,
