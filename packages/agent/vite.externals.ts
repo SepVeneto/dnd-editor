@@ -9,3 +9,22 @@
  * 同一份 `index.js`，不会出现多实例状态被拆散的问题。
  */
 export const agentExternals: RegExp[] = []
+
+/**
+ * 库内联的运行时（`vue` / `zod` / `openai` / `@openai/agents`）统一按生产模式编译。
+ *
+ * 库模式下 vite 不会替换 `process.env.NODE_ENV`（留给宿主替换），这份内联 `vue` 于是会跟着
+ * 宿主的构建模式漂移：
+ * - 宿主 dev 构建把它切成 dev 版，它在模块初始化时执行
+ *   `getGlobalThis().__VUE_HMR_RUNTIME__ = { createRecord, rerender, reload }`，用自己那份
+ *   HMR 运行时（record / instance 都存在它模块私有的 Map 里）覆盖宿主的全局运行时。宿主 `.vue`
+ *   热更新随后拿到的是这份空表，`rerender` / `reload` 找不到已挂载实例，页面不报错、改动也不再
+ *   生效——宿主 HMR 静默失效；
+ * - 产物被浏览器当 ESM 直接加载（不经宿主的 define）时，还会因 `process` 未定义而崩。
+ *
+ * 构建期固化 `NODE_ENV=production`：内联 vue 只保留生产分支、不写任何宿主全局，行为也不再随
+ * 宿主构建模式漂移（库自己的 UI 调试走 playground，那边是直接从源码起的 dev 版 vue）。
+ */
+export const agentDefine: Record<string, string> = {
+  'process.env.NODE_ENV': JSON.stringify('production'),
+}

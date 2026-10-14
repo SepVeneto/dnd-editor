@@ -2,7 +2,7 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import vue from '@vitejs/plugin-vue'
 import { defineConfig } from 'vite'
-import { agentExternals } from './vite.externals'
+import { agentDefine, agentExternals } from './vite.externals'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -14,6 +14,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
  *   宿主无需为这些依赖买单、lock 里也不会多出一大堆包；`/element` 入口复用本入口（保持 external
  *   的包名），因此组件定义与 `defineCustomElement`、配置、注册表始终来自同一份 `index.js`；
  * - `features.customElement: true` 让 SFC 样式内联到组件上，`<dnd-agent>` 的 shadow DOM 才能带上样式。
+ * - 内联的运行时按生产模式编译（`agentDefine`）：这份 `vue` 不能写宿主全局，否则会顶掉宿主的
+ *   `globalThis.__VUE_HMR_RUNTIME__`，让宿主热更新静默失效——组件是 web component，本就不该和宿主
+ *   共享运行时状态。
  */
 export default defineConfig({
   plugins: [
@@ -28,6 +31,7 @@ export default defineConfig({
       '@': resolve(__dirname, 'src'),
     },
   },
+  define: agentDefine,
   build: {
     target: 'es2018',
     // 作为构建流程的第一步，负责清空 dist

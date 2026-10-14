@@ -28,7 +28,7 @@
   ],
   "scripts": {
     "dev": "vite",
-    "build": "pnpm run build:lib && pnpm run build:element && pnpm run build:types",
+    "build": "pnpm run build:lib && pnpm run build:element && node scripts/check-dist.mjs && pnpm run build:types",
     "build:lib": "vite build -c vite.config.lib.ts",
     "build:element": "vite build -c vite.config.element.ts",
     "build:types": "tsc -p tsconfig.build.json",

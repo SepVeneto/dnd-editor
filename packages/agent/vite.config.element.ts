@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url'
 import vue from '@vitejs/plugin-vue'
 import { defineConfig } from 'vite'
 import type { Plugin } from 'vite'
-import { agentExternals } from './vite.externals'
+import { agentDefine, agentExternals } from './vite.externals'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const PACKAGE_NAME = '@sepveneto/dnde-agent'
@@ -34,6 +34,8 @@ function rewriteIndexImport(): Plugin {
  *   保证业务侧 import 的方法与 `<dnd-agent>` 共享同一份模块实例；
  * - 只保留 `index`（包名）为 external，交给宿主打包器解析；`vue` 等运行时依赖由 `index.js`
  *   打包并复用，本入口不再直接依赖它们。
+ * - 同样使用 `agentDefine`：本入口（或将来被加进来的组件）一旦把运行时打进产物，也不能写宿主
+ *   全局，否则会劫持宿主的 HMR（详见 `vite.externals.ts`）。
  */
 export default defineConfig({
   plugins: [rewriteIndexImport(), vue()],
@@ -42,6 +44,7 @@ export default defineConfig({
       '@': resolve(__dirname, 'src'),
     },
   },
+  define: agentDefine,
   build: {
     target: 'es2018',
     emptyOutDir: false,
