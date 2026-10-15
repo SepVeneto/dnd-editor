@@ -10,6 +10,7 @@ import { useDebounceFn, useEventListener } from '@vueuse/core'
 import * as Vue from 'vue'
 import { useTemplateRef } from 'vue'
 import App from './App.vue'
+import { isHmrEnabled, getSnapshot, saveSnapshot } from './hmr'
 import { editorProps } from './props'
 import { useApp, useEditor } from './store'
 
@@ -20,13 +21,35 @@ const appStore = useApp()
 appStore.setWidgets(props.widgets)
 const editor = useEditor()
 editor.shadowRoot = Vue.useShadowRoot()!
+
+// 业务侧改组件配置（schema）会触发宿主页面热更新，<mpd-editor> 会被卸载再挂载，
+// 开发态下从快照恢复上次的数据，避免用户正在编辑的内容被清空
+let restored = false
+if (isHmrEnabled()) {
+  const snapshot = getSnapshot(props.name)
+  if (snapshot) {
+    editor.setData(snapshot)
+    restored = true
+  }
+}
+
 const updateModelValue = useDebounceFn(() => {
   const data = editor.getData()
   emit('change', data)
 }, 1000)
+// 恢复出来的数据也要同步回宿主，否则宿主自己的那一份还是空的
+if (restored)
+  updateModelValue()
+
 Vue.watch(() => editor.rootNode, () => {
+  // 快照同步保存：热更新随时可能发生，不能等防抖
+  if (isHmrEnabled())
+    saveSnapshot(props.name, editor.getData())
   updateModelValue()
 }, { deep: true })
+// 业务侧重新下发组件配置（改 schema、按需加载配置等）时就地更新组件定义，
+// 不重建根节点，因此画布上的数据与选中态都会保留
+Vue.watch(() => props.widgets, widgets => appStore.setWidgets(widgets))
 // 让动态组件的样式加载在shadow dom中，而不是宿主环境中
 // @ts-expect-error: ignore
 window.__shadowdom_css_runtime__ = async (tagLink: HTMLLinkElement) => {
