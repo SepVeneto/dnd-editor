@@ -28,9 +28,8 @@ export interface WidgetAgent {
    *
    * @param node 已创建的组件节点
    * @param item 布局结果项（选中的组件 + 元素引用）
-   * @param data 生成布局用到的业务数据
    */
-  update?: (node: Node, item: WidgetLayoutItem, data: Record<string, any>) => void
+  update?: (node: Node, item: WidgetLayoutItem) => void
 }
 
 export interface Base {
