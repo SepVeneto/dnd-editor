@@ -29,7 +29,7 @@ export interface WidgetAgent {
    * @param node 已创建的组件节点
    * @param item 布局结果项（选中的组件 + 元素引用）
    */
-  update?: (node: Node, item: WidgetLayoutItem) => void
+  update?: (node: Node, item: WidgetLayoutItem, state: Record<string, unknown>) => void
 }
 
 export interface Base {

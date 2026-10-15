@@ -213,8 +213,8 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  init: [payload: { layout: LayoutIR }]
-  edit: [payload: { edits: EditIR[] }]
+  init: [payload: { layout: LayoutIR, state: Record<string, unknown> }]
+  edit: [payload: { edits: EditIR[], state: Record<string, unknown> }]
   capability: [payload: { name: string, result: unknown }]
 }>()
 
@@ -487,11 +487,11 @@ async function send(message: string, files?: any[]) {
         name: 'test',
       })
       if (res) {
-        emit('init', { layout: result.layout })
+        emit('init', { layout: result.layout, state: result.workflow?.state || {} })
       }
     }
     else if (result.flow === 'edit') {
-      emit('edit', { edits: result.edits ?? [] })
+      emit('edit', { edits: result.edits ?? [], state: result.workflow?.state || {} })
     }
     else if (result.flow === 'capability' && result.capability) {
       emit('capability', result.capability)
