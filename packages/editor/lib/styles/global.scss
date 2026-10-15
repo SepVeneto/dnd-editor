@@ -4,6 +4,17 @@
 @tailwind components;
 @tailwind utilities;
 
+// element-plus 主题里对嵌套表单项用的是 `.form-item .form-item { margin-bottom: 0 }`，
+// 本意只是消除最后一个嵌套项与父级叠加的外间距，却把嵌套项之间的间距也一并清零了。
+// 这里改为只对最后一个嵌套项取消下间距，其余保留默认间距。
+.mpd-form-item .mpd-form-item:not(:last-child) {
+  margin-bottom: 18px;
+}
+
+.mpd-form-item .mpd-form-item:last-child {
+  margin-bottom: 0;
+}
+
 .dragging-ghost {
   padding: 0;
   width: 100%;
