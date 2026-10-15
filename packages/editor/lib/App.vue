@@ -153,7 +153,7 @@ const runtimeContext = () => ({
 })
 
 function onInit(args: any) {
-  const { layout, state } = args.detail[0].layout
+  const { layout, state } = args.detail[0]
   layout.forEach((item: any) => {
     const w = app.widgetMap.get(item.widget)
     if (!w)
