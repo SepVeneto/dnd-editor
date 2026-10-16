@@ -69,7 +69,7 @@
                 <ViewRender
                   scope="widgets"
                   :type="`${panel.node.type}.view`"
-                  :config="panel.node.data"
+                  :config="panel.node"
                   :data="panel.node.data"
                 />
               </NodeWrap>
