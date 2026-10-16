@@ -63,20 +63,67 @@ editorRef.value?.register(ctx => ({
 
 ## 配置区
 
-配置区默认分为`属性`和`样式`两个部分，可以通过`config.addPanel`来扩展额外的区块。
+配置区默认分为`属性`和`样式`两个部分。
 
-比如需要一个页面级的弹窗，可以按照如下方式进行扩展：
+`config.addPanel` 用于给**根节点（页面级）补充配置**：它只是给配置区多加一个标签，标签里放业务侧定义的根配置项。它**不一定对应独立组件**——可能只是出于业务需要，把一组配置单独归到一个标签里。
+
+当这些配置要驱动一个**位置固定、组件区（widgets）不自由提供的组件**（例如右下角浮窗）时，通过可选的 `component` 传入该组件：编辑器会把它作为独立节点绑定到根节点上（不进入页面布局的拖拽列表，因此**不可拖曳、不可删除**，始终以预览态渲染），并可在选中它后配置内容。
+
+- 两份配置相互独立，**都由业务侧定义**，编辑器不注入任何配置项：
+  - **根配置（`attributes`）**：本标签里的配置项，绑定在 `rootNode.data[name]` 下；
+  - **组件内容（`component.schema.props`）**：选中该组件后于「属性」中编辑；
+- 若 `attributes` 里定义了 `isShow` 开关，编辑器会按它决定是否渲染预览
+  （与 `Node.visible` 同一约定：默认显示，`isShow` 为假值时隐藏）；
+- 点击编辑区里的组件预览即可选中它，进而配置内容；
+- 两份数据都会维护进 `getData()`，根配置挂在根节点 `data` 的 `name` 下。
+
+下面分别演示「标签 + 可选组件」与「纯配置标签」：
 
 ``` ts
+import { schema, widget } from '@sepveneto/dnde-core/helper'
+
 editorRef.value?.register(ctx => ({
   init() {
+    // 标签 + 可选组件：维护一个位置固定的浮窗
     ctx.plugins.config.addPanel({
-      label: '弹窗',
+      label: '浮窗',
       name: 'dialog',
+      // 根配置（页面级）完全由业务侧定义，显示开关也在这里
       attributes: [
-          schema.switch({ label: '是否展示', key: 'needOpen' }),
-      ]
+        schema.switch({ label: '显示', key: 'isShow' }),
+        schema.number({ label: '浮窗层级', key: 'zIndex' }),
+      ],
+      // 可选：不传就只是一个纯配置标签
+      component: widget.create({
+        name: '浮窗',
+        type: 'dialog',
+        // 默认隐藏，配合根配置里的显示开关
+        defaultData: { isShow: 0 },
+        // 组件自身的定位样式，absolute 相对手机屏幕定位到右下角
+        defaultStyle: {
+          position: 'absolute',
+          width: 48,
+          height: 48,
+          bottom: 20,
+          right: 20,
+        },
+        // 组件自身的内容配置项，选中该组件后于「属性」中编辑
+        attributes: [
+          schema.input({ label: '标题', key: 'title' }),
+        ],
+      }),
+    })
+
+    // 纯配置标签：不关联组件，只是给根节点补充一组配置
+    ctx.plugins.config.addPanel({
+      label: '页面设置',
+      name: 'pageSettings',
+      attributes: [
+        schema.switch({ label: '允许分享', key: 'shareable' }),
+      ],
     })
   }
 }))
 ```
+
+组件视图仍按 `${type}.view.vue` 的约定在 `src/widgets/` 目录下查找，节点的 `data` 会作为 `props.config` 传入。

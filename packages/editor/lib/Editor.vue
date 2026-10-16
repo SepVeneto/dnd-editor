@@ -73,7 +73,7 @@ const api = {
     pluginConstructor.init()
   },
   async validate() {
-    const isValid = await editor.plugins.config.validate(editor.rootNode.data)
+    const isValid = await editor.plugins.config.validate()
     if (!isValid) {
       editor.selectNode()
       await Vue.nextTick()

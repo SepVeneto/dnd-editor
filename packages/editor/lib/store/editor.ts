@@ -6,6 +6,7 @@ import type { HelperAction } from '@/type'
 import { widget } from '@sepveneto/dnde-core'
 import { Node, Widget } from '@sepveneto/dnde-core/class'
 import Validator from 'async-validator'
+import { v4 } from 'uuid'
 import { defineStore } from 'pinia'
 import { computed, customRef, ref, shallowRef, watchEffect } from 'vue'
 import { createDebug, removePopper } from '@/utils'
@@ -63,36 +64,109 @@ class WidgetPlugin {
   }
 }
 
-export interface ConfigPanel {
-  label: string
-  name: string
-  attributes: SchemaItem[]
+/**
+ * 组件固定显示字段的约定（业务侧自行定义开关，编辑器据此决定是否渲染预览）。
+ * 与 `Node.visible` 使用同一约定：`data.isShow` 为真值时显示，为假值时隐藏。
+ */
+export const CONFIG_PANEL_SHOW_KEY = 'isShow'
+
+export interface ConfigPluginContext {
+  addNode: (node: Node, pNode?: Node, manual?: boolean) => void
+  rootNode: () => Node
 }
+export interface ConfigPanelOptions {
+  /** 标签显示名（默认取组件的名字或数据键） */
+  label?: string
+  /** 数据键：该标签的配置项绑定在 rootNode.data[name] 下 */
+  name: string
+  /** 根节点（页面级）配置项，由业务侧定义 */
+  attributes?: SchemaItem[]
+  /**
+   * 可选：位置固定、组件区（widgets）不自由提供的组件（如浮窗）。
+   * 提供时编辑器会以预览态渲染它，并可在选中后配置其内容；
+   * 不提供则只是一个纯配置标签。
+   */
+  component?: IWidget
+}
+export interface ConfigPanel {
+  /** 稳定的标识，用于标签定位 */
+  wid: string
+  label: string
+  /** 数据键，配置项绑定在 rootNode.data[name] 下 */
+  name: string
+  /** 根节点（页面级）配置项 */
+  attributes: SchemaItem[]
+  /** 该标签绑定的数据对象 */
+  data: Record<string, any>
+  /** 可选的固定组件节点 */
+  node?: Node
+}
+/**
+ * 根节点（页面级）配置的补充入口（config pane 提供的额外标签）。
+ *
+ * 本质上只是给根节点配置区多加一个标签：标签里是业务侧定义的根配置项，
+ * 用于补充根节点的配置。它**不一定是独立组件**——可能只是出于业务需要把一组配置单独归到一个标签里；
+ * 「浮窗」这类位置固定、组件区不自由提供的组件，是当这些配置驱动一个固定组件时的用法之一。
+ *
+ * 若提供了 `component`，编辑器会额外把它作为独立 Node 绑定到根节点上（不进入页面布局的拖拽列表，
+ * 因此不可拖曳、不可删除，始终以预览态渲染）；组件的两份配置相互独立、都由业务侧定义：
+ * - 根配置（`attributes`）：本标签里的配置项；
+ * - 组件内容（`component.schema.props`）：选中该组件后于「属性」里编辑。
+ */
 class ConfigPlugin {
   public list: ConfigPanel[] = []
-  constructor(_ctx?: any) {
 
-  }
+  constructor(public ctx: ConfigPluginContext) {}
 
   get defaultPane() {
-    if (!this.list.length)
-      return ''
-
-    return this.list[0].name
+    return this.list[0]?.wid ?? ''
   }
 
-  // TODO: 改为通过widget.create创建根节点的选项卡
-  addPanel(panel: ConfigPanel) {
+  /** 注册一个根节点配置标签；`component` 可选，提供时会额外挂一个固定组件 */
+  addPanel(options: ConfigPanelOptions): ConfigPanel {
+    const root = this.ctx.rootNode()
+    const name = options.name
+    if (!root.data[name])
+      root.data[name] = {}
+
+    let node: Node | undefined
+    if (options.component) {
+      const instance = new Widget(options.component)
+      instance._data.meta = { ...instance._data.meta, draggable: false }
+      // 组件默认数据并入同一份配置对象，响应式与 getData() 都能覆盖到
+      Object.assign(root.data[name], instance.defaultData ?? {})
+      node = new Node(instance, {
+        props: root.data[name],
+        style: JSON.parse(JSON.stringify(instance.defaultStyle ?? {})),
+      })
+      // 注册进 nodeMap 以便通过 wid 定位/选中，但不进入页面拖拽列表（manual = false）
+      this.ctx.addNode(node, root, false)
+    }
+
+    const panel: ConfigPanel = {
+      wid: node?.wid ?? v4(),
+      label: options.label ?? options.component?._name ?? name,
+      name,
+      attributes: options.attributes ?? [],
+      data: root.data[name],
+      node,
+    }
     this.list.push(panel)
+    return panel
   }
 
-  async validate(data: any) {
-    for (const pane of this.list) {
-      const _rules = pane.attributes.reduce<Record<string, Rule>>((all, curr) => {
+  async validate() {
+    for (const panel of this.list) {
+      // 关联组件定义了显示开关且处于关闭状态时，不参与校验
+      if (panel.node && CONFIG_PANEL_SHOW_KEY in panel.data && !panel.data[CONFIG_PANEL_SHOW_KEY])
+        continue
+
+      const items = [...panel.attributes, ...(panel.node?.widget.props ?? [])]
+      const _rules = items.reduce<Record<string, Rule>>((all, curr) => {
         all[curr.key] = curr.rules || []
         return all
       }, {}) || {}
-      const valid = await new Validator(_rules).validate(data[pane.name] || {}).catch(() => {
+      const valid = await new Validator(_rules).validate(panel.data || {}).catch(() => {
         return false
       })
       if (valid) {
@@ -162,7 +236,7 @@ export const useEditor = defineStore('editor', () => {
   const plugins = {
     helper: new HelperPlugin({ addNode, delNode }),
     widget: new WidgetPlugin({ addPanel }),
-    config: new ConfigPlugin(),
+    config: new ConfigPlugin({ addNode, rootNode: () => rootNode.value as Node }),
   }
   const selectedNode = computed(() => {
     const node = nodeMap.get(selected.value)

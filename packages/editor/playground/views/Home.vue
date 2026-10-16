@@ -196,34 +196,68 @@ onMounted(() => {
     // helper: 节点的操作菜单
     // widget: 组件菜单
     init() {
+      // addPanel 只是给根节点配置区加一个标签，标签内容由业务侧定义；
+      // component 可选：提供时额外挂一个固定组件（如浮窗），不提供就只是纯配置标签
       ctx.plugins.config.addPanel({
         label: '浮窗',
         name: 'dialog',
+        // 根配置项：显示开关也在这里，编辑器按 isShow 约定决定是否渲染预览
         attributes: [
-          schema.input({
-            label: '标题',
-            key: 'title',
-            required: true,
-          }),
-          schema.time({ label: '时间', key: 'time' }),
-          schema.number({
-            label: '数字',
-            key: 'num',
-          }),
-          schema.radioButton({ label: '单选', key: 'radio', options: [
-            { label: '选项1', value: '1' },
-            { label: '选项2', value: '2' },
-          ] }),
+          schema.switch({ label: '显示', key: 'isShow', attrs: { activeValue: 1, inactiveValue: 0 } }),
+          schema.number({ label: '浮窗层级', key: 'zIndex' }),
         ],
+        component: widget.create({
+          name: '浮窗',
+          type: 'dialog',
+          defaultData: { isShow: 0 },
+          defaultStyle: {
+            position: 'absolute',
+            width: 48,
+            height: 48,
+            bottom: 20,
+            right: 20,
+          },
+          // 组件自身的内容配置项，选中组件后于「属性」中编辑
+          attributes: [
+            schema.input({
+              label: '标题',
+              key: 'title',
+              required: true,
+            }),
+            schema.time({ label: '时间', key: 'time' }),
+            schema.number({
+              label: '数字',
+              key: 'num',
+            }),
+            schema.radioButton({ label: '单选', key: 'radio', options: [
+              { label: '选项1', value: '1' },
+              { label: '选项2', value: '2' },
+            ] }),
+          ],
+        }),
       })
       ctx.plugins.config.addPanel({
         label: '弹窗1',
         name: 'dialog1',
         attributes: [
-          schema.switch({
-            label: '启用',
-            key: 'enable',
-          }),
+          schema.switch({ label: '显示', key: 'isShow', attrs: { activeValue: 1, inactiveValue: 0 } }),
+        ],
+        component: widget.create({
+          name: '弹窗1',
+          type: 'dialog1',
+          defaultData: { isShow: 0 },
+          defaultStyle: {
+            position: 'absolute',
+            width: 120,
+            height: 40,
+            bottom: 80,
+            right: 20,
+          },
+          attributes: [
+            schema.switch({
+              label: '启用',
+              key: 'enable',
+            }),
 
           // schema.input({
           //   label: '标题',
@@ -248,6 +282,15 @@ onMounted(() => {
           //   key: 'num',
           //   options: [1, 2, 3],
           // }),
+          ],
+        }),
+      })
+      // 纯配置标签：不关联组件，只是给根节点补充一组配置项
+      ctx.plugins.config.addPanel({
+        label: '页面设置',
+        name: 'pageSettings',
+        attributes: [
+          schema.switch({ label: '允许分享', key: 'shareable' }),
         ],
       })
       // const copy = createCopy(ctx)

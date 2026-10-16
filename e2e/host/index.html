@@ -113,6 +113,34 @@
         el.register(ctx => ({
           init() {
             ctx.plugins.widget.addPanel({ label: 'E2E 扩展', name: 'template' })
+            // 页面级浮窗：config pane 额外提供一个区块，开启显示开关后浮在手机右下角
+            // 根节点配置标签 + 可选的固定组件（浮窗）
+            ctx.plugins.config.addPanel({
+              label: 'E2E 浮窗',
+              name: 'dialog',
+              // 根配置（页面级）完全由业务侧定义，显示开关也在这里
+              attributes: [
+                { type: 'switch', label: '显示', key: 'isShow', attrs: { activeValue: 1, inactiveValue: 0 } },
+                { type: 'radio', label: '浮窗层级', key: 'zIndex', options: [{ label: '低', value: 1 }, { label: '高', value: 2 }] },
+              ],
+              component: {
+                _name: 'E2E 浮窗',
+                _view: 'dialog',
+                // 组件自身的内容配置（选中组件后编辑）
+                schema: {
+                  props: [{ type: 'input', label: '标题', key: 'title' }],
+                  style: [],
+                },
+                style: { position: 'absolute', width: 48, height: 48, bottom: 20, right: 20 },
+                data: { isShow: 0, title: 'E2E 浮窗' },
+              },
+            })
+            // 纯配置标签：不关联任何组件，只是给根节点补充配置
+            ctx.plugins.config.addPanel({
+              label: 'E2E 配置',
+              name: 'extraConfig',
+              attributes: [{ type: 'switch', label: '开关', key: 'flag' }],
+            })
           },
         }))
 
@@ -266,6 +294,63 @@
         state.popperStyle = popperStyle
           ? { len: popperStyle.textContent.length, head: popperStyle.textContent.slice(0, 40) }
           : null
+
+        // 页面级浮窗：配置区提供区块 + 显示开关，开启后浮窗以预览态出现在手机右下角
+        await (async () => {
+          const info = { }
+          // 选中根节点，让配置区的浮窗 tab 出现
+          el.shadowRoot.querySelector('.mpd-editor').dispatchEvent(new MouseEvent('click', { bubbles: true }))
+          await sleep(300)
+
+          const tabs = [...el.shadowRoot.querySelectorAll('.mpd-tabs__item')]
+          const tab = tabs.find(t => t.textContent.trim() === 'E2E 浮窗')
+          info.hasTab = !!tab
+          info.hasPlainTab = tabs.some(t => t.textContent.trim() === 'E2E 配置')
+          tab && tab.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+          await sleep(300)
+
+          // 根配置里的浮窗区块 = 「显示」开关 + 自定义根配置项，但不展示浮窗自身的内容配置项
+          const switchEl = el.shadowRoot.querySelector('.mpd-switch')
+          info.rootHasSwitch = !!switchEl
+          info.rootHasCustom = !!el.shadowRoot.querySelector('.mpd-radio-group')
+          info.rootHasContent = !!el.shadowRoot.querySelector('.mpd-input')
+
+          // 初始未开启：手机上不应出现浮窗预览
+          info.previewBefore = !!el.shadowRoot.querySelector('.mpd-node.preview')
+          if (!switchEl) {
+            info.reason = 'no switch in config panel'
+            state.configPanel = info
+            return
+          }
+          switchEl.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+          await sleep(400)
+
+          const preview = el.shadowRoot.querySelector('.mpd-node.preview[data-name="E2E 浮窗"]')
+          info.previewAfter = !!preview
+          if (preview) {
+            const cs = getComputedStyle(preview)
+            info.position = cs.position
+            info.right = cs.right
+            info.bottom = cs.bottom
+            // 预览态：没有操作栏（不可删除），也不是可拖曳节点
+            info.hasOperate = !!preview.querySelector('.node-operate, .node-helper')
+            info.draggable = preview.classList.contains('draggable')
+
+            // 点击浮窗预览：应选中该浮窗，进而在「属性」里配置其具体内容
+            preview.querySelector('.node-wrap').dispatchEvent(new MouseEvent('click', { bubbles: true }))
+            await sleep(300)
+            info.selectedAfterClick = preview.classList.contains('selected')
+            // 选中组件后展示其内容配置（标题输入框），与根配置相互独立
+            info.panelHasContent = !!el.shadowRoot.querySelector('.mpd-input')
+          }
+
+          // 浮窗数据要能被 getData() 取到，但不能混进页面拖拽列表
+          const data = el.getData()
+          info.inGetData = data?.data?.dialog ? data.data.dialog.isShow : null
+          info.inList = (data?.list || []).some(n => n._view === 'dialog')
+          info.plainInGetData = !!data?.data?.extraConfig
+          state.configPanel = info
+        })()
 
         state.phase = 'done'
       }

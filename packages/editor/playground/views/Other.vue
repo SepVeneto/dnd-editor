@@ -51,30 +51,61 @@ onMounted(() => {
         label: '弹窗',
         name: 'dialog',
         attributes: [
-          schema.input({
-            label: '标题',
-            key: 'title',
-            required: true,
-          }),
-          schema.time({ label: '时间', key: 'time' }),
-          schema.number({
-            label: '数字',
-            key: 'num',
-          }),
-          schema.radioButton({ label: '单选', key: 'radio', options: [
-            { label: '选项1', value: '1' },
-            { label: '选项2', value: '2' },
-          ] }),
+          // 根配置（页面级）完全由业务侧定义，显示开关也在这里
+          schema.switch({ label: '显示', key: 'isShow', attrs: { activeValue: 1, inactiveValue: 0 } }),
+          schema.number({ label: '浮窗层级', key: 'zIndex' }),
         ],
+        component: widget.create({
+          name: '弹窗',
+          type: 'dialog',
+          defaultData: { isShow: 0 },
+          defaultStyle: {
+            position: 'absolute',
+            width: 48,
+            height: 48,
+            bottom: 20,
+            right: 20,
+          },
+          attributes: [
+            schema.input({
+              label: '标题',
+              key: 'title',
+              required: true,
+            }),
+            schema.time({ label: '时间', key: 'time' }),
+            schema.number({
+              label: '数字',
+              key: 'num',
+            }),
+            schema.radioButton({ label: '单选', key: 'radio', options: [
+              { label: '选项1', value: '1' },
+              { label: '选项2', value: '2' },
+            ] }),
+          ],
+        }),
       })
       ctx.plugins.config.addPanel({
         label: '弹窗1',
         name: 'dialog1',
         attributes: [
-          schema.switch({
-            label: '启用',
-            key: 'enable',
-          }),
+          schema.switch({ label: '显示', key: 'isShow', attrs: { activeValue: 1, inactiveValue: 0 } }),
+        ],
+        component: widget.create({
+          name: '弹窗1',
+          type: 'dialog1',
+          defaultData: { isShow: 0 },
+          defaultStyle: {
+            position: 'absolute',
+            width: 120,
+            height: 40,
+            bottom: 80,
+            right: 20,
+          },
+          attributes: [
+            schema.switch({
+              label: '启用',
+              key: 'enable',
+            }),
 
           // schema.input({
           //   label: '标题',
@@ -99,7 +130,8 @@ onMounted(() => {
           //   key: 'num',
           //   options: [1, 2, 3],
           // }),
-        ],
+          ],
+        }),
       })
       // const copy = createCopy(ctx)
       // const del = createDelete(ctx)

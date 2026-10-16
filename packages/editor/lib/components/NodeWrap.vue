@@ -4,7 +4,12 @@
     :data-id="node.wid"
     :style="normalizeStyle(node.style)"
     :data-name="node.name"
-    :class="[isActive && 'selected', isDraggable && 'draggable', isHover && 'hover']"
+    :class="[
+      isActive && 'selected',
+      isDraggable && 'draggable',
+      isHover && 'hover',
+      preview && 'preview'
+    ]"
   >
     <div
       class="node-wrap"
@@ -22,7 +27,7 @@
       </slot>
     </div>
     <NodeOperate
-      v-if="isActive"
+      v-if="isActive && !preview"
       :node="node"
     />
 
@@ -48,9 +53,13 @@ import NodeContainer from './NodeContainer.vue'
 import NodeOperate from './NodeOperate.vue'
 import { ElIcon } from 'element-plus'
 
-const props = defineProps<{ node: Node }>()
+const props = defineProps<{
+  node: Node
+  preview?: boolean
+}>()
 
 const editor = useEditor()
+const preview = computed(() => props.preview === true)
 const isActive = computed(() => props.node.wid === editor.selected)
 const isHover = computed(() => {
   if (isActive.value)
@@ -74,6 +83,9 @@ const isDraggable = computed(() => props.node.widget?.draggable)
   }
   &.hover::after {
     border: 1px dashed #4089Ef;
+  }
+  &.preview.hover::before {
+    display: none;
   }
   &.hover::before {
     content: attr(data-name);

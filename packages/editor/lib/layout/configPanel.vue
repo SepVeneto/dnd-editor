@@ -46,25 +46,28 @@
           />
         </ElScrollbar>
       </ElTabPane>
-      <template v-if="isSelectRoot">
-        <ElTabPane
-          v-for="pane in editor.plugins.config.list"
-          :key="pane.name"
-          :label="pane.label"
-          :name="pane.name"
+
+      <!--
+        根节点（页面级）配置的补充标签：标签内容完全由业务侧定义，不一定是独立组件；
+        若关联了固定组件，其内容配置在选中该组件后回到「属性」里编辑。
+      -->
+      <ElTabPane
+        v-for="panel in rootConfigPanes"
+        :key="panel.wid"
+        :label="panel.label"
+        :name="panel.wid"
+      >
+        <ElScrollbar
+          height="700px"
+          wrap-style="padding-right: 20px;"
         >
-          <ElScrollbar
-            height="700px"
-            wrap-style="padding-right: 20px;"
-          >
-            <ConfigForm
-              :ref="(ref: any) => updateRef(ref, pane.name)"
-              v-model="editor.selectedNode.data[pane.name]"
-              :list="pane.attributes"
-            />
-          </ElScrollbar>
-        </ElTabPane>
-      </template>
+          <ConfigForm
+            :ref="(ref: any) => updateRef(ref, panel.wid)"
+            v-model="panel.data"
+            :list="panel.attributes"
+          />
+        </ElScrollbar>
+      </ElTabPane>
     </ElTabs>
   </div>
 </template>
@@ -94,11 +97,14 @@ const refPageConfig = shallowRef<{ ref: Raw<PaneInstance>, name: string }[]>([])
 
 const active = ref<string>('props')
 
-watchOnce(() => editor.plugins.config.defaultPane, (name) => {
-  active.value = propSchema.value.length > 0 ? 'props' : name
-})
-
 const isSelectRoot = computed(() => editor.selectedNode.wid === editor.rootNode.wid)
+const isConfigInstance = computed(() => editor.plugins.config.list.some(panel => panel.node?.wid === editor.selected))
+// 这些标签补充的是根节点配置，在选中根节点（或关联组件）时出现
+const rootConfigPanes = computed(() => (isSelectRoot.value || isConfigInstance.value ? editor.plugins.config.list : []))
+
+watchOnce(() => editor.plugins.config.defaultPane, (paneWid) => {
+  active.value = propSchema.value.length > 0 ? 'props' : paneWid
+})
 
 watch(() => editor.selected, () => {
   refPageConfig.value = []
@@ -133,11 +139,13 @@ onBeforeUpdate(() => {
 
 defineExpose({
   async validate() {
-    const propValid = await refProp.value?.validate()?.catch(() => {
-      active.value = 'props'
-    })
-    if (!propValid)
-      return
+    if (refProp.value) {
+      const propValid = await refProp.value?.validate()?.catch(() => {
+        active.value = 'props'
+      })
+      if (!propValid)
+        return
+    }
 
     if (refPageConfig.value) {
       for (const pane of refPageConfig.value) {
@@ -150,9 +158,11 @@ defineExpose({
       }
     }
 
-    await refStyle.value?.validate()?.catch(() => {
-      active.value = 'style'
-    })
+    if (refStyle.value) {
+      await refStyle.value?.validate()?.catch(() => {
+        active.value = 'style'
+      })
+    }
   },
 })
 </script>

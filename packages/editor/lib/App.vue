@@ -55,6 +55,25 @@
                 </NodeWrap>
               </template>
             </VueDraggable>
+
+            <template
+              v-for="panel in editor.plugins.config.list"
+              :key="panel.wid"
+            >
+              <!-- 关联了固定组件的标签：不可拖曳/删除，始终以预览态渲染，点击选中后即可配置 -->
+              <NodeWrap
+                v-if="panel.node && panel.node.visible !== false"
+                :node="panel.node"
+                preview
+              >
+                <ViewRender
+                  scope="widgets"
+                  :type="`${panel.node.type}.view`"
+                  :config="panel.node.data"
+                  :data="panel.node.data"
+                />
+              </NodeWrap>
+            </template>
           </ElScrollbar>
         </div>
       </div>
