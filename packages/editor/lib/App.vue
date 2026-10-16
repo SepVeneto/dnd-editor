@@ -220,13 +220,9 @@ function onCapability({ name, result }: { name: string, result: unknown }) {
   console.log('[editor] capability result', name, result)
 }
 
-// TODO: 需要优化
-// 目前由于mf在引入时force对于web components在不重新导入的情况下没办法再次加载，导致从其它页面切换回来时不会重新加载样式
-// 针对常规项目，样式第一次加载时会被挂载到dom上，所以不需要处理重复打开的情况
-// 但是 web components中，样式会被挂载到shadow dom中，而重复打开会重新创建shdow dom
-// 导致样式丢失
-// 未来要么mf兼容web components，要么提供手动清除缓存的方式
-// 或者可以从根本上解决，即考虑其它样式加载的方式
+// 编辑器卸载时清掉生产者经模块联邦加载的模块缓存，下次挂载重新导入，拿到最新的组件代码。
+// shadow root 重建导致的样式丢失由 ./shadowCss 单独兜住（重建时重新投放已加载过的样式），
+// 这里不必再依赖「重新导入」来补样式。
 onUnmounted(() => {
   // @ts-expect-error: ignore
   window.__disposeModules()

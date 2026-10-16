@@ -4,9 +4,11 @@
  *
  * 起两个真实的开发服务器（生产者 rsbuild dev + 宿主 vite dev），用真实浏览器改源码，验证：
  *   1. 改生产者的组件视图（`*.view.vue`）→ 编辑器画布原地更新，编辑中的数据保留；
- *   2. 改宿主自己的模板 → 宿主页面照常原地更新（编辑器不能吞掉宿主的更新）；
- *   3. 改业务侧下发的组件配置（schema）→ 配置面板用上新定义、编辑器数据不被清空；
- *   4. 以上都不触发整页刷新。
+ *   2. 改生产者的组件样式（`<style>`）→ 画布上的样式原地更新（样式在 shadow root 里，
+ *      要能被 rspack 的 CSS HMR 找到，见 packages/editor/lib/shadowCss.ts）；
+ *   3. 改宿主自己的模板 → 宿主页面照常原地更新（编辑器不能吞掉宿主的更新）；
+ *   4. 改业务侧下发的组件配置（schema）→ 配置面板用上新定义、编辑器数据不被清空；
+ *   5. 以上都不触发整页刷新。
  *
  * 这是两件事的回归用例：
  *   - 产物自带的 Vue 必须是「开发态」的（见 build/hmr-intro.ts）：一旦 `process.env.NODE_ENV`
@@ -42,6 +44,13 @@ const VIEW = {
   from: null,
   to: null,
   needle: 'hmr-probe-view',
+}
+/** 只改样式：验证 shadow root 里的样式表能被 CSS HMR 找到并原地更新（而不是样式丢失 / 整页刷新） */
+const VIEW_STYLE = {
+  file: join(ROOT, 'packages/widgets/src/widgets/menuItem.view.vue'),
+  from: 'color: crimson;',
+  to: 'color: rgb(10, 200, 30);',
+  expect: 'rgb(10, 200, 30)',
 }
 const SCHEMA = {
   file: join(ROOT, 'packages/editor/playground/views/Home.vue'),
@@ -138,6 +147,9 @@ async function connectCDP(wsUrl) {
 
 /** 改文件 → 等画布出现标记 → 立即还原 */
 async function editAndWait(target, snapshot, evaluate) {
+  // 连着几步快速改同一个文件时，相邻两次写入可能被文件监听器合并成一次，
+  // 开发服务器会认为内容没变而不发 HMR 更新。写之前先让上一步「消化」完。
+  await sleep(400)
   const original = await readFile(target.file, 'utf8')
   // 锚点按当前内容定位，避免写死文案：
   // 组件视图用模板里那段占位 div，schema 用「菜单」组件里那个开关的 label
@@ -327,6 +339,43 @@ try {
     check('改组件视图：画布原地更新（HMR 生效）', afterView.hasNeedle, `用时 ${viewResult.needleAt}ms`)
     check('改组件视图：编辑中的数据保留', afterView.nodes === 1, `nodes=${afterView.nodes}`)
     check('改组件视图：没有整页刷新', !viewResult.reloaded && afterView.sentinel === 'alive')
+  }
+
+  // 1.2 只改生产者的样式：验证 shadow root 里的样式表能被 CSS HMR 找到并原地更新
+  if (!process.env.HMR_E2E_SKIP?.includes('viewstyle')) {
+    const styleOriginal = await readFile(VIEW_STYLE.file, 'utf8')
+    if (!styleOriginal.includes(VIEW_STYLE.from))
+      throw new Error(`样式锚点不存在：${VIEW_STYLE.file} 里的 ${VIEW_STYLE.from}`)
+
+    const colorOf = () => evaluate(`(() => {
+      const wrapper = document.querySelector('mpd-editor')?.shadowRoot?.querySelector('.menu-item-wrapper')
+      return {
+        color: wrapper ? getComputedStyle(wrapper).color : null,
+        sentinel: window.__HMR_E2E_SENTINEL__ ?? null,
+      }
+    })()`)
+
+    await evaluate(`window.__HMR_E2E_SENTINEL__ = 'alive'`)
+    await sleep(400)
+    const styleAt = Date.now()
+    await writeFile(VIEW_STYLE.file, styleOriginal.replace(VIEW_STYLE.from, VIEW_STYLE.to))
+    try {
+      let styleUpdated = false
+      const styleDeadline = Date.now() + 15000
+      while (Date.now() < styleDeadline) {
+        if ((await colorOf()).color === VIEW_STYLE.expect) {
+          styleUpdated = true
+          break
+        }
+        await sleep(200)
+      }
+      const afterStyle = await colorOf()
+      check('改组件视图样式：画布样式原地更新（CSS HMR 生效）', styleUpdated, `color=${afterStyle.color} 用时 ${Date.now() - styleAt}ms`)
+      check('改组件视图样式：没有整页刷新', afterStyle.sentinel === 'alive')
+    }
+    finally {
+      await writeFile(VIEW_STYLE.file, styleOriginal)
+    }
   }
 
   // 1.5 改宿主自己的模板：验证宿主页面本身的 HMR 也照常工作（编辑器不吞掉宿主的更新）

@@ -39,7 +39,7 @@ watchEffect(() => {
 
 const refEditor = useTemplateRef<EditorInstance>('editorRef')
 // 元素在 import 时就注册好了：不需要等 register() 完成，也不需要 v-if 去卡渲染时机
-register({ remoteUrl: 'http://localhost:8090' })
+register({ remoteUrl: new URLSearchParams(location.search).get('remote') || 'http://localhost:8090' })
 
 onMounted(() => {
   // 编辑器可能还没挂载完，这里调用的扩展注册会先排队，挂载后自动补上

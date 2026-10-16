@@ -8,11 +8,12 @@
 <script lang="ts" setup>
 import { useDebounceFn, useEventListener } from '@vueuse/core'
 import * as Vue from 'vue'
-import { useHost, useTemplateRef } from 'vue'
+import { onUnmounted, useHost, useTemplateRef } from 'vue'
 import App from './App.vue'
 import { bindEditorElement } from './element'
 import { isHmrEnabled, getSnapshot, saveSnapshot } from './hmr'
 import { editorProps } from './props'
+import { installShadowCssRuntime, registerShadowCssRoot } from './shadowCss'
 import { useApp, useEditor } from './store'
 
 const props = defineProps(editorProps)
@@ -51,24 +52,13 @@ Vue.watch(() => editor.rootNode, () => {
 // 业务侧重新下发组件配置（改 schema、按需加载配置等）时就地更新组件定义，
 // 不重建根节点，因此画布上的数据与选中态都会保留
 Vue.watch(() => props.widgets, widgets => appStore.setWidgets(widgets))
-// 让动态组件的样式加载在shadow dom中，而不是宿主环境中
-// @ts-expect-error: ignore
-window.__shadowdom_css_runtime__ = async (tagLink: HTMLLinkElement) => {
-  try {
-    const res = await fetch(tagLink.href)
-    const stylecontent = await res.text()
-    const style = document.createElement('style')
-    style.textContent = stylecontent
-    const shadowRoot = editor.shadowRoot
-    shadowRoot?.appendChild(style)
-    // 手动触发link标签的load事件，保证组件渲染流程正常
-    tagLink.dispatchEvent(new Event('load'))
-  }
-  catch (err) {
-    console.error(err)
-    tagLink.dispatchEvent(new Event('error'))
-  }
-}
+// 让动态组件的样式加载在 shadow dom 中，而不是宿主环境中：
+// 生产者运行时的 <link> 由 shadowCss 接管，热更新与 shadow root 重建（宿主热更新、路由切换）
+// 也一并处理，避免改了样式不生效 / 重建后样式丢失。
+installShadowCssRuntime()
+// 编辑器卸载（shadow root 会被丢弃）时注销，卸载后不再参与样式查找
+const unregisterShadowCssRoot = registerShadowCssRoot(editor.shadowRoot)
+onUnmounted(() => unregisterShadowCssRoot())
 
 const refApp = useTemplateRef('appRef')
 // 编辑器内不需要触发取消选中的已经通过click.stop屏蔽了

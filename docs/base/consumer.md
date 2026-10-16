@@ -134,7 +134,12 @@ register({ remoteUrl: 'http://localhost:8090' })
 | 改动内容 | 效果 |
 | -------- | ---- |
 | 生产者的组件视图（`*.view.vue`） | 画布上的组件原地更新，编辑中的数据保留 |
+| 生产者的样式（组件视图的 `<style>`） | 画布上的样式原地更新（样式加载在 shadow root 中，见下） |
 | 业务侧下发的组件配置（`widgets`/`schema`） | 配置面板用上新定义；编辑器数据不变，宿主页面热更新导致的重新挂载也会从快照恢复数据 |
+
+生产者的样式默认挂在 `document.head`。编辑器把它重定向进自己的 `shadow root`（不污染宿主页面），
+因此热更新时 rspack「找旧样式表」的默认逻辑会失效 —— 生产者需要接入 `@sepveneto/dnd-plugins`，
+插件会补上这一步（查找扩展到 shadow root）。样式随 shadow root 重建（路由切换、宿主热更新）也由编辑器重新投放。
 
 回归用例：`node e2e/hmr.mjs`（会自己拉起生产者的 rsbuild dev 与宿主的 vite dev）。
 

@@ -81,6 +81,7 @@ class ConfigPlugin {
     return this.list[0].name
   }
 
+  // TODO: 改为通过widget.create创建根节点的选项卡
   addPanel(panel: ConfigPanel) {
     this.list.push(panel)
   }

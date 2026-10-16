@@ -184,7 +184,8 @@ watchEffect(() => {
 const refEditor = useTemplateRef<EditorInstance>('editorRef')
 // 元素在 import 时就注册好了：不需要等 register() 完成，也不需要 v-if 去卡渲染时机
 register({
-  remoteUrl: 'http://localhost:8090',
+  // ?remote= 用来连到临时起的生产者（默认 8090 可能已被别的进程占用）
+  remoteUrl: new URLSearchParams(location.search).get('remote') || 'http://localhost:8090',
   // 业务侧显式注入 agent 的加载方式；不注入也不影响编辑器本身使用
   agent: () => import('@sepveneto/dnde-agent/element'),
 })
@@ -196,7 +197,7 @@ onMounted(() => {
     // widget: 组件菜单
     init() {
       ctx.plugins.config.addPanel({
-        label: '弹窗',
+        label: '浮窗',
         name: 'dialog',
         attributes: [
           schema.input({
