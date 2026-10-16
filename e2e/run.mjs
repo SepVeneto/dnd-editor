@@ -273,6 +273,24 @@ try {
     throw new Error('页面未上报状态')
 
   check('编辑器自定义元素成功挂载', state.mounted === true)
+  // 宿主侧只需要 import 编辑器：元素在 import 时就注册好，可以直接渲染，
+  // 不需要 v-if 等 register()；真正的编辑器挂载前先显示加载占位
+  check(
+    '不等待 register() 即可渲染 <mpd-editor>（挂载前显示加载占位）',
+    state.loadingPlaceholder === true && state.loadingCleared === true,
+    `placeholder=${state.loadingPlaceholder}, cleared=${state.loadingCleared}`,
+  )
+  // 挂载前调用的 setData 会排队，挂载后补上：画布上的卡片内容即来自这次调用
+  check(
+    '挂载前调用的 setData 会排队并在挂载后生效',
+    state.hasElImage === true,
+    `hasElImage=${state.hasElImage}`,
+  )
+  check(
+    '挂载前调用的 register()（扩展）会排队并在挂载后生效',
+    state.hasPluginTab === true,
+    `hasPluginTab=${state.hasPluginTab}`,
+  )
   // 生产者不再注入冗余的 el- 主题；shadow 里应当是编辑器自己的 mpd 主题
   check(
     'shadow DOM 使用编辑器自己的 mpd 主题',

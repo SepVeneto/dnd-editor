@@ -1,20 +1,27 @@
-import { defineCustomElement } from 'vue'
-import Main from './Editor.vue'
-import { createPinia } from 'pinia'
-import { setAgentImporter } from './agents/loader.js'
+import type { App } from 'vue'
 import type { AgentImporter } from './agents/loader.js'
+import { createPinia } from 'pinia'
+import { defineAsyncComponent } from 'vue'
+import Main from './Editor.vue'
+import { setAgentImporter } from './agents/loader.js'
+import { createEditorElement, EDITOR_ELEMENT_TAG } from './element.js'
 import elementPlusCss from './styles/popper.scss?inline'
 import { injectPopperStyles, initMf } from './utils.js'
 
 export type EditorInstance = InstanceType<typeof Main>
 
+export { EDITOR_ELEMENT_TAG }
 // 宿主关闭 injectGlobalStyle 后，也可以在合适时机自行调用
 export { injectPopperStyles }
 export type { AgentImporter } from './agents/loader.js'
 
-let initPromise = new Map<string, Promise<boolean>>()
-
 const PRODUCER_STYLE_ID = 'mpd-producer-styles'
+
+/** 生产者（组件视图）通过 `widgets/setup` 声明的插件与样式 */
+interface ProducerSetup {
+  use?: Array<{ plugin: any, options?: any }>
+  styles?: string[]
+}
 
 /**
  * 生产者自己声明的样式（`setup.styles`）默认只进 shadow root。
@@ -64,6 +71,58 @@ export interface RegisterOptions {
   agent?: AgentImporter
 }
 
+function defer<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((r) => { resolve = r })
+  return { promise, resolve }
+}
+
+/**
+ * `register()` 之前元素就已经注册好了（见文件末尾），这里只等第一个 `register()` 把
+ * 生产者地址带进来：`<mpd-editor>` 可以先渲染、后注册，渲染时机完全由宿主决定。
+ */
+const registration = defer<RegisterOptions>()
+
+/** 元素的挂载只认第一个 register()：它决定编辑器用哪份主题与生产者插件 */
+let registered = false
+
+/** 生产者 setup 按 remoteUrl 缓存，`register()` 因此是幂等的 */
+const setups = new Map<string, Promise<ProducerSetup>>()
+
+/** 生产者 setup 的结果，元素挂载（configureApp）时用于注册插件 */
+let producerSetup: ProducerSetup = {}
+
+/**
+ * 加载生产者的 setup。除了组件视图本身，生产者还会通过它声明自己的插件与样式，
+ * 因此必须在编辑器挂载之前拿到。加载失败按空 setup 处理（与组件视图加载失败的表现一致）。
+ */
+function loadProducerSetup(options: RegisterOptions): Promise<ProducerSetup> {
+  const cached = setups.get(options.remoteUrl)
+  if (cached)
+    return cached
+
+  const injectGlobalStyle = options.injectGlobalStyle ?? true
+  const promise = (async () => {
+    const mf = initMf(options.remoteUrl)
+    const setup = (await mf.loadRemote('widgets/setup').catch((err) => {
+      console.error(err)
+      return {}
+    })) as ProducerSetup
+    // 生产者的样式除注入 shadow root 外，再往 light DOM 投放一份，
+    // 供 teleport 到 document.body 的弹层（createDialog / ElSelect 下拉等）使用。
+    if (injectGlobalStyle)
+      injectProducerStyles(setup.styles ?? [])
+    return setup
+  })().catch((err) => {
+    // 失败时清除缓存，允许调用方重试，而不是一直复用同一个 rejected promise
+    setups.delete(options.remoteUrl)
+    throw err
+  })
+
+  setups.set(options.remoteUrl, promise)
+  return promise
+}
+
 export function register(options: RegisterOptions): Promise<boolean> {
   // 注意放在缓存判断之前：先关后开时也能补上
   if (options.injectGlobalStyle ?? true)
@@ -74,46 +133,43 @@ export function register(options: RegisterOptions): Promise<boolean> {
   if (options.agent)
     setAgentImporter(options.agent)
 
-  const cached = initPromise.get(options.remoteUrl)
-  if (cached) return cached
+  // 元素已经在等这个地址了：先渲染 <mpd-editor> 再 register，或者反过来，都可以。
+  // 之后的 register() 只影响后续经模块联邦加载的组件视图，不再改变元素定义。
+  if (!registered) {
+    registered = true
+    registration.resolve(options)
+  }
 
-  const promise = (async () => {
-    const mf = initMf(options.remoteUrl)
-    const setup: any = await mf.loadRemote('widgets/setup').catch((err) => {
-      console.error(err)
-      return {}
-    })
-    // 生产者的样式除注入 shadow root 外，再往 light DOM 投放一份，
-    // 供 teleport 到 document.body 的弹层（createDialog / ElSelect 下拉等）使用。
-    if (options.injectGlobalStyle ?? true)
-      injectProducerStyles(setup?.styles ?? [])
-    const Editor = defineCustomElement(Main, {
-      configureApp(app) {
-        const store = createPinia()
-        app.use(store)
+  return loadProducerSetup(options).then(() => true)
+}
 
-        setup.use?.forEach((item: any) => {
-          app.use(item.plugin, item.options)
-        })
-      },
-      // 主题只打包一份：这里注入 shadow root（变量作用在 :host），
-      // injectPopperStyles() 把同一份字符串投放到 document.head 兜住 teleport 的弹层
-      styles: [elementPlusCss.replaceAll(':root', ':host'), ...(setup?.styles ?? [])],
-    })
+/**
+ * 元素的定义：先等 `register()` 把生产者地址交进来，再等生产者 setup 加载完成。
+ * 期间 `<mpd-editor>` 已经存在于页面中（显示加载占位），宿主不需要用 v-if 卡住它。
+ */
+async function loadEditorDefinition() {
+  const options = await registration.promise
+  producerSetup = await loadProducerSetup(options)
+  return {
+    ...Main,
+    // 主题只打包一份：这里注入 shadow root（变量作用在 :host），
+    // injectPopperStyles() 把同一份字符串投放到 document.head 兜住 teleport 的弹层
+    styles: [
+      elementPlusCss.replaceAll(':root', ':host'),
+      ...(producerSetup.styles ?? []),
+      ...(Main.styles ?? []),
+    ],
+  }
+}
 
-    // 自定义元素只能注册一次，已注册时复用即可。
-    // 这里不能再提前 return，否则 promise 永远不会 settle，调用方将永久挂起
-    if (!customElements.get('mpd-editor')) {
-      customElements.define('mpd-editor', Editor)
-    }
+const EditorElement = createEditorElement({
+  definition: defineAsyncComponent(loadEditorDefinition),
+  configureApp(app: App) {
+    app.use(createPinia())
+    producerSetup.use?.forEach((item: any) => app.use(item.plugin, item.options))
+  },
+})
 
-    return true
-  })().catch((err) => {
-    // 失败时清除缓存，允许调用方重试，而不是一直复用同一个 rejected promise
-    initPromise.delete(options.remoteUrl)
-    throw err
-  })
-
-  initPromise.set(options.remoteUrl, promise)
-  return promise
+if (typeof window !== 'undefined' && window.customElements && !window.customElements.get(EDITOR_ELEMENT_TAG)) {
+  window.customElements.define(EDITOR_ELEMENT_TAG, EditorElement)
 }

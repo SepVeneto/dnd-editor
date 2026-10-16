@@ -34,12 +34,12 @@ npm i @sepveneto/dnde @sepveneto/dnde-core
 
 ## 用法
 
-编辑器通过`register`注册`<mpd-editor>`自定义元素，`register`需要传入生产者（组件视图）的部署地址：
+编辑器被导入时就会注册`<mpd-editor>`自定义元素，`register`需要传入生产者（组件视图）的部署地址：
 
 ```ts
 import { register } from '@sepveneto/dnde'
 
-await register({ remoteUrl: 'http://localhost:8090' })
+register({ remoteUrl: 'http://localhost:8090' })
 ```
 
 ```html
@@ -47,8 +47,72 @@ await register({ remoteUrl: 'http://localhost:8090' })
 ```
 
 ::: tip
-`register`是幂等的，同一个`remoteUrl`重复调用会复用同一次注册结果，不会重复注册自定义元素。
+`register`是幂等的，同一个`remoteUrl`重复调用会复用同一次注册结果。
 :::
+
+### 渲染时机
+
+宿主的`import`和`register`都是异步的，但**渲染`<mpd-editor>`不需要等它们**，不需要`v-if`之类的时序控制：
+
+- `import`之后元素就已经注册好，模板里可以直接写`<mpd-editor>`；
+- 真正的编辑器要等`register`拿到生产者地址、生产者的`setup`加载完成之后才挂载，这期间元素会显示自带的加载占位；
+- 挂载前调用`setData`、`register`等方法会先排队，挂载后按顺序补上（`await`在这些方法上始终成立）。
+
+因此「先渲染再注册」和「先注册再渲染」都是合法的，宿主只需要在合适的时机调用`register`即可：
+
+```vue
+<template>
+  <mpd-editor ref="editor" :widgets="widgets" />
+</template>
+
+<script setup lang="ts">
+import { onMounted, useTemplateRef } from 'vue'
+import { register } from '@sepveneto/dnde'
+
+const editorRef = useTemplateRef('editor')
+
+register({ remoteUrl: 'http://localhost:8090' })
+
+onMounted(async () => {
+  // 挂载前调用会先排队，挂载后自动补上
+  editorRef.value.setData(await mockApi())
+})
+</script>
+```
+
+::: tip
+`<mpd-editor>`是自定义元素，需要告诉`vue`不要在编译期把它当成组件解析，否则控制台会有`Failed to resolve component`告警：
+
+```ts
+// vite.config.ts
+vue({
+  template: { compilerOptions: { isCustomElement: tag => tag === 'mpd-editor' } },
+})
+```
+:::
+
+#### 需要更小的首屏体积时
+
+编辑器产物较大，若希望把它拆成独立的`chunk`，可以改成动态`import`：此时只有`import`本身需要等待，`register`与编辑器的挂载都不用等：
+
+```vue
+<template>
+  <mpd-editor v-if="ready" ref="editor" :widgets="widgets" />
+</template>
+
+<script setup lang="ts">
+import { onMounted, ref, useTemplateRef } from 'vue'
+
+const ready = ref(false)
+const editorRef = useTemplateRef('editor')
+
+import('@sepveneto/dnde').then(({ register }) => {
+  register({ remoteUrl: 'http://localhost:8090' })
+  // 元素在 import 时就已经注册好，渲染之后指令式 API 立即可用（挂载前的调用会排队）
+  ready.value = true
+})
+</script>
+```
 
 ### 最佳实践
 
@@ -58,34 +122,30 @@ await register({ remoteUrl: 'http://localhost:8090' })
 ``` vue [demo.vue]
 <template>
   <mpd-editor
-    v-if="editor.render.value"
     ref="editor"
     :widgets="widgets"
-    :extra="editor.extra"
+    :extra="extra"
+    @change="onChange"
   />
 </template>
 
 <script setup lang="ts">
 import { useTemplateRef } from 'vue'
-import { useEditor } from './composable.ts'
+import { register } from '@sepveneto/dnde'
 import { widgets } from './widgets.ts'
 
 const editorRef = useTemplateRef('editor')
-const editor = useEditor()
+const extra = {
+  // 可以是文件上传之类的接口，也可以直接共享 store
+}
+
+// 只需要把生产者（组件视图）的地址交给编辑器，不用 await，也不需要用返回值控制渲染时机
+register({ remoteUrl: 'http://localhost:8090' })
 
 mockApi().then((res) => {
-  editor.waitForMounted.then(() => {
-    // 设置编辑器数据
-    editorRef.value.setData(res)
-  })
+  // 编辑器可能还没挂载完：这里调用会先排队，挂载后自动补上
+  editorRef.value.setData(res)
 })
-
-init()
-
-async function init() {
-  await editor.register()
-  // 编辑器的其它初始化逻辑
-}
 
 async function getEditorData() {
   // 校验编辑器数据是否合法
@@ -95,45 +155,6 @@ async function getEditorData() {
   return editorRef.value.getData()
 }
 </script>
-```
-
-``` ts [composable.ts]
-import { nextTick, ref } from 'vue'
-
-export function useEditor() {
-  // 由于编辑器的js较大，使用异步加载可以显著提升首屏速度
-  const dnde = import('@sepveneto/dnde')
-  // 这里可以替换成loading让用户体验更友好
-  const render = ref(false)
-  // 区分开发环境，不推荐跨域部署
-  const mode = import.meta.env.MODE
-  const remoteUrl = mode === 'development'
-    ? 'http://localhost:8090'
-    : `${window.location.origin}/design-widgets`
-
-  // 通过接口获取编辑器数据和编辑器初始化都是异步操作
-  // 而设置数据需要等两者都完成
-  const { promise, resolve } = Promise.withResolvers()
-
-  const extra = {
-    // 可以是文件上传之类的接口
-    // 也可以直接共享store
-  }
-
-  async function register() {
-    // remoteUrl 指向生产者（组件视图）的部署地址
-    (await dnde).register({ remoteUrl })
-    render.value = true
-    nextTick().then(resolve)
-  }
-
-  return {
-    waitForMounted: promise,
-    render,
-    register,
-    extra,
-  }
-}
 ```
 
 ``` ts [widgets.ts]

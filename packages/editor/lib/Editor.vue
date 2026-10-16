@@ -8,8 +8,9 @@
 <script lang="ts" setup>
 import { useDebounceFn, useEventListener } from '@vueuse/core'
 import * as Vue from 'vue'
-import { useTemplateRef } from 'vue'
+import { useHost, useTemplateRef } from 'vue'
 import App from './App.vue'
+import { bindEditorElement } from './element'
 import { isHmrEnabled, getSnapshot, saveSnapshot } from './hmr'
 import { editorProps } from './props'
 import { useApp, useEditor } from './store'
@@ -75,7 +76,7 @@ useEventListener(editor.shadowRoot, 'click', () => {
   editor.selectNode()
 })
 
-defineExpose({
+const api = {
   register(fn: (ctx: typeof editor) => { init: () => void }) {
     const editor = useEditor()
     const pluginConstructor = fn(editor)
@@ -104,5 +105,10 @@ defineExpose({
   setData(data: { _view: 'page', list: any[] }) {
     editor.setData(data)
   },
-})
+}
+
+defineExpose(api)
+// 元素在模块加载时就注册好了，宿主可以不等 register() 直接渲染 <mpd-editor>（见 main.ts）：
+// 编辑器挂载前的指令式调用会先排队，这里挂载完成后再补上，宿主不需要关心渲染时机。
+bindEditorElement(useHost(), api)
 </script>

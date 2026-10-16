@@ -13,7 +13,7 @@ title: 扩展
 比如内置的`删除`操作只有指定的组件才能使用，也需要针对每个组件支持导出具体数据方便debug，可以按照如下方式进行扩展：
 
 ``` ts
-// 编辑器的引用，需要在注册之后才能获取到
+// 元素渲染之后就可以调用，编辑器还没挂载完也没关系（调用会先排队）
 editorRef.value?.register(ctx => ({
   init() {
     ctx.plugins.helper.addBuiltin({

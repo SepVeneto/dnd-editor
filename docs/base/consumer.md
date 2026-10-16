@@ -12,34 +12,30 @@ title: 消费者
 ``` vue [demo.vue]
 <template>
   <mpd-editor
-    v-if="editor.render.value"
     ref="editor"
     :widgets="widgets"
-    :extra="editor.extra"
+    :extra="extra"
+    @change="onChange"
   />
 </template>
 
 <script setup lang="ts">
 import { useTemplateRef } from 'vue'
-import { useEditor } from './composable.ts'
+import { register } from '@sepveneto/dnde'
 import { widgets } from './widgets.ts'
 
 const editorRef = useTemplateRef('editor')
-const editor = useEditor()
+const extra = {
+  // 可以是文件上传之类的接口，也可以直接共享 store
+}
+
+// 只需要把生产者（组件视图）的地址交给编辑器，不用 await，也不需要用返回值控制渲染时机
+register({ remoteUrl: 'http://localhost:8090' })
 
 mockApi().then((res) => {
-  editor.waitForMounted.then(() => {
-    // 设置编辑器数据
-    editorRef.value.setData(res)
-  })
+  // 编辑器可能还没挂载完：这里调用会先排队，挂载后自动补上
+  editorRef.value.setData(res)
 })
-
-init()
-
-async function init() {
-  await editor.register()
-  // 编辑器的其它初始化逻辑
-}
 
 async function getEditorData() {
   // 校验编辑器数据是否合法
@@ -49,45 +45,6 @@ async function getEditorData() {
   return editorRef.value.getData()
 }
 </script>
-```
-
-``` ts [composable.ts]
-import { nextTick, ref } from 'vue'
-
-export function useEditor() {
-  // 由于编辑器的js较大，使用异步加载可以显著提升首屏速度
-  const dnde = import('@sepveneto/dnde')
-  // 这里可以替换成loading让用户体验更友好
-  const render = ref(false)
-  // 区分开发环境，不推荐跨域部署
-  const mode = import.meta.env.MODE
-  const remoteUrl = mode === 'development'
-    ? 'http://localhost:8090'
-    : `${window.location.origin}/design-widgets`
-
-  // 通过接口获取编辑器数据和编辑器初始化都是异步操作
-  // 而设置数据需要等两者都完成
-  const { promise, resolve } = Promise.withResolvers()
-
-  const extra = {
-    // 可以是文件上传之类的接口
-    // 也可以直接共享store
-  }
-
-  async function register() {
-    // remoteUrl 指向生产者（组件视图）的部署地址
-    (await dnde).register({ remoteUrl })
-    render.value = true
-    nextTick().then(resolve)
-  }
-
-  return {
-    waitForMounted: promise,
-    render,
-    register,
-    extra,
-  }
-}
 ```
 
 ``` ts [widgets.ts]
@@ -144,13 +101,16 @@ export const widgets = [
 
 ## 注册
 
-编辑器的自定义元素需要先通过`register`注册，`remoteUrl`指向生产者（组件视图）的部署地址：
+`<mpd-editor>`自定义元素在编辑器被导入时即注册，`register`只负责把生产者（组件视图）的部署地址交给它：
 
 ```ts
 import { register } from '@sepveneto/dnde'
 
-await register({ remoteUrl: 'http://localhost:8090' })
+register({ remoteUrl: 'http://localhost:8090' })
 ```
+
+渲染`<mpd-editor>`不必等`register`返回（挂载时机由编辑器自己掌握，见[渲染时机](./quickstart.md#渲染时机)），
+先渲染后注册、先注册后渲染都可以；挂载前调用的方法会先排队，挂载后自动补上。
 
 `register`的可选配置：
 
@@ -200,3 +160,8 @@ await register({ remoteUrl: 'http://localhost:8090' })
 | validate | <Desc desc="() => Promise<void>" :raw="false">Function</Desc> | 验证配置区数据，校验失败时抛出异常 |
 | getData | <Desc desc="() => any">Function</Desc> | 获取编辑区的数据 |
 | setData | <Desc desc="(data: any) => void">Function</Desc> | 设置编辑区的数据 |
+
+::: tip
+编辑器还没挂载完时调用上述方法不会失败：调用会先排队，挂载后按顺序补上（此时返回 Promise，
+`await el.getData()` 这类写法在挂载前后都成立）。
+:::

@@ -72,24 +72,22 @@
         }
 
         const { register } = await import('/editor/editor.js')
-        await register({
-          remoteUrl: location.origin,
-          // ?nogstyle=1 用于验证「不往宿主 head 注入全局主题」的开关
-          injectGlobalStyle: !new URLSearchParams(location.search).has('nogstyle'),
-        })
 
+        // 宿主侧不再需要用 v-if 控制渲染时机：元素在 import 时就已经注册，
+        // 这里直接渲染、不等 register() 完成，注册只是为了告诉编辑器生产者在哪里。
         const el = document.createElement('mpd-editor')
         el.id = 'editor'
         el.widgets = widgets
         el.extra = { obj: 'e2e-extra' }
         document.getElementById('app').appendChild(el)
-
-        await waitFor(() => el.shadowRoot && el.shadowRoot.querySelector('.mpd-editor'))
-        state.mounted = true
+        // 真正的编辑器还在等 register() 与生产者 setup，此刻应当先显示加载占位
+        state.loadingPlaceholder = !!el.shadowRoot?.querySelector('.mpd-editor-loading')
+        state.mounted = false
 
         const hasCardImg = () => [...el.shadowRoot.querySelectorAll('img')]
           .some(i => (i.getAttribute('src') || '').startsWith('data:image/gif'))
 
+        // 挂载前调用指令式 API：先排队，等编辑器挂载后补上
         const setData = el.setData || (el._instance && el._instance.exposed && el._instance.exposed.setData)
         if (typeof setData !== 'function')
           throw new Error('setData 未暴露在自定义元素上')
@@ -110,6 +108,27 @@
             }],
           }],
         })
+
+        // 挂载前注册扩展：与 setData 一样会先排队，等编辑器挂载后补上
+        el.register(ctx => ({
+          init() {
+            ctx.plugins.widget.addPanel({ label: 'E2E 扩展', name: 'template' })
+          },
+        }))
+
+        register({
+          remoteUrl: location.origin,
+          // ?nogstyle=1 用于验证「不往宿主 head 注入全局主题」的开关
+          injectGlobalStyle: !new URLSearchParams(location.search).has('nogstyle'),
+        })
+
+        await waitFor(() => el.shadowRoot && el.shadowRoot.querySelector('.mpd-editor'))
+        state.mounted = true
+        // 挂载后加载占位应当被撤掉
+        state.loadingCleared = !el.shadowRoot.querySelector('.mpd-editor-loading')
+        // 挂载前注册的扩展面板应当已经出现在组件区的 tab 栏里
+        state.hasPluginTab = [...el.shadowRoot.querySelectorAll('.mpd-tabs__item')]
+          .some(item => item.textContent.trim() === 'E2E 扩展')
 
         // 等远端的 card.view 真正渲染出 ElImage 的 <img>（用 DOM 判定，避免匹配到注入的 CSS 文本）
         try {
