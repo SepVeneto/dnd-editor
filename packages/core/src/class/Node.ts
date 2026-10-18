@@ -104,22 +104,3 @@ export class Node {
     return res
   }
 }
-
-export class RootNode {
-  public level = 0
-  public wid: string
-  public widget: Readonly<Widget>
-  public parent?: Node
-  public list: any[] = []
-  public data: Record<string, any> = {}
-  public style: CSSProperties = {}
-  public hovering: boolean = false
-  public dragging: boolean = false
-  constructor(widget: Widget, info?: { props?: Node['data'], style?: Node['style'], list?: Node['list'] }) {
-    this.widget = widget
-    this.wid = v4()
-    // this.list = info?.list || []
-    this.data = info?.props || {}
-    this.style = info?.style || {}
-  }
-}

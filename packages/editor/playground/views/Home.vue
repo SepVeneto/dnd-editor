@@ -22,15 +22,15 @@
 </template>
 
 <script setup lang="ts">
-import type { IWidget } from '@sepveneto/dnde-core'
 import type { Capability, Workflow } from '@sepveneto/dnde-agent'
+import type { IWidget } from '@sepveneto/dnde-core'
 import type { EditorInstance } from '@/main'
+import { Agent, createAgent, defineCapability, defineWorkflow, invokeCapability, parseJson, runAgent, structuredExtract } from '@sepveneto/dnde-agent'
 import { schema, widget } from '@sepveneto/dnde-core/helper'
 // import { register } from '../dist/editor.js'
 import { onMounted, ref, useTemplateRef, watchEffect } from 'vue'
-import { register } from '@/main'
-import { Agent, createAgent, defineCapability, defineWorkflow, invokeCapability, parseJson, runAgent, structuredExtract } from '@sepveneto/dnde-agent'
 import z from 'zod'
+import { register } from '@/main'
 
 /**
  * 业务侧（playground）：
@@ -361,7 +361,7 @@ const baseWidgets: IWidget[] = [
       schema.styleNumber({
         label: '1',
         key: 'width',
-      })
+      }),
     ],
   }),
   widget.columnContainer({
@@ -403,7 +403,7 @@ const serviceWidgets: IWidget[] = [
       right: 20,
       width: 100,
       height: 100,
-    }
+    },
   }),
   widget.create({
     name: '菜单',
@@ -440,13 +440,23 @@ const serviceWidgets: IWidget[] = [
   }),
   widget.create({
     name: '金刚区',
-    type: 'jqg',
+    type: 'jgq',
     defaultData: {
       isShow: 1,
     },
+    defaultStyle: {
+      width: 375,
+      height: 200,
+    },
+    attributes: [
+      schema.input({
+        label: '标题',
+        key: 'title',
+      }),
+    ],
     agent: {
-      description: '紧凑规则网格。适合大量同类元素，需要提高信息密度、方便用户快速浏览的场景。多个元素可以同时放入一个组件中。不适合少量元素的突出展示。',
       layout: {
+        description: '紧凑规则网格。适合大量同类元素，需要提高信息密度、方便用户快速浏览的场景。多个元素可以同时放入一个组件中。不适合少量元素的突出展示。',
         direction: 'row',
         density: 'high',
         priority: 'large',
@@ -455,7 +465,7 @@ const serviceWidgets: IWidget[] = [
       update: (node, item) => {
         node.data.list = item.items
       },
-    }
+    },
   }),
   widget.create({
     name: '图片组件',
@@ -464,8 +474,8 @@ const serviceWidgets: IWidget[] = [
       isShow: 1,
     },
     agent: {
-      description: '较大的独立展示区域。固定占一整行，单行排列。适合少量元素，需要突出单个元素的场景。推荐一个元素使用一个组件，使每个元素获得较大的展示面积。',
       layout: {
+        description: '较大的独立展示区域。固定占一整行，单行排列。适合少量元素，需要突出单个元素的场景。推荐一个元素使用一个组件，使每个元素获得较大的展示面积。',
         direction: 'row',
         density: 'low',
         priority: 'large',
@@ -475,8 +485,8 @@ const serviceWidgets: IWidget[] = [
         console.log('update', node, item)
         node.data.list = item.items
       },
-    }
-  })
+    },
+  }),
 ]
 const widgets = [
   widget.group('基础组件', baseWidgets),

@@ -1,3 +1,4 @@
+import type { Node, Widget } from '@sepveneto/dnde-core'
 import { z } from 'zod'
 
 export interface AddComponentIR {
@@ -87,3 +88,65 @@ export const editIrSchema = z.object({
     ]),
   ),
 })
+
+export interface LayoutContextNode {
+  uuid: string
+  name: string
+  type: string
+  desc?: string
+  parent?: string
+  children?: string[]
+
+  // TODO: 要由业务侧提供
+  // 从业务数据中提取的少量语义线索
+  summary?: string
+
+  // TODO: 要由业务侧提供
+  // 保留少量有助于识别节点的关键字段
+  keyData?: Record<string, string | number | boolean | null>
+}
+
+/**
+ * 把页面组件树投影成扁平的状态 IR。
+ *
+ * 输出按先序遍历排列，节点之间通过 uuid 建立 parent / children 引用，
+ * 避免把整棵树重复嵌套进模型上下文。`widgets` 用于在节点缺少
+ * Widget 实例时，按组件类型回退解析展示名称。
+ */
+export function genStateIr(node: Node): LayoutContextNode[] {
+  const result: LayoutContextNode[] = []
+
+  const visit = (current: Node, parent: string | undefined) => {
+    const uuid = current.wid
+    const type = current.type
+    const name = current.name
+    const desc = current.widget.agent?.description
+    const children = Array.isArray(current.list) ? current.list : []
+
+    const item: LayoutContextNode = {
+      uuid,
+      name,
+      type,
+      desc,
+    }
+    if (parent) {
+      item.parent = parent
+    }
+    if (children.length > 0) {
+      item.children = children.map(child => child.wid)
+    }
+
+    result.push(item)
+    children.forEach(child => visit(child, uuid))
+  }
+
+  visit(node, undefined)
+  return result
+}
+
+export function genWidgetIr(widgets: Widget[]) {
+  return widgets.map(item => ({
+    type: item.view,
+    attribues: item.props,
+  }))
+}
