@@ -1,13 +1,22 @@
 <template>
   <section class="thread">
     <header class="thread__header">
-      <span class="thread__dot" :class="{ 'thread__dot--busy': isRunning }" />
+      <span
+        class="thread__dot"
+        :class="{ 'thread__dot--busy': isRunning }"
+      />
       <h3>装修助手</h3>
       <span class="thread__status">{{ isRunning ? '正在生成…' : '在线' }}</span>
     </header>
 
-    <div ref="viewport" class="thread__viewport">
-      <p v-if="!messages.length" class="thread__empty">
+    <div
+      ref="viewport"
+      class="thread__viewport"
+    >
+      <p
+        v-if="!messages.length"
+        class="thread__empty"
+      >
         用一句话描述你的需求：初始化页面、修改页面内容，或直接调用业务能力。
       </p>
 
@@ -17,10 +26,21 @@
         class="message"
         :class="`message--${message.role}`"
       >
-        <template v-for="(block, index) in blocksOf(message)" :key="index">
-          <p v-if="block.type === 'text' && block.part.text" class="message__text">{{ block.part.text }}</p>
+        <template
+          v-for="(block, index) in blocksOf(message)"
+          :key="index"
+        >
+          <p
+            v-if="block.type === 'text' && block.part.text"
+            class="message__text"
+          >
+            {{ block.part.text }}
+          </p>
 
-          <details v-else-if="block.type === 'thinking'" class="message__thinking">
+          <details
+            v-else-if="block.type === 'thinking'"
+            class="message__thinking"
+          >
             <summary class="message__thinking-summary">
               <span
                 class="message__thinking-dot"
@@ -30,7 +50,10 @@
                 class="message__thinking-label"
                 :class="{ 'message__thinking-label--active': block.pending }"
               >{{ block.label }}</span>
-              <span v-if="block.pending" class="message__thinking-ellipsis"><i>.</i><i>.</i><i>.</i></span>
+              <span
+                v-if="block.pending"
+                class="message__thinking-ellipsis"
+              ><i>.</i><i>.</i><i>.</i></span>
               <svg
                 class="message__caret"
                 viewBox="0 0 16 16"
@@ -50,18 +73,35 @@
             </summary>
 
             <div class="message__thinking-body">
-              <template v-for="(part, partIndex) in block.parts" :key="partIndex">
-                <div v-if="part.type === 'step'" class="message__step">{{ part.label }}</div>
+              <template
+                v-for="(part, partIndex) in block.parts"
+                :key="partIndex"
+              >
+                <div
+                  v-if="part.type === 'step'"
+                  class="message__step"
+                >
+                  {{ part.label }}
+                </div>
 
-                <details v-else-if="part.type === 'workflow-step'" class="message__step-details">
+                <details
+                  v-else-if="part.type === 'workflow-step'"
+                  class="message__step-details"
+                >
                   <summary class="message__step-summary">
                     <span
                       class="message__step-dot"
                       :class="{ 'message__step-dot--active': part.status === 'running' }"
                     />
                     <span>{{ part.label }}</span>
-                    <span v-if="part.status === 'error'" class="message__step-badge message__step-badge--failed">失败</span>
-                    <span v-else-if="part.status === 'running'" class="message__step-badge">进行中…</span>
+                    <span
+                      v-if="part.status === 'error'"
+                      class="message__step-badge message__step-badge--failed"
+                    >失败</span>
+                    <span
+                      v-else-if="part.status === 'running'"
+                      class="message__step-badge"
+                    >进行中…</span>
                     <svg
                       class="message__caret"
                       viewBox="0 0 16 16"
@@ -88,7 +128,10 @@
                   :class="{ 'message__action--failed': !!part.result && !toolOk(part.result) }"
                 >
                   <code>{{ describeAction(part.action) }}</code>
-                  <span v-if="part.result" class="message__action-result">
+                  <span
+                    v-if="part.result"
+                    class="message__action-result"
+                  >
                     {{ toolOk(part.result) ? '✓' : '✕' }} {{ formatPayload(toolOutput(part.result)) }}
                   </span>
                 </p>
@@ -101,8 +144,14 @@
                   <div class="flow__head">
                     <span class="flow__badge">工具</span>
                     <code class="flow__name">{{ toolName(part.call) }}</code>
-                    <span v-if="!part.result" class="flow__status flow__status--pending">执行中…</span>
-                    <span v-else class="flow__status">{{ toolOk(part.result) ? '✓ 完成' : '✕ 失败' }}</span>
+                    <span
+                      v-if="!part.result"
+                      class="flow__status flow__status--pending"
+                    >执行中…</span>
+                    <span
+                      v-else
+                      class="flow__status"
+                    >{{ toolOk(part.result) ? '✓ 完成' : '✕ 失败' }}</span>
                   </div>
                   <div class="flow__row">
                     <span class="flow__label">输入</span>
@@ -120,13 +169,22 @@
                   :class="{ 'message__action--failed': part.decision === 'rejected' }"
                 >
                   <code>{{ describeApproval(part.call) }}</code>
-                  <span v-if="part.decision" class="message__action-result">
+                  <span
+                    v-if="part.decision"
+                    class="message__action-result"
+                  >
                     {{ part.decision === 'approved' ? '✓ 已同意' : '✕ 已拒绝' }}
                   </span>
-                  <span v-else class="message__action-result message__action-result--pending">等待确认…</span>
+                  <span
+                    v-else
+                    class="message__action-result message__action-result--pending"
+                  >等待确认…</span>
                 </p>
 
-                <details v-else-if="part.type === 'raw' && part.text" class="message__raw">
+                <details
+                  v-else-if="part.type === 'raw' && part.text"
+                  class="message__raw"
+                >
                   <summary>模型原始输出{{ part.label ? `（${part.label}）` : '' }}</summary>
                   <pre>{{ part.text }}</pre>
                 </details>
@@ -137,7 +195,10 @@
       </div>
     </div>
 
-    <div v-if="suggestions.length" class="thread__suggestions">
+    <div
+      v-if="suggestions.length"
+      class="thread__suggestions"
+    >
       <button
         v-for="suggestion in suggestions"
         :key="suggestion.prompt"
@@ -149,11 +210,28 @@
       </button>
     </div>
 
-    <div v-if="pendingApproval" class="approval">
-      <p class="approval__text">{{ approvalMessage }}</p>
+    <div
+      v-if="pendingApproval"
+      class="approval"
+    >
+      <p class="approval__text">
+        {{ approvalMessage }}
+      </p>
       <div class="approval__actions">
-        <button type="button" class="approval__reject" @click="reject">不同意</button>
-        <button type="button" class="approval__approve" @click="approve">同意</button>
+        <button
+          type="button"
+          class="approval__reject"
+          @click="reject"
+        >
+          不同意
+        </button>
+        <button
+          type="button"
+          class="approval__approve"
+          @click="approve"
+        >
+          同意
+        </button>
       </div>
     </div>
 
@@ -166,7 +244,9 @@
             style="width: 32px;"
           >
             <IconFile style="width: 32px; height: 32px;" />
-            <div style="font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ item.name }}</div>
+            <div style="font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+              {{ item.name }}
+            </div>
           </div>
         </div>
         <textarea
@@ -176,12 +256,20 @@
           @keydown="onKeydown"
         />
       </div>
-      <button type="button" :disabled="isRunning || (!draft.trim() && !fileUpload.list.value.length)" @click="submit">发送</button>
       <button
-      type="button"
-      :disabled="isRunning"
-      @click="fileUpload.selectFile"
-      >+</button>
+        type="button"
+        :disabled="isRunning || (!draft.trim() && !fileUpload.list.value.length)"
+        @click="submit"
+      >
+        发送
+      </button>
+      <button
+        type="button"
+        :disabled="isRunning"
+        @click="fileUpload.selectFile"
+      >
+        +
+      </button>
 
       <input
         ref="file"
@@ -189,27 +277,30 @@
         style="display: none;"
         accept=".docx"
         @change="fileUpload.handleFileChange"
-      />
+      >
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, reactive, ref, shallowRef, useTemplateRef, watch } from 'vue'
-import { createAgentRuntime } from './runtime'
-import type { AgentRuntime, AgentRuntimeEvent } from './runtime'
+import type { Node, Widget } from '@sepveneto/dnde-core'
 import type { Capability } from './capability'
-import type { Workflow } from './workflow'
-import type { EditIR, LayoutIR } from './ir'
 import type { ToolApprovalHandler, ToolApprovalRequest } from './context'
+import type { EditIR, LayoutIR } from './ir'
+import type { AgentRuntime, AgentRuntimeEvent } from './runtime'
 import type { MessagePart, ThreadMessage } from './type'
-import { useFile } from '@/composables'
+import type { Workflow } from './workflow'
+import { computed, nextTick, reactive, ref, shallowRef, useTemplateRef, watch } from 'vue'
 import IconFile from '@/assets/file.vue'
+import { useFile } from '@/composables'
+import { createAgentRuntime } from './runtime'
 
 const props = defineProps<{
   capabilities?: Capability<any, any>[]
   workflows?: Workflow[]
   context?: () => Record<string, unknown>
+  rootNode: Node
+  widgets: Widget[]
 }>()
 
 const emit = defineEmits<{
@@ -448,8 +539,9 @@ async function send(message: string, files?: any[]) {
   let rawMsg = ''
   if (files?.length) {
     const response = await fetch(`http://localhost:4000/docx-markdown?id=${files[0].name}`)
-    rawMsg += (await response.json()).data + '\n'
-  } else {
+    rawMsg += `${(await response.json()).data}\n`
+  }
+  else {
     fileUpload.reset()
   }
   messages.value.push({
@@ -477,6 +569,8 @@ async function send(message: string, files?: any[]) {
     const result = await runtime.value.run(rawMsg + message, {
       onEvent: handleEvent,
       onApproval,
+      rootNode: props.rootNode,
+      widgets: props.widgets,
     })
 
     if (result.flow === 'initialize' && result.layout) {

@@ -1,34 +1,48 @@
 <template>
   <div class="assistant-root">
-    <section v-if="open" class="assistant-panel">
+    <section
+      v-if="open"
+      class="assistant-panel"
+    >
       <AssistantThread
-        :capabilities="props.capabilities"
-        :workflows="props.workflows"
-        :context="props.context"
+        :capabilities="capabilities"
+        :workflows="workflows"
+        :context="context"
+        :root-node="rootNode"
+        :widgets="widgets"
         @init="onInit"
         @edit="onEdit"
         @capability="onCapability"
       />
     </section>
-    <button class="assistant-button" type="button" @click="open = !open">
+    <button
+      class="assistant-button"
+      type="button"
+      @click="open = !open"
+    >
       <span>装修助手</span>
-      <span class="dot" :class="{ ok: isRunning }" />
+      <span
+        class="dot"
+        :class="{ ok: isRunning }"
+      />
     </button>
-
   </div>
 </template>
 
 <script setup lang="ts">
-import AssistantThread from './AssistantThread.vue'
-import { ref } from 'vue'
+import type { Node, Widget } from '@sepveneto/dnde-core'
 import type { Capability } from './capability'
-import type { Workflow } from './workflow'
 import type { EditIR, LayoutIR } from './ir'
+import type { Workflow } from './workflow'
+import { ref } from 'vue'
+import AssistantThread from './AssistantThread.vue'
 
-const props = defineProps<{
+defineProps<{
   capabilities?: Capability<any, any>[]
   workflows?: Workflow[]
   context?: () => Record<string, unknown>
+  rootNode: Node
+  widgets: Widget[]
 }>()
 
 const emit = defineEmits<{

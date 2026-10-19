@@ -17,10 +17,17 @@ export interface WidgetLayoutItem {
 }
 
 export interface WidgetAgent {
-  description: string
+  /**
+   * 组件的功能描述
+   */
+  description?: string
   layout?: {
-    direction: 'row' | 'column',
-    density: 'low' | 'medium' | 'high',
+    /**
+     * 组件在布局中的描述
+     */
+    description: string
+    direction: 'row' | 'column'
+    density: 'low' | 'medium' | 'high'
     priority: 'large'
   }
   /**

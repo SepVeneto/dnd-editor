@@ -14,7 +14,10 @@
           class="mpd-flex mpd-flex-col mpd-absolute"
           style="top: 50px; left: 14px; right: 14px; height: 714px;"
         >
-          <header class="phone-header" v-if="editor.showTopbar">
+          <header
+            v-if="editor.showTopbar"
+            class="phone-header"
+          >
             <LeftArrow />
             <span>顶部导航栏</span>
             <span />
@@ -98,6 +101,8 @@
       :capabilities="capabilities"
       :workflows="workflows"
       :context="runtimeContext"
+      :root-node="editor.rootNode"
+      :widgets="app.widgetsFlat"
       @init="onInit"
       @edit="onEdit"
       @capability="onCapability"
@@ -106,25 +111,25 @@
 </template>
 
 <script lang="ts" setup>
-import LeftArrow from './assets/leftArrow.vue'
-import { Node } from '@sepveneto/dnde-core/class'
+import type { EditIR } from './agents/types'
 import { editorContextKey, EventEmitter } from '@sepveneto/dnde-core'
+import { Node } from '@sepveneto/dnde-core/class'
 import { ElConfigProvider, ElScrollbar, provideGlobalConfig } from 'element-plus'
 // @ts-expect-error: no def
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
 import { computed, getCurrentInstance, onMounted, onUnmounted, provide, ref, useTemplateRef, watch } from 'vue'
 import VueDraggable from 'vuedraggable'
-import { useNodeListDrag } from './composables/useNodeListDrag'
+import { snapshotNodes, toLayoutWidgets } from './agents/context'
+import { loadAgent } from './agents/loader'
+import LeftArrow from './assets/leftArrow.vue'
 import NodeWrap from './components/NodeWrap.vue'
+import { useNodeListDrag } from './composables/useNodeListDrag'
 import ConfigPanel from './layout/configPanel.vue'
 import TreePanel from './layout/treePanel.vue'
 import WidgetsMenu from './layout/widgetsMenu.vue'
 import { editorProps } from './props'
 import { useApp, useEditor } from './store'
 import { EditorKey, loadFromRemote, normalizeStyle } from './utils'
-import { snapshotNodes, toLayoutWidgets } from './agents/context'
-import { loadAgent } from './agents/loader'
-import type { EditIR, LayoutIR } from './agents/types'
 
 const props = defineProps(editorProps)
 
@@ -166,10 +171,12 @@ watch(
   { immediate: true },
 )
 
-const runtimeContext = () => ({
-  widgets: toLayoutWidgets(app.widgets ?? []),
-  nodes: snapshotNodes(editor.rootNode.list),
-})
+function runtimeContext() {
+  return {
+    widgets: toLayoutWidgets(app.widgets ?? []),
+    nodes: snapshotNodes(editor.rootNode.list),
+  }
+}
 
 function onInit(args: any) {
   const { layout, state } = args.detail[0]
@@ -178,6 +185,7 @@ function onInit(args: any) {
     if (!w)
       return
 
+    // eslint-disable-next-line ts/ban-ts-comment
     // @ts-ignore
     const node = new Node(w, JSON.parse(JSON.stringify({ props: w.defaultData, style: w.defaultStyle })))
     // 数据如何写入组件由业务侧通过 widget 的 agent.update 决定
@@ -187,17 +195,20 @@ function onInit(args: any) {
   })
 }
 
-function onEdit({ edits, state }: { edits: EditIR[], state: Record<string, unknown> }) {
+function onEdit(evt: CustomEvent) {
+  const { edits, state } = evt.detail[0]
   for (const ir of edits) {
     if (ir.type === 'add-component') {
       const w = app.widgetMap.get(ir.widget)
       if (!w)
         continue
 
+      // eslint-disable-next-line ts/ban-ts-comment
       // @ts-ignore
       const node = new Node(w, JSON.parse(JSON.stringify({ props: w.defaultData, style: w.defaultStyle })))
       w.agent?.update?.(node, { widget: ir.widget, items: ir.items } as any, state)
-      editor.addNode(node)
+      // TODO: 嵌套结构
+      editor.addNode(node, editor.rootNode, true)
       continue
     }
 
@@ -244,7 +255,7 @@ function onCapability({ name, result }: { name: string, result: unknown }) {
 // 这里不必再依赖「重新导入」来补样式。
 onUnmounted(() => {
   // @ts-expect-error: ignore
-  window.__disposeModules()
+  window.__disposeModules?.()
   // Object.keys(window.__GLOBAL_LOADING_REMOTE_ENTRY__).forEach((key) => {
   //   delete window.__GLOBAL_LOADING_REMOTE_ENTRY__[key]
   // })

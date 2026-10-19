@@ -1,4 +1,7 @@
 // server.ts
+import { existsSync, readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import express from 'express'
 import cors from 'cors'
 import multer from 'multer'
@@ -6,6 +9,51 @@ import multer from 'multer'
 import mammoth from 'mammoth'
 import TurndownService from 'turndown'
 import turndownPluginGfm from 'turndown-plugin-gfm'
+
+const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+
+/**
+ * 轻量加载 .env 文件，避免引入额外依赖。
+ * 已存在的 process.env 优先，方便用命令行变量覆盖本地配置。
+ */
+function loadEnvFile(file) {
+  if (!existsSync(file)) {
+    return
+  }
+
+  for (const line of readFileSync(file, 'utf8').split(/\r?\n/)) {
+    const match = line.match(/^\s*(?:export\s+)?([\w.-]+)\s*=\s*(.*)$/)
+    if (!match) {
+      continue
+    }
+
+    const [, key, rawValue] = match
+    if (process.env[key] !== undefined) {
+      continue
+    }
+
+    let value = rawValue.trim()
+    if (value.startsWith('"') || value.startsWith('\'')) {
+      const quote = value[0]
+      const end = value.indexOf(quote, 1)
+      value = end === -1 ? value.slice(1) : value.slice(1, end)
+    }
+    else {
+      const commentIndex = value.indexOf(' #')
+      value = (commentIndex === -1 ? value : value.slice(0, commentIndex)).trim()
+    }
+
+    process.env[key] = value
+  }
+}
+
+// 本地开发：优先读取 agent-bff 目录下的 .env.local / .env。
+for (const file of [
+  resolve(packageDir, '.env.local'),
+  resolve(packageDir, '.env'),
+]) {
+  loadEnvFile(file)
+}
 
 const app = express()
 
@@ -31,10 +79,10 @@ app.use(express.json({ limit: '10mb' }))
 
 const PORT = Number(process.env.PORT ?? 4000)
 const LLM_BASE_URL = process.env.LLM_BASE_URL ?? 'https://llm-29a9b93te5uwccoz.cn-beijing.maas.aliyuncs.com/compatible-mode/v1'
-const LLM_API_KEY = process.env.LLM_API_KEY ?? 'sk-ws-H.PRIYDPY.6pkt.MEUCIQCzDiHwSrcrpVm52eQVC8h5Sq-2bo6nskePEPctk1R9bQIgeN9sgI1WspsHA2VE7-4rsSV7RsWN_3Q3QhO_yhllwfY'
+const LLM_API_KEY = process.env.LLM_API_KEY
 
 if (!LLM_API_KEY) {
-  throw new Error('LLM_API_KEY is required')
+  throw new Error('LLM_API_KEY is required: add it to packages/agent-bff/.env.local')
 }
 
 app.post('/v1/responses', async (req, res) => {

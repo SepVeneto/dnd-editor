@@ -1,6 +1,6 @@
+import type { Capability } from './capability'
 import { Agent } from '@openai/agents'
 import { createCapabilityTool } from './capability'
-import type { Capability } from './capability'
 import { getModel } from './core/sdk'
 
 const EDIT_INSTRUCTIONS = `
@@ -20,9 +20,10 @@ edits 是数组，每个元素是一个编辑动作：
 - { "type": "move-component", "target": "要移动的组件", "before": "排在其前的组件", "after": "排在其后的组件" }
 
 规则：
-1. target / before / after 优先使用当前编辑器状态里能唯一定位的描述。
+1. target / before / after 优先使用当前编辑器状态里能唯一定位的描述, 比如uuid。
 2. 只有当需要外部业务数据时才调用业务能力。
 3. 如果用户输入无法映射为明确的编辑动作，输出 { "edits": [] }。
+4. 如果待操作的组件有多个，需求让用户指明是哪一个
 `
 
 export function createEditAgent(options: { capabilities: Capability<any, any>[] }): Agent<any, any> {

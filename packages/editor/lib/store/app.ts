@@ -2,11 +2,14 @@ import type { IWidget } from '@sepveneto/dnde-core'
 import { widgetType } from '@sepveneto/dnde-core'
 import { Node, Widget } from '@sepveneto/dnde-core/class'
 import { defineStore } from 'pinia'
-import { shallowRef } from 'vue'
+import { computed, shallowRef } from 'vue'
 import { useEditor } from './editor'
 
 export interface WidgetGroup { name: string, list: Widget[] }
 export type LikeWidget = IWidget | { name: string, list: IWidget[], type: widgetType }
+function isWidgetGroup(likeWidget: any): likeWidget is WidgetGroup {
+  return 'list' in likeWidget
+}
 
 export const useApp = defineStore('app', () => {
   const widgets = shallowRef<(Widget | WidgetGroup)[]>()
@@ -59,9 +62,26 @@ export const useApp = defineStore('app', () => {
     return data.type === widgetType.GROUP
   }
 
+  const widgetsFlat = computed(() => {
+    const list: Widget[] = []
+    widgets.value?.forEach((item) => {
+      if (isWidgetGroup(item)) {
+        item.list.forEach((each) => {
+          list.push(each)
+        })
+      }
+      else {
+        list.push(item)
+      }
+    })
+
+    return list
+  })
+
   return {
     setWidgets,
     widgets,
     widgetMap,
+    widgetsFlat,
   }
 })

@@ -6,7 +6,9 @@ catalog:
   '@element-plus/icons-vue': ^2.3.2
   '@module-federation/enhanced': ^2.8.1
   '@rsbuild/core': ^2.1.8
+  '@types/debug': ^4.1.13
   '@types/node': ^22.15.23
+  debug: ^4.4.3
   element-plus: ^2.14.1
   mammoth: ^1.13.0
   multer: ^2.4.0

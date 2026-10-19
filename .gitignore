@@ -5,3 +5,4 @@ docs/.vitepress/cache
 docs/.vitepress/.temp
 packages/editor/stats.html
 uploads
+*.local

@@ -1,26 +1,30 @@
-import { MemorySession } from '@openai/agents'
 import type { Agent, AgentInputItem, RunStreamEvent } from '@openai/agents'
-import { createCapabilityAgent } from './capabilityAgent'
+import type { Node, Widget } from '@sepveneto/dnde-core'
 import type { Capability } from './capability'
 import type { AppContext, ToolApprovalHandler } from './context'
+import type { FlowType } from './flowAgent'
+import type { EditIR, LayoutIR, NormalizedElements } from './ir'
+import type { LayoutWidgetDescriptor } from './layout'
+import type { Workflow, WorkflowEvent, WorkflowRunResult } from './workflow'
+import { MemorySession } from '@openai/agents'
+import createDebug from 'debug'
+import { createCapabilityAgent } from './capabilityAgent'
 import { runAgentStreamed } from './core/sdk'
 import { createEditAgent } from './editAgent'
-import { createFlowAgent } from './flowAgent'
 import { parseJson } from './extract'
-import type { FlowType } from './flowAgent'
-import type { EditIR, LayoutIR } from './ir'
-import type { NormalizedElements } from './ir'
+import { createFlowAgent } from './flowAgent'
+import { genStateIr, genWidgetIr } from './ir'
 import { generateLayoutIR } from './layout'
-import type { LayoutWidgetDescriptor } from './layout'
 import { WorkflowRuntime } from './workflow'
-import type { Workflow, WorkflowEvent, WorkflowRunResult } from './workflow'
 
-export type AgentRuntimeEvent =
-  | { type: 'text-delta', text: string }
-  | { type: 'tool-call', callId: string, name: string, args: unknown }
-  | { type: 'tool-result', callId: string, name: string, result?: unknown, error?: string }
-  | { type: 'agent-updated', agent: string }
-  | WorkflowEvent
+const editDebug = createDebug('agent.runtime.edit')
+
+export type AgentRuntimeEvent
+  = | { type: 'text-delta', text: string }
+    | { type: 'tool-call', callId: string, name: string, args: unknown }
+    | { type: 'tool-result', callId: string, name: string, result?: unknown, error?: string }
+    | { type: 'agent-updated', agent: string }
+    | WorkflowEvent
 
 export interface AgentRuntimeResult {
   flow: FlowType
@@ -41,6 +45,8 @@ export interface AgentRuntimeOptions {
 export interface AgentRuntimeHooks {
   onEvent?: (event: AgentRuntimeEvent) => void
   onApproval?: ToolApprovalHandler
+  rootNode: Node
+  widgets: Widget[]
 }
 
 const DEFAULT_MAX_TURNS = 8
@@ -73,7 +79,7 @@ export class AgentRuntime {
     this.flowSession = new MemorySession()
   }
 
-  async run(input: string | AgentInputItem[], hooks: AgentRuntimeHooks = {}): Promise<AgentRuntimeResult> {
+  async run(input: string | AgentInputItem[], hooks: AgentRuntimeHooks): Promise<AgentRuntimeResult> {
     const appContext: AppContext = {
       state: this.options.context?.() ?? {},
       onApproval: hooks.onApproval,
@@ -144,10 +150,16 @@ export class AgentRuntime {
     appContext: AppContext,
     hooks: AgentRuntimeHooks,
   ): Promise<AgentRuntimeResult> {
+    console.log(hooks.widgets)
+    const layoutIr = genStateIr(hooks.rootNode)
+    const widgetIr = genWidgetIr(hooks.widgets)
     const composed = [
       `用户输入：${input}`,
-      `当前编辑器状态：${JSON.stringify(appContext.state, null, 2)}`,
+      `当前编辑器状态：${JSON.stringify(layoutIr)}`,
+      `所有的组件信息：${JSON.stringify(widgetIr)}`,
     ].join('\n\n')
+
+    editDebug(composed)
 
     const result = await runAgentStreamed(this.editAgent, composed, {
       context: appContext,
@@ -162,6 +174,7 @@ export class AgentRuntime {
 
     const output = parseJson(String(result.finalOutput ?? '')) as { edits?: unknown } | undefined
     const edits = Array.isArray(output?.edits) ? output.edits as EditIR[] : []
+    editDebug(output)
     return { flow: 'edit', text: JSON.stringify(edits), edits }
   }
 

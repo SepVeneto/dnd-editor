@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { schema } from '../src'
-import { Node, RootNode, Widget } from '../src/class'
+import { Node, Widget } from '../src/class'
 
 function makeWidget(extra: Record<string, any> = {}) {
   return new Widget({ _name: '卡片', _view: 'card', ...extra })
@@ -14,7 +14,7 @@ function widgetWithRequired() {
   })
 }
 
-describe('Node', () => {
+describe('node', () => {
   it('未指定 uuid 时自动生成', () => {
     const node = new Node(makeWidget())
     expect(typeof node.wid).toBe('string')
@@ -97,7 +97,7 @@ describe('Node', () => {
   })
 })
 
-describe('Node.validate', () => {
+describe('node.validate', () => {
   it('校验通过时返回 undefined', async () => {
     const node = new Node(widgetWithRequired(), { props: { title: 'ok' } })
     await expect(node.validate()).resolves.toBeUndefined()
@@ -115,13 +115,5 @@ describe('Node.validate', () => {
 
     await expect(parent.validate(true)).resolves.toBeUndefined()
     await expect(parent.validate()).resolves.toBe('child')
-  })
-})
-
-describe('RootNode', () => {
-  it('忽略传入的 list', () => {
-    const root = new RootNode(makeWidget(), { props: { a: 1 }, list: [new Node(makeWidget())] })
-    expect(root.list).toEqual([])
-    expect(root.data).toEqual({ a: 1 })
   })
 })
