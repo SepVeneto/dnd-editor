@@ -113,33 +113,31 @@
         el.register(ctx => ({
           init() {
             ctx.plugins.widget.addPanel({ label: 'E2E 扩展', name: 'template' })
-            // 页面级浮窗：config pane 额外提供一个区块，开启显示开关后浮在手机右下角
-            // 根节点配置标签 + 可选的固定组件（浮窗）
+            // 页面级浮窗：config pane 提供根节点配置页，开启显示开关后浮在手机右下角。
+            // 固定组件本身只作为配置入口，点击后应回到根节点并激活这个配置页。
             ctx.plugins.config.addPanel({
-              label: 'E2E 浮窗',
-              name: 'dialog',
-              // 根配置（页面级）完全由业务侧定义，显示开关也在这里
-              attributes: [
-                { type: 'switch', label: '显示', key: 'isShow', attrs: { activeValue: 1, inactiveValue: 0 } },
-                { type: 'radio', label: '浮窗层级', key: 'zIndex', options: [{ label: '低', value: 1 }, { label: '高', value: 2 }] },
-              ],
-              component: {
-                _name: 'E2E 浮窗',
-                _view: 'dialog',
-                // 组件自身的内容配置（选中组件后编辑）
-                schema: {
-                  props: [{ type: 'input', label: '标题', key: 'title' }],
-                  style: [],
-                },
-                style: { position: 'absolute', width: 48, height: 48, bottom: 20, right: 20 },
-                data: { isShow: 0, title: 'E2E 浮窗' },
+              _name: 'E2E 浮窗',
+              _view: 'dialog',
+              schema: {
+                props: [
+                  { type: 'switch', label: '显示', key: 'isShow', attrs: { activeValue: 1, inactiveValue: 0 } },
+                  { type: 'radio', label: '浮窗层级', key: 'zIndex', options: [{ label: '低', value: 1 }, { label: '高', value: 2 }] },
+                ],
+                style: [],
               },
+              style: { position: 'absolute', width: 48, height: 48, bottom: 20, right: 20 },
+              data: { isShow: 0 },
             })
             // 纯配置标签：不关联任何组件，只是给根节点补充配置
             ctx.plugins.config.addPanel({
-              label: 'E2E 配置',
-              name: 'extraConfig',
-              attributes: [{ type: 'switch', label: '开关', key: 'flag' }],
+              _name: 'E2E 配置',
+              _view: 'extraConfig',
+              schema: {
+                props: [{ type: 'switch', label: '开关', key: 'flag' }],
+                style: [],
+              },
+              style: {},
+              data: { flag: false },
             })
           },
         }))
@@ -309,14 +307,13 @@
           tab && tab.dispatchEvent(new MouseEvent('click', { bubbles: true }))
           await sleep(300)
 
-          // 根配置里的浮窗区块 = 「显示」开关 + 自定义根配置项，但不展示浮窗自身的内容配置项
+          // 根配置里的浮窗区块 = 「显示」开关 + 自定义根配置项
           const switchEl = el.shadowRoot.querySelector('.mpd-switch')
           info.rootHasSwitch = !!switchEl
           info.rootHasCustom = !!el.shadowRoot.querySelector('.mpd-radio-group')
-          info.rootHasContent = !!el.shadowRoot.querySelector('.mpd-input')
 
           // 初始未开启：手机上不应出现浮窗预览
-          info.previewBefore = !!el.shadowRoot.querySelector('.mpd-node.preview')
+          info.previewBefore = !!el.shadowRoot.querySelector('.mpd-node.preview[data-name="E2E 浮窗"]')
           if (!switchEl) {
             info.reason = 'no switch in config panel'
             state.configPanel = info
@@ -336,12 +333,23 @@
             info.hasOperate = !!preview.querySelector('.node-operate, .node-helper')
             info.draggable = preview.classList.contains('draggable')
 
-            // 点击浮窗预览：应选中该浮窗，进而在「属性」里配置其具体内容
+            // 点击浮窗预览：应回到根节点并激活浮窗配置页，而不是把浮窗作为独立组件选中
             preview.querySelector('.node-wrap').dispatchEvent(new MouseEvent('click', { bubbles: true }))
             await sleep(300)
-            info.selectedAfterClick = preview.classList.contains('selected')
-            // 选中组件后展示其内容配置（标题输入框），与根配置相互独立
-            info.panelHasContent = !!el.shadowRoot.querySelector('.mpd-input')
+            const activeTab = [...el.shadowRoot.querySelectorAll('.mpd-tabs__item.is-active')]
+              .find(t => t.textContent.trim() === 'E2E 浮窗')
+            const breadcrumb = [...el.shadowRoot.querySelectorAll('.mpd-breadcrumb__item')]
+              .map(item => item.textContent.trim())
+            info.rootSelectedAfterClick = breadcrumb.length === 1 && breadcrumb[0] === '页面'
+            info.panelActivatedAfterClick = !!activeTab
+            info.previewSelectedAfterClick = preview.classList.contains('selected')
+
+            // 点击编辑器非工作区：失焦回到根节点第一个配置标签，并清除浮窗选中态
+            el.shadowRoot.querySelector('.mpd-editor').dispatchEvent(new MouseEvent('click', { bubbles: true }))
+            await sleep(300)
+            info.blurClearedPreview = !preview.classList.contains('selected')
+            info.blurRestoredFirstTab = [...el.shadowRoot.querySelectorAll('.mpd-tabs__item')]
+              .findIndex(item => item.classList.contains('is-active')) === 0
           }
 
           // 浮窗数据要能被 getData() 取到，但不能混进页面拖拽列表

@@ -292,7 +292,7 @@ try {
     `hasPluginTab=${state.hasPluginTab}`,
   )
   // 页面级浮窗：config pane 提供区块，开启显示开关后浮窗以预览态浮在手机右下角，
-  // 不可拖曳/删除，点击即可配置，数据进入 getData() 但不进入页面拖拽列表
+  // 不可拖曳/删除，点击后回到根节点并激活对应配置页，数据进入 getData() 但不进入页面拖拽列表
   const cp = state.configPanel || {}
   check('config pane 提供了根节点配置标签', cp.hasTab === true, JSON.stringify(cp))
   check(
@@ -300,11 +300,7 @@ try {
     cp.hasPlainTab === true && cp.plainInGetData === true,
     JSON.stringify(cp),
   )
-  check(
-    '根配置的浮窗区块 = 显示开关 + 自定义根配置项，不展示浮窗内容配置',
-    cp.rootHasSwitch === true && cp.rootHasCustom === true && cp.rootHasContent === false,
-    JSON.stringify(cp),
-  )
+  check('根配置的浮窗区块显示显示开关与自定义配置项', cp.rootHasSwitch === true && cp.rootHasCustom === true, JSON.stringify(cp))
   check('浮窗显示开关默认关闭，手机上不出现浮窗', cp.previewBefore === false, JSON.stringify(cp))
   check(
     '开启显示开关后浮窗以预览态出现在手机右下角',
@@ -313,8 +309,13 @@ try {
   )
   check('浮窗不可拖曳、无操作栏（不可删除）', cp.draggable === false && cp.hasOperate === false, JSON.stringify(cp))
   check(
-    '点击组件预览即选中该组件，内容配置与根配置相互独立',
-    cp.selectedAfterClick === true && cp.panelHasContent === true,
+    '点击浮窗预览后选中根节点、激活配置页并保留浮窗视图选中态',
+    cp.rootSelectedAfterClick === true && cp.panelActivatedAfterClick === true && cp.previewSelectedAfterClick === true,
+    JSON.stringify(cp),
+  )
+  check(
+    '点击非工作区域后失焦并恢复根节点第一个配置标签',
+    cp.blurClearedPreview === true && cp.blurRestoredFirstTab === true,
     JSON.stringify(cp),
   )
   check(

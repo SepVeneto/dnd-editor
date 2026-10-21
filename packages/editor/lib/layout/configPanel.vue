@@ -4,14 +4,14 @@
       <ElBreadcrumbItem
         v-for="item in list"
         :key="item.wid"
-        @click="editor.selected = item.wid"
+        @click="editor.selectNode(item.wid)"
       >
         <span class="mpd-cursor-pointer">{{ item.name }}</span>
       </ElBreadcrumbItem>
     </ElBreadcrumb>
 
     <ElTabs
-      v-model="active"
+      v-model="editor.activeConfigPane"
     >
       <ElTabPane
         label="属性"
@@ -48,8 +48,8 @@
       </ElTabPane>
 
       <!--
-        根节点（页面级）配置的补充标签：标签内容完全由业务侧定义，不一定是独立组件；
-        若关联了固定组件，其内容配置在选中该组件后回到「属性」里编辑。
+        根节点（页面级）配置的补充标签。固定组件只作为配置入口展示，
+        点击它的预览视图后会回到根节点并激活对应标签。
       -->
       <template v-if="isSelectRoot">
         <ElTabPane
@@ -77,9 +77,8 @@
 <script lang="ts" setup>
 import type { Raw } from 'vue'
 import { ArrowRight } from '@element-plus/icons-vue'
-import { watchOnce } from '@vueuse/core'
 import { ElBreadcrumb, ElBreadcrumbItem, ElScrollbar, ElTabPane, ElTabs } from 'element-plus'
-import { computed, nextTick, onBeforeUpdate, ref, shallowRef, useTemplateRef, watch } from 'vue'
+import { computed, nextTick, onBeforeUpdate, shallowRef, useTemplateRef, watch } from 'vue'
 import ConfigForm from '@/components/ConfigForm.vue'
 import { useEditor } from '@/store'
 
@@ -97,25 +96,20 @@ const refStyle = useTemplateRef('styleRef')
 type PaneInstance = InstanceType<typeof ConfigForm>
 const refPageConfig = shallowRef<{ ref: Raw<PaneInstance>, name: string }[]>([])
 
-const active = ref<string>('props')
-
 const isSelectRoot = computed(() => editor.selectedNode.wid === editor.rootNode.wid)
-const isConfigInstance = computed(() => editor.plugins.config.list.some(panel => panel.wid === editor.selected))
-// 这些标签补充的是根节点配置，在选中根节点（或关联组件）时出现
-const rootConfigPanes = computed(() => (isSelectRoot.value || isConfigInstance.value ? editor.plugins.config.list : []))
-
-watchOnce(() => editor.plugins.config.defaultPane, (paneWid) => {
-  active.value = propSchema.value.length > 0 ? 'props' : paneWid
-})
+// 这些标签补充的是根节点配置，仅在选中根节点时出现。
+const rootConfigPanes = computed(() => (isSelectRoot.value ? editor.plugins.config.list : []))
 
 watch(() => editor.selected, () => {
   refPageConfig.value = []
 
   if (isSelectRoot.value) {
-    active.value = propSchema.value.length > 0 ? 'props' : editor.plugins.config.defaultPane
+    const activePanel = editor.plugins.config.list.find(panel => panel.wid === editor.activeConfigPane)
+    if (!activePanel)
+      editor.activeConfigPane = 'props'
   }
   else {
-    active.value = 'props'
+    editor.activeConfigPane = 'props'
   }
   nextTick().then(() => {
     refPageConfig.value?.forEach((item) => {
@@ -143,7 +137,7 @@ defineExpose({
   async validate() {
     if (refProp.value) {
       const propValid = await refProp.value?.validate()?.catch(() => {
-        active.value = 'props'
+        editor.activeConfigPane = 'props'
       })
       if (!propValid)
         return
@@ -152,7 +146,7 @@ defineExpose({
     if (refPageConfig.value) {
       for (const pane of refPageConfig.value) {
         const valid = await pane.ref.validate()?.catch(() => {
-          active.value = pane.name
+          editor.activeConfigPane = pane.name
           return false
         })
         if (!valid)
@@ -162,7 +156,7 @@ defineExpose({
 
     if (refStyle.value) {
       await refStyle.value?.validate()?.catch(() => {
-        active.value = 'style'
+        editor.activeConfigPane = 'style'
       })
     }
   },

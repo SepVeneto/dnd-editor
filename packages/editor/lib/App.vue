@@ -63,11 +63,13 @@
               v-for="panel in editor.plugins.config.list"
               :key="panel.wid"
             >
-              <!-- 关联了固定组件的标签：不可拖曳/删除，始终以预览态渲染，点击选中后即可配置 -->
+              <!-- 配置页关联的固定组件：不可拖曳/删除，点击后回到根节点并激活对应配置页 -->
               <NodeWrap
-                v-if="panel && panel.visible !== false"
+                v-if="panel.visible === true"
                 :node="panel"
                 preview
+                :active="editor.activeConfigPane === panel.wid"
+                :select="selectConfigPanel"
               >
                 <ViewRender
                   scope="widgets"
@@ -327,6 +329,15 @@ const drag = useNodeListDrag({
 const ViewRender = loadFromRemote('widgets', 'remote')
 
 const refConfigPanel = useTemplateRef('configPanelRef')
+
+/**
+ * 固定组件是根配置的视图入口，本身不作为独立组件进入编辑态。
+ * 点击后选中根节点，并定位到该固定组件对应的配置页。
+ */
+function selectConfigPanel(panel: Node) {
+  editor.selectConfigPane(panel.wid)
+}
+
 defineExpose({
   validate() {
     return refConfigPanel.value?.validate()

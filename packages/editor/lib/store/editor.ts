@@ -97,14 +97,11 @@ export interface ConfigPanel {
 /**
  * 根节点（页面级）配置的补充入口（config pane 提供的额外标签）。
  *
- * 本质上只是给根节点配置区多加一个标签：标签里是业务侧定义的根配置项，
- * 用于补充根节点的配置。它**不一定是独立组件**——可能只是出于业务需要把一组配置单独归到一个标签里；
- * 「浮窗」这类位置固定、组件区不自由提供的组件，是当这些配置驱动一个固定组件时的用法之一。
- *
- * 若提供了 `component`，编辑器会额外把它作为独立 Node 绑定到根节点上（不进入页面布局的拖拽列表，
- * 因此不可拖曳、不可删除，始终以预览态渲染）；组件的两份配置相互独立、都由业务侧定义：
- * - 根配置（`attributes`）：本标签里的配置项；
- * - 组件内容（`component.schema.props`）：选中该组件后于「属性」里编辑。
+ * 每个标签绑定一个固定组件 Node，但组件数据和配置页都属于根节点：
+ * - 数据写入 `rootNode.data[type]`，通过 `getData()` 输出，不进入页面拖拽列表；
+ * - 配置项由该 Widget 的 `schema.props` 定义；
+ * - 只有 `data.isShow` 为真时才渲染固定组件预览，纯配置标签不会加载组件视图；
+ * - 点击固定组件预览时应回到根节点，并激活对应配置标签，而不是独立选中该组件。
  */
 class ConfigPlugin {
   public list: Node[] = []
@@ -115,7 +112,7 @@ class ConfigPlugin {
     return this.list[0]?.wid ?? ''
   }
 
-  /** 注册一个根节点配置标签；`component` 可选，提供时会额外挂一个固定组件 */
+  /** 注册一个根节点配置标签及其固定组件视图 */
   addPanel(options: IWidget): Node {
     const instance = new Widget(options)
     const root = this.ctx.rootNode()
@@ -199,6 +196,8 @@ export const useEditor = defineStore('editor', () => {
   const nodeMap = new Map<string, Node>()
   nodeMap.set(rootNode.value.wid, rootNode.value)
   const selected = ref<string>(rootNode.value.wid)
+  /** 当前配置标签，固定组件预览的选中态也跟随它。 */
+  const activeConfigPane = ref<string>('props')
 
   const showTopbar = computed(() => {
     const topbar = rootNode.value.widget._data.schema?.props?.find((item) => {
@@ -214,6 +213,7 @@ export const useEditor = defineStore('editor', () => {
   watchEffect(() => {
     nodeMap.delete(rootNode.value.wid)
     selected.value = rootNode.value.wid
+    activeConfigPane.value = 'props'
     nodeMap.set(rootNode.value.wid, rootNode.value)
   })
 
@@ -273,11 +273,22 @@ export const useEditor = defineStore('editor', () => {
     }
     parent.list.splice(index, 1)
     unregister(node)
-    selected.value = rootNode.value.wid
+    selectNode()
   }
 
   function selectNode(wid?: string) {
     selected.value = wid || rootNode.value.wid
+    if (!wid || wid === rootNode.value.wid)
+      activeConfigPane.value = 'props'
+  }
+
+  /** 选中根节点并激活指定配置页；固定组件视图本身不进入普通组件选中态。 */
+  function selectConfigPane(wid: string) {
+    if (!plugins.config.list.some(panel => panel.wid === wid))
+      return
+
+    selected.value = rootNode.value.wid
+    activeConfigPane.value = wid
   }
 
   function getData() {
@@ -309,6 +320,7 @@ export const useEditor = defineStore('editor', () => {
     unregister(rootNode.value)
     rootNode.value = node
     selected.value = node.wid
+    activeConfigPane.value = 'props'
     nodeMap.set(node.wid, node)
   }
 
@@ -337,7 +349,9 @@ export const useEditor = defineStore('editor', () => {
     shadowRoot,
     elementRoot,
     selectNode,
+    selectConfigPane,
     selected,
+    activeConfigPane,
     hovering,
     selectedNode,
     selectedNodes,

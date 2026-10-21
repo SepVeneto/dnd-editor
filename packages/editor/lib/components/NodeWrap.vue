@@ -8,14 +8,14 @@
       isActive && 'selected',
       isDraggable && 'draggable',
       isHover && 'hover',
-      preview && 'preview'
+      preview && 'preview',
     ]"
   >
     <div
       class="node-wrap"
       @mouseenter.stop="editor.hovering = node.wid"
       @mouseleave.stop="editor.hovering = undefined"
-      @click.stop="editor.selected = node.wid"
+      @click.stop="handleSelect"
     >
       <NodeContainer
         v-if="node.type === 'containerGrid'"
@@ -46,21 +46,32 @@
 <script lang="ts" setup>
 import type { Node } from '@sepveneto/dnde-core/class'
 import { Hide as IconHide } from '@element-plus/icons-vue'
+import { ElIcon } from 'element-plus'
 import { computed } from 'vue'
 import { useEditor } from '@/store'
 import { normalizeStyle } from '@/utils'
 import NodeContainer from './NodeContainer.vue'
 import NodeOperate from './NodeOperate.vue'
-import { ElIcon } from 'element-plus'
 
 const props = defineProps<{
   node: Node
   preview?: boolean
+  /** 覆盖节点选中态。固定组件预览由配置页的激活状态决定。 */
+  active?: boolean
+  /**
+   * 覆盖默认选中行为。固定组件预览由编辑器接管时，通常需要选中根节点而不是组件节点。
+   */
+  select?: (node: Node) => void
 }>()
 
 const editor = useEditor()
 const preview = computed(() => props.preview === true)
-const isActive = computed(() => props.node.wid === editor.selected)
+const isActive = computed(() => {
+  if (preview.value)
+    return props.active === true
+
+  return props.node.wid === editor.selected
+})
 const isHover = computed(() => {
   if (isActive.value)
     return false
@@ -68,6 +79,13 @@ const isHover = computed(() => {
   return props.node.wid === editor.hovering
 })
 const isDraggable = computed(() => props.node.widget?.draggable)
+
+function handleSelect() {
+  if (props.select)
+    props.select(props.node)
+  else
+    editor.selectNode(props.node.wid)
+}
 </script>
 
 <style lang="scss" scoped>

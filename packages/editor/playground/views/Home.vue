@@ -196,8 +196,8 @@ onMounted(() => {
     // helper: 节点的操作菜单
     // widget: 组件菜单
     init() {
-      // addPanel 只是给根节点配置区加一个标签，标签内容由业务侧定义；
-      // component 可选：提供时额外挂一个固定组件（如浮窗），不提供就只是纯配置标签
+      // addPanel 给根节点配置区增加一个标签；
+      // 固定组件的点击只用于定位到该配置标签，不会进入独立的组件编辑态
       ctx.plugins.config.addPanel(
         widget.create({
           name: '浮窗',
