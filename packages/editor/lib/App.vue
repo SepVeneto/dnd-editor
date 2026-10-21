@@ -65,15 +65,15 @@
             >
               <!-- 关联了固定组件的标签：不可拖曳/删除，始终以预览态渲染，点击选中后即可配置 -->
               <NodeWrap
-                v-if="panel.node && panel.node.visible !== false"
-                :node="panel.node"
+                v-if="panel && panel.visible !== false"
+                :node="panel"
                 preview
               >
                 <ViewRender
                   scope="widgets"
-                  :type="`${panel.node.type}.view`"
-                  :config="panel.node"
-                  :data="panel.node.data"
+                  :type="`${panel.type}.view`"
+                  :config="panel"
+                  :data="panel.data"
                 />
               </NodeWrap>
             </template>

@@ -6,7 +6,6 @@ import type { HelperAction } from '@/type'
 import { widget } from '@sepveneto/dnde-core'
 import { Node, Widget } from '@sepveneto/dnde-core/class'
 import Validator from 'async-validator'
-import { v4 } from 'uuid'
 import { defineStore } from 'pinia'
 import { computed, customRef, ref, shallowRef, watchEffect } from 'vue'
 import { createDebug, removePopper } from '@/utils'
@@ -81,12 +80,6 @@ export interface ConfigPanelOptions {
   name: string
   /** 根节点（页面级）配置项，由业务侧定义 */
   attributes?: SchemaItem[]
-  /**
-   * 可选：位置固定、组件区（widgets）不自由提供的组件（如浮窗）。
-   * 提供时编辑器会以预览态渲染它，并可在选中后配置其内容；
-   * 不提供则只是一个纯配置标签。
-   */
-  component?: IWidget
 }
 export interface ConfigPanel {
   /** 稳定的标识，用于标签定位 */
@@ -114,7 +107,7 @@ export interface ConfigPanel {
  * - 组件内容（`component.schema.props`）：选中该组件后于「属性」里编辑。
  */
 class ConfigPlugin {
-  public list: ConfigPanel[] = []
+  public list: Node[] = []
 
   constructor(public ctx: ConfigPluginContext) {}
 
@@ -123,45 +116,35 @@ class ConfigPlugin {
   }
 
   /** 注册一个根节点配置标签；`component` 可选，提供时会额外挂一个固定组件 */
-  addPanel(options: ConfigPanelOptions): ConfigPanel {
+  addPanel(options: IWidget): Node {
+    const instance = new Widget(options)
     const root = this.ctx.rootNode()
-    const name = options.name
-    if (!root.data[name])
-      root.data[name] = {}
+    const key = instance.view
+    if (!root.data[key])
+      root.data[key] = {}
 
-    let node: Node | undefined
-    if (options.component) {
-      const instance = new Widget(options.component)
-      instance._data.meta = { ...instance._data.meta, draggable: false }
-      // 组件默认数据并入同一份配置对象，响应式与 getData() 都能覆盖到
-      Object.assign(root.data[name], instance.defaultData ?? {})
-      node = new Node(instance, {
-        props: root.data[name],
-        style: JSON.parse(JSON.stringify(instance.defaultStyle ?? {})),
-      })
-      // 注册进 nodeMap 以便通过 wid 定位/选中，但不进入页面拖拽列表（manual = false）
-      this.ctx.addNode(node, root, false)
-    }
+    Object.assign(root.data[key], instance.defaultData ?? {})
 
-    const panel: ConfigPanel = {
-      wid: node?.wid ?? v4(),
-      label: options.label ?? options.component?._name ?? name,
-      name,
-      attributes: options.attributes ?? [],
-      data: root.data[name],
-      node,
-    }
-    this.list.push(panel)
-    return panel
+    instance._data.meta = { ...instance._data.meta, draggable: false }
+    // 组件默认数据并入同一份配置对象，响应式与 getData() 都能覆盖到
+    const node = new Node(instance, {
+      props: root.data[key],
+      style: JSON.parse(JSON.stringify(instance.defaultStyle ?? {})),
+    })
+    // 注册进 nodeMap 以便通过 wid 定位/选中，但不进入页面拖拽列表（manual = false）
+    this.ctx.addNode(node, root, false)
+
+    this.list.push(node)
+    return node
   }
 
   async validate() {
     for (const panel of this.list) {
       // 关联组件定义了显示开关且处于关闭状态时，不参与校验
-      if (panel.node && CONFIG_PANEL_SHOW_KEY in panel.data && !panel.data[CONFIG_PANEL_SHOW_KEY])
+      if (panel && CONFIG_PANEL_SHOW_KEY in panel.data && !panel.data[CONFIG_PANEL_SHOW_KEY])
         continue
 
-      const items = [...panel.attributes, ...(panel.node?.widget.props ?? [])]
+      const items = (panel.widget.props ?? [])
       const _rules = items.reduce<Record<string, Rule>>((all, curr) => {
         all[curr.key] = curr.rules || []
         return all
@@ -218,11 +201,12 @@ export const useEditor = defineStore('editor', () => {
   const selected = ref<string>(rootNode.value.wid)
 
   const showTopbar = computed(() => {
-    const topbar = rootNode.value.widget._data.schema?.props?.find(item => {
+    const topbar = rootNode.value.widget._data.schema?.props?.find((item) => {
       return item._role === 'topbar'
     })
     // 默认显示
-    if (!topbar) return true
+    if (!topbar)
+      return true
 
     return !!rootNode.value.data[topbar.key]
   })

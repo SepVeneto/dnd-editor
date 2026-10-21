@@ -51,23 +51,25 @@
         根节点（页面级）配置的补充标签：标签内容完全由业务侧定义，不一定是独立组件；
         若关联了固定组件，其内容配置在选中该组件后回到「属性」里编辑。
       -->
-      <ElTabPane
-        v-for="panel in rootConfigPanes"
-        :key="panel.wid"
-        :label="panel.label"
-        :name="panel.wid"
-      >
-        <ElScrollbar
-          height="700px"
-          wrap-style="padding-right: 20px;"
+      <template v-if="isSelectRoot">
+        <ElTabPane
+          v-for="panel in rootConfigPanes"
+          :key="panel.wid"
+          :label="panel.name"
+          :name="panel.wid"
         >
-          <ConfigForm
-            :ref="(ref: any) => updateRef(ref, panel.wid)"
-            v-model="panel.data"
-            :list="panel.attributes"
-          />
-        </ElScrollbar>
-      </ElTabPane>
+          <ElScrollbar
+            height="700px"
+            wrap-style="padding-right: 20px;"
+          >
+            <ConfigForm
+              :ref="(ref: any) => updateRef(ref, panel.wid)"
+              v-model="panel.data"
+              :list="panel.widget.props"
+            />
+          </ElScrollbar>
+        </ElTabPane>
+      </template>
     </ElTabs>
   </div>
 </template>
@@ -76,10 +78,10 @@
 import type { Raw } from 'vue'
 import { ArrowRight } from '@element-plus/icons-vue'
 import { watchOnce } from '@vueuse/core'
+import { ElBreadcrumb, ElBreadcrumbItem, ElScrollbar, ElTabPane, ElTabs } from 'element-plus'
 import { computed, nextTick, onBeforeUpdate, ref, shallowRef, useTemplateRef, watch } from 'vue'
 import ConfigForm from '@/components/ConfigForm.vue'
 import { useEditor } from '@/store'
-import { ElBreadcrumb, ElBreadcrumbItem, ElScrollbar, ElTabPane, ElTabs } from 'element-plus'
 
 const editor = useEditor()
 const list = computed(() => {
@@ -98,7 +100,7 @@ const refPageConfig = shallowRef<{ ref: Raw<PaneInstance>, name: string }[]>([])
 const active = ref<string>('props')
 
 const isSelectRoot = computed(() => editor.selectedNode.wid === editor.rootNode.wid)
-const isConfigInstance = computed(() => editor.plugins.config.list.some(panel => panel.node?.wid === editor.selected))
+const isConfigInstance = computed(() => editor.plugins.config.list.some(panel => panel.wid === editor.selected))
 // 这些标签补充的是根节点配置，在选中根节点（或关联组件）时出现
 const rootConfigPanes = computed(() => (isSelectRoot.value || isConfigInstance.value ? editor.plugins.config.list : []))
 
