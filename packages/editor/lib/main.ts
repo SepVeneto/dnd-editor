@@ -1,12 +1,15 @@
 import type { App } from 'vue'
 import type { AgentImporter } from './agents/loader.js'
+import ElementPlus from 'element-plus'
+// @ts-expect-error: no def
+import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
 import { createPinia } from 'pinia'
 import { defineAsyncComponent } from 'vue'
-import Main from './Editor.vue'
 import { setAgentImporter } from './agents/loader.js'
+import Main from './Editor.vue'
 import { createEditorElement, EDITOR_ELEMENT_TAG } from './element.js'
 import elementPlusCss from './styles/popper.scss?inline'
-import { injectPopperStyles, initMf } from './utils.js'
+import { initMf, injectPopperStyles } from './utils.js'
 
 export type EditorInstance = InstanceType<typeof Main>
 
@@ -73,7 +76,9 @@ export interface RegisterOptions {
 
 function defer<T>() {
   let resolve!: (value: T) => void
-  const promise = new Promise<T>((r) => { resolve = r })
+  const promise = new Promise<T>((r) => {
+    resolve = r
+  })
   return { promise, resolve }
 }
 
@@ -166,6 +171,8 @@ const EditorElement = createEditorElement({
   definition: defineAsyncComponent(loadEditorDefinition),
   configureApp(app: App) {
     app.use(createPinia())
+    // 一次写入 app 级配置，供命令式弹层继承；重复调用 provideGlobalConfig 会触发 Vue 覆盖警告。
+    app.use(ElementPlus, { namespace: 'mpd', locale: zhCn })
     producerSetup.use?.forEach((item: any) => app.use(item.plugin, item.options))
   },
 })

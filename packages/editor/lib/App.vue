@@ -113,10 +113,9 @@
 </template>
 
 <script lang="ts" setup>
-import type { EditIR } from './agents/types'
 import { editorContextKey, EventEmitter } from '@sepveneto/dnde-core'
 import { Node } from '@sepveneto/dnde-core/class'
-import { ElConfigProvider, ElScrollbar, provideGlobalConfig } from 'element-plus'
+import { ElConfigProvider, ElScrollbar } from 'element-plus'
 // @ts-expect-error: no def
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
 import { computed, getCurrentInstance, onMounted, onUnmounted, provide, ref, useTemplateRef, watch } from 'vue'
@@ -152,12 +151,8 @@ provide(EditorKey, {
   root: refRoot,
 })
 
-// 命令式弹层（如 basic-comp 的 createDialog）会在独立的渲染根里渲染，
-// 该渲染根只继承 app 级别的 provide，拿不到模板里实例级 <ElConfigProvider> 的命名空间配置，
-// 于是会退化成 element-plus 默认的 `el-` 前缀；而编辑器注入的主题是按 `mpd-` 编译的，
-// 类名对不上就会让弹窗与其中的 select 下拉完全没有样式。
-// 这里把编辑器的命名空间补到 app 级别，让这类弹层也能命中同一份主题。
-provideGlobalConfig({ namespace: editorNamespace, locale: zhCn }, inst!.appContext.app)
+// 命令式弹层（如 basic-comp 的 createDialog）只继承 app 级别的 provide，
+// 其 Element Plus 配置在 main.ts 安装插件时与默认配置一次性写入，避免重复 provide。
 
 const capabilities = computed(() => (props.capabilities ?? []) as any[])
 const workflows = computed(() => (props.workflows ?? []) as any[])
