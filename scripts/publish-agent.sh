@@ -6,6 +6,8 @@ set -eu
 
 pnpm i --frozen-lockfile --registry=https://registry.npmmirror.com
 
+pnpm build:core
+
 cd packages/agent
 
 # 以 tag 为准回写版本号，确保发布出去的版本与 tag 一致
