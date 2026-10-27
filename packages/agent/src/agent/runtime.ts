@@ -105,7 +105,7 @@ export class AgentRuntime {
     const effectiveInput = input
 
     if (classification.flow === 'initialize') {
-      return this.runInitialize(`用于移动端手机的布局，优先关注 layout.description，用于组件选择与页面布局规划；必要时参考 description，理解组件的业务语义。\neffectiveInput`, appContext, hooks)
+      return this.runInitialize(`用于移动端手机的布局，优先关注 layout.description，用于组件选择与页面布局规划；必要时参考 description，理解组件的业务语义。\n${effectiveInput}`, appContext, hooks)
     }
     if (classification.flow === 'edit') {
       return this.runEdit(effectiveInput, appContext, hooks)
