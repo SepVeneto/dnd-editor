@@ -105,7 +105,7 @@ export class AgentRuntime {
     const effectiveInput = input
 
     if (classification.flow === 'initialize') {
-      return this.runInitialize(effectiveInput, appContext, hooks)
+      return this.runInitialize(`用于移动端手机的布局，优先关注 layout.description，用于组件选择与页面布局规划；必要时参考 description，理解组件的业务语义。\neffectiveInput`, appContext, hooks)
     }
     if (classification.flow === 'edit') {
       return this.runEdit(effectiveInput, appContext, hooks)
@@ -150,10 +150,10 @@ export class AgentRuntime {
     appContext: AppContext,
     hooks: AgentRuntimeHooks,
   ): Promise<AgentRuntimeResult> {
-    console.log(hooks.widgets)
     const layoutIr = genStateIr(hooks.rootNode)
     const widgetIr = genWidgetIr(hooks.widgets)
     const composed = [
+      `优先关注 description，用于理解组件功能并定位用户想修改的组件；必要时参考 layout.description，辅助理解组件的排版特征`,
       `用户输入：${input}`,
       `当前编辑器状态：${JSON.stringify(layoutIr)}`,
       `所有的组件信息：${JSON.stringify(widgetIr)}`,

@@ -1,6 +1,6 @@
+import type { LayoutIR, NormalizedElements } from './ir'
 import { Agent } from '@openai/agents'
 import { getModel, runAgent } from './core/sdk'
-import type { LayoutIR, NormalizedElements } from './ir'
 import { parseJson } from './extract'
 
 export interface LayoutWidgetDescriptor {
@@ -23,7 +23,7 @@ const LAYOUT_INSTRUCTIONS = `
 1. 必须覆盖 elements 中的所有元素，不得遗漏、合并或编造。
 2. category 取元素的 kind，id 取元素自身的 id，一一对应。
 3. 组件 typeId 必须从 widgets 里原样选取。
-4. 少量元素优先低密度、大面积、一个元素一个组件；元素较多时才考虑高密度组件分组。
+4. 核心目的是尽可能的铺满页面。少量元素优先低密度、大面积、一个元素一个组件；元素较多时才考虑高密度组件分组。
 `
 
 export function createLayoutAgent(): Agent<any, any> {

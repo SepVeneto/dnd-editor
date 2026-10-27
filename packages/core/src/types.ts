@@ -18,17 +18,22 @@ export interface WidgetLayoutItem {
 
 export interface WidgetAgent {
   /**
-   * 组件的功能描述
+   * 组件的功能描述。
+   * 用于组件检索、用户意图匹配和编辑时的组件定位。
    */
   description?: string
+  /**
+   * 初始化页面时使用的布局信息。
+   */
   layout?: {
     /**
-     * 组件在布局中的描述
+     * 组件的布局特征与适用场景。
      */
     description: string
-    direction: 'row' | 'column'
-    density: 'low' | 'medium' | 'high'
-    priority: 'large'
+    // 估算尺寸，作为布局参考
+    estimatedSize: string
+    // 在布局时的优先级
+    priority: 'large' | 'medium' | 'small' | 'tiny'
   }
   /**
    * 布局子 Agent 结束、组件创建完成后，由业务侧决定数据如何更新到组件里。
