@@ -293,6 +293,7 @@ import type { Workflow } from './workflow'
 import { computed, nextTick, reactive, ref, shallowRef, useTemplateRef, watch } from 'vue'
 import IconFile from '@/assets/file.vue'
 import { useFile } from '@/composables'
+import { resolveServiceURL } from './core/sdk'
 import { createAgentRuntime } from './runtime'
 
 const props = defineProps<{
@@ -538,7 +539,7 @@ function handleEvent(event: AgentRuntimeEvent) {
 async function send(message: string, files?: any[]) {
   let rawMsg = ''
   if (files?.length) {
-    const response = await fetch(`http://localhost:4000/docx-markdown?id=${files[0].name}`)
+    const response = await fetch(`${resolveServiceURL('docx-markdown')}?id=${encodeURIComponent(files[0].name)}`)
     rawMsg += `${(await response.json()).data}\n`
   }
   else {

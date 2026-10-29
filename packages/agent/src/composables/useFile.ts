@@ -1,4 +1,6 @@
-import { shallowRef, Ref } from "vue";
+import type { Ref } from 'vue'
+import { shallowRef } from 'vue'
+import { resolveServiceURL } from '@/agent/core/sdk'
 
 export function useFile(file: Ref<HTMLInputElement | null>) {
   const list = shallowRef<{ name: string, file: string }[]>([])
@@ -16,9 +18,9 @@ export function useFile(file: Ref<HTMLInputElement | null>) {
       const formData = new FormData()
       formData.append('file', files[0])
 
-      const response = await fetch('http://localhost:4000/upload', {
+      const response = await fetch(resolveServiceURL('upload'), {
         method: 'POST',
-        body: formData
+        body: formData,
       })
 
       const result = await response.json()

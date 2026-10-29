@@ -1,5 +1,3 @@
-import OpenAI from 'openai'
-import { run as agentsRun, Usage } from '@openai/agents'
 import type {
   Agent,
   AgentInputItem,
@@ -11,9 +9,11 @@ import type {
   RunStreamEvent,
   SerializedOutputType,
   Session,
-  StreamEvent,
   StreamedRunResult,
+  StreamEvent,
 } from '@openai/agents'
+import { run as agentsRun, Usage } from '@openai/agents'
+import OpenAI from 'openai'
 
 export interface ModelConfig {
   baseURL?: string
@@ -45,6 +45,18 @@ export function configureModel(next: ModelConfig): void {
 
 export function getModelConfig(): Required<ModelConfig> {
   return { ...config }
+}
+
+/**
+ * 模型 API 与文件服务共用同一个部署地址。`baseURL` 通常以 `/v1` 结尾，
+ * 文件接口位于其兄弟路径，因此解析时去掉末尾的版本段并保留自定义部署前缀。
+ */
+export function resolveServiceURL(path: string): string {
+  const serviceBaseURL = config.baseURL
+    .replace(/\/+$/, '')
+    .replace(/\/v1$/, '')
+
+  return `${serviceBaseURL}/${path.replace(/^\/+/, '')}`
 }
 
 export function getModelName(): string {
@@ -94,7 +106,7 @@ class ProxyChatCompletionsModel implements Model {
     }
   }
 
-  async *getStreamedResponse(request: ModelRequest): AsyncIterable<StreamEvent> {
+  async* getStreamedResponse(request: ModelRequest): AsyncIterable<StreamEvent> {
     const { messages, tools, responseFormat } = buildChatRequest(request)
     const stream = await client.chat.completions.create({
       model: this.model,
