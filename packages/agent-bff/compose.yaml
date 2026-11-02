@@ -1,0 +1,32 @@
+name: ${AGENT_BFF_PROJECT_NAME:-agent-bff}
+
+services:
+  agent-bff:
+    image: ${AGENT_BFF_IMAGE:-agent-bff:latest}
+    restart: unless-stopped
+    ports:
+      - "${AGENT_BFF_BIND:-0.0.0.0}:${AGENT_BFF_PORT:-4000}:4000"
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+    volumes:
+      - uploads:/app/packages/agent-bff/uploads
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+volumes:
+  uploads:
+    name: ${AGENT_BFF_UPLOAD_VOLUME:-agent-bff-uploads}

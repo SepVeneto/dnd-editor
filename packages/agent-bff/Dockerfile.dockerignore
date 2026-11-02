@@ -1,0 +1,10 @@
+**
+
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!.npmrc
+!packages/agent-bff/package.json
+!packages/agent-bff/src/**
+!packages/agent-bff/Dockerfile
+!packages/agent-bff/Dockerfile.dockerignore
