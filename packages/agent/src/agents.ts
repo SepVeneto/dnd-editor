@@ -1,6 +1,6 @@
 import type { FunctionTool } from '@openai/agents'
-import type { AgentHostApi } from './types'
 import type { AgentToolDefinition } from './tool'
+import type { AgentHostApi } from './types'
 import { Agent, tool } from '@openai/agents'
 import { z } from 'zod'
 
@@ -28,9 +28,10 @@ async function resolveApproval(
   if (typeof window === 'undefined' || typeof window.confirm !== 'function')
     return false
 
+  // eslint-disable-next-line no-alert
   return window.confirm(
     definition.approval?.message?.(input)
-      ?? `是否执行工具 ${definition.name}？`,
+    ?? `是否执行工具 ${definition.name}？`,
   )
 }
 

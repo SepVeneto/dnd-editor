@@ -36,11 +36,11 @@
 </template>
 
 <script setup lang="ts">
-import type { AgentHostApi } from '../types'
 import type { AgentToolDefinition } from '../tool'
+import type { AgentHostApi } from '../types'
 import { computed, ref } from 'vue'
-import { createAgentRuntime } from '../runtime'
 import ChatView from '../components/ChatView.vue'
+import { createAgentRuntime } from '../runtime'
 
 const props = withDefaults(defineProps<{
   api?: AgentHostApi

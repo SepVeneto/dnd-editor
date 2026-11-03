@@ -1,21 +1,3 @@
-<script setup lang="ts">
-import type { MessagePart } from '../types'
-import MarkdownContent from './MarkdownContent.vue'
-
-defineProps<{
-  part: MessagePart
-}>()
-
-function formatJson(value: unknown) {
-  try {
-    return JSON.stringify(value, null, 2)
-  }
-  catch {
-    return String(value)
-  }
-}
-</script>
-
 <template>
   <MarkdownContent
     v-if="part.type === 'text'"
@@ -71,8 +53,8 @@ function formatJson(value: unknown) {
         <small>工具调用</small>
       </div>
       <span
+        class="status-pill"
         :class="[
-          'status-pill',
           part.state === 'output-available' ? 'complete' : 'running',
         ]"
       >
@@ -125,3 +107,21 @@ function formatJson(value: unknown) {
     <pre><code>{{ formatJson(part.data) }}</code></pre>
   </div>
 </template>
+
+<script setup lang="ts">
+import type { MessagePart } from '../types'
+import MarkdownContent from './MarkdownContent.vue'
+
+defineProps<{
+  part: MessagePart
+}>()
+
+function formatJson(value: unknown) {
+  try {
+    return JSON.stringify(value, null, 2)
+  }
+  catch {
+    return String(value)
+  }
+}
+</script>

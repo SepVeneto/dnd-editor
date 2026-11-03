@@ -231,6 +231,8 @@ function operateEditor(operation: Record<string, any>) {
     if (!widget)
       throw new Error(`找不到组件 ${operation.widget ?? ''}`)
 
+    // eslint-disable-next-line ts/ban-ts-comment
+    // @ts-ignore
     const parent = operation.target
       ? requireAgentNode(operation.target)
       : editor.rootNode

@@ -1,3 +1,10 @@
+<template>
+  <div
+    class="markdown-content"
+    v-html="rendered"
+  />
+</template>
+
 <script setup lang="ts">
 import DOMPurify from 'dompurify'
 import { marked } from 'marked'
@@ -19,10 +26,3 @@ const rendered = computed(() => {
   })
 })
 </script>
-
-<template>
-  <div
-    class="markdown-content"
-    v-html="rendered"
-  />
-</template>

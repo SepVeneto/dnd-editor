@@ -4,8 +4,8 @@ import type {
   RunItemStreamEvent,
   RunStreamEvent,
 } from '@openai/agents'
-import type { AgentHostApi, ChatMessage, ChatMode, MessagePart, ToolPart } from './types'
 import type { AgentToolDefinition } from './tool'
+import type { AgentHostApi, ChatMessage, ChatMode, MessagePart, ToolPart } from './types'
 import {
   assistant,
   MemorySession,

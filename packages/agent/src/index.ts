@@ -12,6 +12,31 @@ export function createAgentElement(): VueElementConstructor {
   return defineCustomElement(MpdAgent)
 }
 
+export type { CreateAgentsOptions } from './agents'
+
+export {
+  createAgents,
+  DEFAULT_AGENT_BFF_URL,
+  DEFAULT_AGENT_MODEL,
+} from './agents'
+export type {
+  AgentRuntime,
+  AgentRuntimeConfig,
+  AgentRuntimeOptions,
+  AgentRuntimeTurn,
+} from './runtime'
+
+export { createAgentRuntime } from './runtime'
+export type {
+  AgentToolApprovalOptions,
+  AgentToolContext,
+  AgentToolDefinition,
+} from './tool'
+
+export {
+  defineAgentTool,
+  defineCapability,
+} from './tool'
 export type {
   AgentApiMode,
   AgentEditorApi,
@@ -27,31 +52,6 @@ export type {
   TextPart,
   ToolPart,
 } from './types'
-
-export type {
-  AgentToolApprovalOptions,
-  AgentToolContext,
-  AgentToolDefinition,
-} from './tool'
-export {
-  defineAgentTool,
-  defineCapability,
-} from './tool'
-
-export type {
-  AgentRuntime,
-  AgentRuntimeConfig,
-  AgentRuntimeOptions,
-  AgentRuntimeTurn,
-} from './runtime'
-export { createAgentRuntime } from './runtime'
-
-export type { CreateAgentsOptions } from './agents'
-export {
-  createAgents,
-  DEFAULT_AGENT_BFF_URL,
-  DEFAULT_AGENT_MODEL,
-} from './agents'
 
 export {
   Agent,
