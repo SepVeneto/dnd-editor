@@ -1,0 +1,41 @@
+import type { z } from 'zod'
+import type { AgentHostApi } from './types'
+
+export interface AgentToolContext {
+  api: AgentHostApi
+  getContext: () => Record<string, unknown>
+  signal?: AbortSignal
+}
+
+export interface AgentToolApprovalOptions {
+  message?: (input: any) => string
+}
+
+export interface AgentToolDefinition<TInput = unknown, TOutput = unknown> {
+  /** Discriminator that keeps plain tool definitions distinct from SDK objects. */
+  kind?: 'agent-tool'
+  name: string
+  description: string
+  parameters?: z.ZodType
+  /** Alias kept for existing capability definitions. */
+  inputSchema?: z.ZodType
+  needsApproval?: boolean | ((input: TInput) => boolean | Promise<boolean>)
+  approval?: AgentToolApprovalOptions
+  execute: (
+    input: TInput,
+    context: AgentToolContext,
+  ) => TOutput | Promise<TOutput>
+}
+
+/**
+ * Define a business tool consumed by the agent. Tools stay owned by the host:
+ * the element only adapts them to the Agents SDK at runtime.
+ */
+export function defineAgentTool<TInput = unknown, TOutput = unknown>(
+  definition: AgentToolDefinition<TInput, TOutput>,
+): AgentToolDefinition<TInput, TOutput> {
+  return { ...definition, kind: 'agent-tool' }
+}
+
+/** Backwards-compatible name for hosts that already use the capability API. */
+export const defineCapability = defineAgentTool

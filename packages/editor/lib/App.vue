@@ -100,14 +100,9 @@
 
     <dnd-agent
       v-if="agentReady"
-      :capabilities="capabilities"
-      :workflows="workflows"
+      :api="agentApi"
+      :tools="agentTools"
       :context="runtimeContext"
-      :root-node="editor.rootNode"
-      :widgets="app.widgetsFlat"
-      @init="onInit"
-      @edit="onEdit"
-      @capability="onCapability"
     />
   </ElConfigProvider>
 </template>
@@ -120,7 +115,6 @@ import { ElConfigProvider, ElScrollbar } from 'element-plus'
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
 import { computed, getCurrentInstance, onMounted, onUnmounted, provide, ref, useTemplateRef, watch } from 'vue'
 import VueDraggable from 'vuedraggable'
-import { snapshotNodes, toLayoutWidgets } from './agents/context'
 import { loadAgent } from './agents/loader'
 import LeftArrow from './assets/leftArrow.vue'
 import NodeWrap from './components/NodeWrap.vue'
@@ -154,8 +148,23 @@ provide(EditorKey, {
 // 命令式弹层（如 basic-comp 的 createDialog）只继承 app 级别的 provide，
 // 其 Element Plus 配置在 main.ts 安装插件时与默认配置一次性写入，避免重复 provide。
 
-const capabilities = computed(() => (props.capabilities ?? []) as any[])
-const workflows = computed(() => (props.workflows ?? []) as any[])
+const agentTools = computed(() => props.agentTools ?? [])
+
+const agentApi = computed(() => {
+  const hostApi = props.agentApi ?? {}
+  return {
+    ...hostApi,
+    model: {
+      ...(hostApi.model ?? {}),
+    },
+    editor: {
+      getCurrentEditor: snapshotEditor,
+      getWidgets: listAgentWidgets,
+      operateEditor,
+      ...(hostApi.editor ?? {}),
+    },
+  }
+})
 
 // agent 是可选能力：只有业务侧显式开启、且能加载到 <dnd-agent> 时才渲染。
 // 未安装 @sepveneto/dnde-agent 时由 loadAgent 在控制台给出安装提示。
@@ -169,82 +178,122 @@ watch(
 )
 
 function runtimeContext() {
+  const snapshot = snapshotEditor()
   return {
-    widgets: toLayoutWidgets(app.widgets ?? []),
-    nodes: snapshotNodes(editor.rootNode.list),
+    ...snapshot,
+    widgets: listAgentWidgets(),
   }
 }
 
-function onInit(args: any) {
-  const { layout, state } = args.detail[0]
-  layout.forEach((item: any) => {
-    const w = app.widgetMap.get(item.widget)
-    if (!w)
-      return
+function serializeAgentNode(node: any): Record<string, any> {
+  return {
+    id: node.wid,
+    type: node.type,
+    name: node.name,
+    data: node.data,
+    style: node.style,
+    children: node.list?.map(serializeAgentNode) ?? [],
+  }
+}
 
-    // eslint-disable-next-line ts/ban-ts-comment
-    // @ts-ignore
-    const node = new Node(w, JSON.parse(JSON.stringify({ props: w.defaultData, style: w.defaultStyle })))
-    // 数据如何写入组件由业务侧通过 widget 的 agent.update 决定
-    w.agent?.update?.(node, item, state)
+function snapshotEditor() {
+  return {
+    page: serializeAgentNode(editor.rootNode),
+    selected: editor.selected,
+  }
+}
 
-    editor.addNode(node, editor.rootNode, true)
+function listAgentWidgets() {
+  return app.widgetsFlat.map((item) => {
+    const schema = item._data.schema ?? {}
+    return {
+      typeId: item.view,
+      name: item.name,
+      description: item.agent?.description ?? item.agent?.layout?.description ?? '',
+      defaultData: item.defaultData,
+      defaultStyle: item.defaultStyle,
+      propsSchema: schema.props ?? [],
+      styleSchema: schema.style ?? [],
+    }
   })
 }
 
-function onEdit(evt: CustomEvent) {
-  const { edits, state } = evt.detail[0]
-  for (const ir of edits) {
-    if (ir.type === 'add-component') {
-      const w = app.widgetMap.get(ir.widget)
-      if (!w)
-        continue
+function requireAgentNode(id: string | undefined) {
+  const node = id ? editor.nodeMap.get(id) : undefined
+  if (!node)
+    throw new Error(`找不到节点 ${id ?? ''}`)
+  return node
+}
 
-      // eslint-disable-next-line ts/ban-ts-comment
-      // @ts-ignore
-      const node = new Node(w, JSON.parse(JSON.stringify({ props: w.defaultData, style: w.defaultStyle })))
-      w.agent?.update?.(node, { widget: ir.widget, items: ir.items } as any, state)
-      // TODO: 嵌套结构
-      editor.addNode(node, editor.rootNode, true)
-      continue
-    }
+function operateEditor(operation: Record<string, any>) {
+  if (operation.action === 'add') {
+    const widget = app.widgetMap.get(operation.widget)
+    if (!widget)
+      throw new Error(`找不到组件 ${operation.widget ?? ''}`)
 
-    const index = findNodeIndex(ir.target)
-    if (index < 0)
-      continue
-
-    if (ir.type === 'delete-component') {
-      editor.rootNode.list.splice(index, 1)
-    }
-    else if (ir.type === 'update-component') {
-      Object.assign(editor.rootNode.list[index]!.data, ir.changes)
-    }
-    else if (ir.type === 'move-component') {
-      const [node] = editor.rootNode.list.splice(index, 1)
-      const before = ir.before ? findNodeIndex(ir.before) : -1
-      const after = ir.after ? findNodeIndex(ir.after) : -1
-      let insertAt = editor.rootNode.list.length
-      if (before >= 0)
-        insertAt = before
-      else if (after >= 0)
-        insertAt = after + 1
-      editor.rootNode.list.splice(insertAt, 0, node!)
-    }
+    const parent = operation.target
+      ? requireAgentNode(operation.target)
+      : editor.rootNode
+    // eslint-disable-next-line ts/ban-ts-comment
+    // @ts-ignore
+    const node = new Node(widget, JSON.parse(JSON.stringify({
+      props: widget.defaultData,
+      style: widget.defaultStyle,
+    })))
+    widget.agent?.update?.(node, {
+      widget: operation.widget,
+      items: operation.items ?? [],
+    }, {})
+    if (operation.changes)
+      Object.assign(node.data, operation.changes)
+    if (operation.style)
+      Object.assign(node.style, operation.style)
+    editor.addNode(node, parent, true)
+    editor.selectNode(node.wid)
+    return { ok: true, node: serializeAgentNode(node) }
   }
-}
 
-function findNodeIndex(target: string): number {
-  const list = editor.rootNode.list
-  const numeric = Number.parseInt(target, 10)
-  if (!Number.isNaN(numeric) && list[numeric])
-    return numeric
+  const node = requireAgentNode(operation.target)
 
-  return list.findIndex(node => node.wid === target || node.type === target || node.name === target)
-}
+  if (operation.action === 'edit') {
+    if (operation.changes)
+      Object.assign(node.data, operation.changes)
+    if (operation.style)
+      Object.assign(node.style, operation.style)
+    return { ok: true, node: serializeAgentNode(node) }
+  }
 
-function onCapability({ name, result }: { name: string, result: unknown }) {
-  // 业务能力结果已经在助手面板里展示，这里不修改编辑器。
-  console.log('[editor] capability result', name, result)
+  if (operation.action === 'delete') {
+    editor.delNode(node.wid)
+    return { ok: true, node: { id: node.wid } }
+  }
+
+  if (operation.action === 'move') {
+    const parent = node.parent
+    if (!parent)
+      throw new Error('页面根节点不能移动')
+
+    const index = parent.list.findIndex(item => item.wid === node.wid)
+    if (index < 0)
+      throw new Error(`节点 ${node.wid} 不在父节点中`)
+    parent.list.splice(index, 1)
+
+    const before = operation.before
+      ? parent.list.findIndex(item => item.wid === operation.before)
+      : -1
+    const after = operation.after
+      ? parent.list.findIndex(item => item.wid === operation.after)
+      : -1
+    const insertAt = before >= 0
+      ? before
+      : after >= 0
+        ? after + 1
+        : parent.list.length
+    parent.list.splice(insertAt, 0, node)
+    return { ok: true, node: serializeAgentNode(node) }
+  }
+
+  throw new Error(`不支持的编辑器操作 ${operation.action}`)
 }
 
 // 编辑器卸载时清掉生产者经模块联邦加载的模块缓存，下次挂载重新导入，拿到最新的组件代码。

@@ -15,11 +15,11 @@ export const editorProps = {
     default: () => ({}),
   },
   agent: Boolean,
-  capabilities: {
-    type: Array as PropType<any[]>,
-    default: () => ([]),
+  agentApi: {
+    type: Object as PropType<Record<string, any>>,
+    default: () => ({}),
   },
-  workflows: {
+  agentTools: {
     type: Array as PropType<any[]>,
     default: () => ([]),
   },

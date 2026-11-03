@@ -5,122 +5,58 @@ import Copilot from './agent/Copilot.vue'
 export const MpdAgent = Copilot
 
 /**
- * 基于库内同一份 `vue` 实例创建 `<dnd-agent>` 的自定义元素类。
- *
- * `vue` 随库本体一起打进 dist，这里集中导出创建逻辑，`/element` 入口只需 `import` 本函数，
- * 就不会各自打包一份 `vue`，从而保证组件定义与 `defineCustomElement` 用的是同一个实例。
+ * Build the `<dnd-agent>` custom element from the same Vue runtime that is
+ * bundled into this package.
  */
 export function createAgentElement(): VueElementConstructor {
   return defineCustomElement(MpdAgent)
 }
 
-// Capability
 export type {
-  Capability,
-  CapabilityContext,
-  CapabilityDefinition,
-  CapabilitySchema,
-  ToolApprovalOptions,
-} from './agent/capability'
+  AgentApiMode,
+  AgentEditorApi,
+  AgentEditorOperation,
+  AgentHostApi,
+  AgentModelConfig,
+  ChatMessage,
+  ChatMode,
+  DataPart,
+  MessagePart,
+  MessageRole,
+  ReasoningPart,
+  TextPart,
+  ToolPart,
+} from './types'
 
+export type {
+  AgentToolApprovalOptions,
+  AgentToolContext,
+  AgentToolDefinition,
+} from './tool'
 export {
-  createCapabilityTool,
+  defineAgentTool,
   defineCapability,
-  invokeCapability,
-} from './agent/capability'
+} from './tool'
 
-export { createCapabilityAgent } from './agent/capabilityAgent'
-export {
-  clearCapabilities,
-  getRegisteredCapabilities,
-  getRegisteredCapabilityTools,
-  listCapabilities,
-  registerCapability,
-  unregisterCapability,
-} from './agent/capabilityRegistry'
-
-// 平台上下文。
 export type {
-  AppContext,
-  ToolApprovalHandler,
-  ToolApprovalRequest,
-} from './agent/context'
-
-// 模型接口调用：走原来的 chat.completions（服务器代理），并作为 SDK 的 Model 适配器接入。
-export {
-  configureModel,
-  getModel,
-  getModelConfig,
-  getModelName,
-  resolveServiceURL,
-  runAgent,
-  runAgentStreamed,
-  setMockClient,
-} from './agent/core/sdk'
-export type { ModelConfig, RunAgentOptions } from './agent/core/sdk'
-export { createEditAgent } from './agent/editAgent'
-
-// Extraction helper
-export type { StructuredExtractOptions } from './agent/extract'
-export { parseJson, structuredExtract } from './agent/extract'
-
-// Agents
-export type { FlowClassification, FlowType } from './agent/flowAgent'
-export { createFlowAgent, flowOutputSchema } from './agent/flowAgent'
-
-// IR
-export type {
-  AddComponentIR,
-  DeleteComponentIR,
-  EditIR,
-  LayoutIR,
-  LayoutWidgetItem,
-  MoveComponentIR,
-  NormalizedElement,
-  NormalizedElementItem,
-  NormalizedElements,
-  UpdateComponentIR,
-} from './agent/ir'
-export { editIrSchema, layoutIrSchema } from './agent/ir'
-export type { LayoutWidgetDescriptor } from './agent/layout'
-export { createLayoutAgent, generateLayoutIR } from './agent/layout'
-// Runtime
-export type {
-  AgentRuntimeEvent,
-  AgentRuntimeHooks,
+  AgentRuntime,
+  AgentRuntimeConfig,
   AgentRuntimeOptions,
-  AgentRuntimeResult,
-} from './agent/runtime'
-export { AgentRuntime, createAgentRuntime } from './agent/runtime'
+  AgentRuntimeTurn,
+} from './runtime'
+export { createAgentRuntime } from './runtime'
 
-export * from './agent/utils/helper'
-// Workflow
-export type {
-  StepResult,
-  Workflow,
-  WorkflowContext,
-  WorkflowDefinition,
-  WorkflowEvent,
-  WorkflowRunOptions,
-  WorkflowRunResult,
-  WorkflowStatus,
-  WorkflowStep,
-} from './agent/workflow'
+export type { CreateAgentsOptions } from './agents'
+export {
+  createAgents,
+  DEFAULT_AGENT_BFF_URL,
+  DEFAULT_AGENT_MODEL,
+} from './agents'
 
-export { defineWorkflow, WorkflowRuntime } from './agent/workflow'
-// Agent Loop / Tool Calling / Session / Context：由 OpenAI Agents SDK 提供。
 export {
   Agent,
   MemorySession,
   run,
   Runner,
   tool,
-} from '@openai/agents'
-
-export type {
-  FunctionTool,
-  RunContext,
-  RunResult,
-  Session,
-  Tool,
 } from '@openai/agents'

@@ -1,58 +1,44 @@
 <template>
   <div class="playground">
     <Copilot
-      :capabilities="capabilities"
-      :workflows="workflows"
+      :api="api"
+      :tools="tools"
       :context="context"
     />
   </div>
 </template>
 
 <script setup lang="ts">
+import type { AgentHostApi, AgentToolDefinition } from '@/index'
 import Copilot from '@/agent/Copilot.vue'
-import {
-  defineCapability,
-  defineWorkflow,
-  structuredExtract,
-  z,
-} from '@/index'
+import { defineAgentTool } from '@/index'
+import { z } from 'zod'
 
-const capabilities = [
-  defineCapability({
+const tools: AgentToolDefinition<any, any>[] = [
+  defineAgentTool({
     name: 'check_scenario',
     description: '检查指定场景是否已经开通',
-    inputSchema: z.object({
+    parameters: z.object({
       scenarios: z.array(z.object({ name: z.string() })),
     }),
     async execute(input: { scenarios: Array<{ name: string }> }) {
-      console.log('check', input)
       return input.scenarios.map(scene => ({ name: scene.name, opened: true }))
     },
   }),
 ]
 
-const parseSchema = z.object({
-  scenes: z.array(z.object({ name: z.string() })),
-})
-
-const workflows = [
-  defineWorkflow({
-    name: 'initialize',
-    description: '根据用户输入初始化页面。',
-    steps: [
-      {
-        name: 'parseScenario',
-        async execute(context) {
-          return structuredExtract({
-            schema: parseSchema,
-            instructions: '抽取用户提到的场景名称，输出 { scenes: [{ name }] }。',
-            input: String(context.input),
-          })
-        },
-      },
-    ],
-  }),
-]
+const api: AgentHostApi = {
+  model: {
+    baseURL: 'http://localhost:4000/v1',
+    model: 'qwen3.6-flash',
+    apiMode: 'responses',
+  },
+  editor: {
+    getCurrentEditor: () => ({ page: { id: 'root', children: [] } }),
+    getWidgets: () => [{ typeId: 'page', name: '页面' }],
+    operateEditor: operation => ({ ok: true, operation }),
+  },
+}
 
 const context = () => ({ widgets: [] })
 </script>

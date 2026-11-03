@@ -13,8 +13,8 @@
     ref="editorRef"
     :widgets="widgets"
     agent
-    :capabilities="capabilities"
-    :workflows="workflows"
+    :agent-api="agentApi"
+    :agent-tools="agentTools"
     :extra="{ obj: 'test' }"
     @change="onUpdate"
   />
@@ -22,10 +22,10 @@
 </template>
 
 <script setup lang="ts">
-import type { Capability, Workflow } from '@sepveneto/dnde-agent'
+import type { AgentToolDefinition } from '@sepveneto/dnde-agent'
 import type { IWidget } from '@sepveneto/dnde-core'
 import type { EditorInstance } from '@/main'
-import { Agent, createAgent, defineCapability, defineWorkflow, invokeCapability, parseJson, runAgent, structuredExtract } from '@sepveneto/dnde-agent'
+import { defineAgentTool } from '@sepveneto/dnde-agent'
 import { schema, widget } from '@sepveneto/dnde-core/helper'
 // import { register } from '../dist/editor.js'
 import { onMounted, ref, useTemplateRef, watchEffect } from 'vue'
@@ -34,25 +34,11 @@ import { register } from '@/main'
 
 /**
  * 业务侧（playground）：
- * 通过编辑器提供的公开原语 defineCapability / defineWorkflow 定义业务能力与流程，
- * 不需要编写 Agent、Prompt 或 Tool。
+ * 宿主只提供编辑器 API 配置与业务工具，Agent Runtime 由 <dnd-agent> 自带。
  */
 
-const businessConfigSchema = z.object({
-  scenes: z.array(z.object({ name: z.string(), fee: z.string().nullable() })),
-  brand: z.array(
-    z.object({
-      name: z.string(),
-      coupon: z.string().nullable(),
-      faceValue: z.number().nullable(),
-      fee: z.string().nullable(),
-    }),
-  ),
-  shopPickup: z.array(z.object({ name: z.string(), scope: z.array(z.string()).optional() })),
-})
-
 /** 查询指定场景的业务数据，供编辑流程补全组件内容。 */
-const queryScenario = defineCapability({
+const queryScenario = defineAgentTool({
   name: 'query_scenario',
   description: '查询指定场景的业务数据，用于编辑时补全组件内容。',
   inputSchema: z.object({ name: z.string() }),
@@ -64,7 +50,7 @@ const queryScenario = defineCapability({
 })
 
 /** 查询场景是否已经开通（只读）。 */
-const checkScenario = defineCapability({
+const checkScenario = defineAgentTool({
   name: 'check_scenario',
   description: '查询业务系统中指定场景的开通状态，只查询不修改。',
   inputSchema: z.object({ scenarios: z.array(z.object({ name: z.string() })) }),
@@ -81,7 +67,7 @@ const checkScenario = defineCapability({
 })
 
 /** 开通场景（写操作，需要人工确认）。 */
-const enableScenario = defineCapability({
+const enableScenario = defineAgentTool({
   name: 'enable_scenario',
   description: '开通业务系统中指定的场景。',
   inputSchema: z.object({ id: z.number(), name: z.string() }),
@@ -98,77 +84,14 @@ const enableScenario = defineCapability({
   },
 })
 
-const initializeWorkflow = defineWorkflow({
-  name: 'initialize',
-  description: '根据用户输入初始化页面。',
-  steps: [
-    {
-      name: 'parseScenario',
-      async execute(context) {
-        const agent = createAgent({
-          name: 'structured-extract',
-          instructions: `你是业务配置解析器。将用户输入解析成结构化业务配置。
-需要解析三类配置：
-- H5外接场景：name、fee
-- 品牌商户：name、coupon、faceValue、fee
-- 扫码提货：name、scope
-只解析用户提供的信息，不补充、不合并、不核查，未提供的字段使用 null。`,
-          outputType: businessConfigSchema,
-        })
-
-        const res = await runAgent(agent, String(context.input))
-        return res.finalOutput ?? ''
-      },
-    },
-    {
-      name: 'verifyScenario',
-      async execute(context) {
-        const parsed = context.state.parseScenario as any
-        const scenarios = (parsed?.scenes ?? []).map((item: any) => ({ name: item.name }))
-        if (!scenarios.length)
-          return parsed
-
-        const result = await invokeCapability(checkScenario, { scenarios }, {
-          onApproval: context.onApproval,
-          signal: context.signal,
-          state: context.state,
-        })
-
-        for (const scene of result as Array<{ id: number, name: string, enabled: boolean }>) {
-          if (!scene.enabled) {
-            try {
-              await invokeCapability(enableScenario, { id: scene.id, name: scene.name }, {
-                onApproval: context.onApproval,
-                signal: context.signal,
-                state: context.state,
-              })
-            }
-            catch {
-              // 用户不同意开通：跳过该场景，继续处理下一个
-            }
-          }
-        }
-
-        return parsed
-      },
-    },
-    {
-      name: 'normalizeScenario',
-      async execute(context) {
-        const config = (context.state.verifyScenario ?? context.state.parseScenario) as any
-        return ['scenes', 'brand', 'shopPickup'].flatMap((kind) => {
-          const list = config?.[kind] ?? []
-          return list.length
-            ? [{ kind, items: list.map((item: any, index: number) => ({ name: item.name, id: index })) }]
-            : []
-        })
-      },
-    },
-  ],
-})
-
-const capabilities: Capability<any, any>[] = [queryScenario, checkScenario, enableScenario]
-const workflows: Workflow[] = [initializeWorkflow]
+const agentTools: AgentToolDefinition<any, any>[] = [queryScenario, checkScenario, enableScenario]
+const agentApi = {
+  model: {
+    baseURL: 'http://localhost:4000/v1',
+    model: 'qwen3.6-flash',
+    apiMode: 'responses' as const,
+  },
+}
 
 const config = ref({})
 function onUpdate(val: CustomEvent) {
