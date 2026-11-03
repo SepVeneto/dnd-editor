@@ -18,17 +18,19 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10
+
       - name: Setup node
         uses: actions/setup-node@v3
         with:
           node-version: 24.15.0
           registry-url: https://registry.npmjs.org
           scope: '@sepveneto'
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 10
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Update npm
         run: npm install npm@11.6.1 -g
