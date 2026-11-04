@@ -225,17 +225,17 @@ function requireAgentNode(id: string | undefined) {
   return node
 }
 
-function operateEditor(operation: Record<string, any>) {
+function operateEditor(
+  operation: Record<string, any>,
+  context: Record<string, any> = {},
+) {
   if (operation.action === 'add') {
     const widget = app.widgetMap.get(operation.widget)
     if (!widget)
       throw new Error(`找不到组件 ${operation.widget ?? ''}`)
 
-    // eslint-disable-next-line ts/ban-ts-comment
-    // @ts-ignore
-    const parent = operation.target
-      ? requireAgentNode(operation.target)
-      : editor.rootNode
+    // Layout is flat: agent-created widgets always go under the page root.
+    const parent = editor.rootNode
     // eslint-disable-next-line ts/ban-ts-comment
     // @ts-ignore
     const node = new Node(widget, JSON.parse(JSON.stringify({
@@ -245,7 +245,7 @@ function operateEditor(operation: Record<string, any>) {
     widget.agent?.update?.(node, {
       widget: operation.widget,
       items: operation.items ?? [],
-    }, {})
+    }, context)
     if (operation.changes)
       Object.assign(node.data, operation.changes)
     if (operation.style)

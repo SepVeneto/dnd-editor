@@ -11,7 +11,7 @@ export interface AgentModelConfig {
 
 export interface AgentEditorOperation {
   action: 'add' | 'edit' | 'delete' | 'move'
-  /** Existing node UUID. For `add`, this is the optional parent UUID. */
+  /** Existing node UUID used by edit, delete, and move operations. */
   target?: string
   /** Widget type id used by `add`. */
   widget?: string
@@ -44,7 +44,11 @@ export interface EditorAgentContext extends Record<string, unknown> {
 export interface AgentEditorApi {
   getCurrentEditor: () => unknown | Promise<unknown>
   getWidgets: () => unknown | Promise<unknown>
-  operateEditor: (operation: AgentEditorOperation) => unknown | Promise<unknown>
+  /** Context contains business data prepared by tools during the current Agent Run. */
+  operateEditor: (
+    operation: AgentEditorOperation,
+    context?: EditorAgentContext,
+  ) => unknown | Promise<unknown>
 }
 
 export interface AgentHostApi {

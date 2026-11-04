@@ -33,6 +33,19 @@ describe('editor context', () => {
     assert.deepEqual(prepared.operation.items, [{ id: 1, name: '大米' }])
   })
 
+  it('add 时移除 target，布局操作不允许嵌套', () => {
+    const context = createEditorAgentContext()
+    context.pendingItems = [{ id: 1, name: '大米' }]
+
+    const prepared = prepareEditorOperation({
+      action: 'add',
+      widget: 'product',
+      target: 'container-1',
+    }, context)
+
+    assert.equal(prepared.operation.target, undefined)
+  })
+
   it('没有业务工具准备的数据时拒绝 add', () => {
     const prepared = prepareEditorOperation({
       action: 'add',

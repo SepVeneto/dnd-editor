@@ -43,6 +43,10 @@ export function prepareEditorOperation(
   }
   const prepared = operation as unknown as AgentEditorOperation
 
+  // Layout is always flat: adding a widget never targets a nested parent.
+  if (prepared.action === 'add')
+    delete prepared.target
+
   if (prepared.action !== 'add')
     return { operation: prepared }
 

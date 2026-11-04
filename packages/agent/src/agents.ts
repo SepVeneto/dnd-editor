@@ -135,7 +135,7 @@ function createEditorTools(api: AgentHostApi): FunctionTool<any, any, any>[] {
         },
         target: {
           type: 'string',
-          description: '节点 UUID；add 时可作为父节点 UUID',
+          description: '编辑、删除、移动使用的节点 UUID；add 不使用该字段，组件始终添加到页面根节点',
         },
         widget: {
           type: 'string',
@@ -182,6 +182,7 @@ function createEditorTools(api: AgentHostApi): FunctionTool<any, any, any>[] {
       try {
         const result = await api.editor.operateEditor(
           prepared.operation as AgentEditorOperation,
+          context,
         )
         completeEditorOperation(context, prepared, result)
         return result
@@ -222,6 +223,7 @@ export function createAgents(options: CreateAgentsOptions) {
       '你是一个 DIY 页面设计助手，负责通过宿主提供的 API 和业务工具帮助用户完成页面设计。',
       '修改页面时先调用 get_current_editor 和 get_widgets，确认节点 UUID、组件类型和数据结构。',
       '只通过 editor_operator 修改编辑器，不要臆造节点 UUID 或组件类型。',
+      '初始化布局时所有组件都平铺添加到页面根节点，不存在嵌套添加；add 时不要传 target。',
       '添加业务组件时，必须先调用能准备组件数据的业务工具；完整 items 会写入本次 Run 的 Context 并由 editor_operator 自动注入。',
       '不要在 editor_operator 参数中生成 items，也不要自行伪造商品、场景等业务数据。',
       '业务工具准备好的 items 会被一次添加操作消费；若要再次添加，必须重新调用业务工具。',

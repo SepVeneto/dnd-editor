@@ -346,6 +346,7 @@ export function createAgentRuntime(
       session: runtime.session,
       signal,
       context: runContext,
+      maxTurns: null,
     })
 
     let textPart: { type: 'text', text: string } | undefined
