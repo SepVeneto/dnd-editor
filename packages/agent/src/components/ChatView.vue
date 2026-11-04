@@ -144,18 +144,82 @@
           class="composer"
           @submit.prevent="sendMessage"
         >
-          <label
-            class="sr-only"
-            for="dnd-agent-message"
-          >消息</label>
-          <textarea
-            id="dnd-agent-message"
-            v-model="draft"
-            :placeholder="placeholder"
-            rows="1"
-            :disabled="isStreaming"
-            @keydown="handleComposerKeydown"
-          />
+          <div class="composer-main">
+            <div
+              v-if="uploadedFiles.length || uploading"
+              class="pending-files"
+            >
+              <div
+                v-if="uploading"
+                class="pending-file uploading"
+              >
+                <span class="file-spinner" />
+                <span>正在上传文档...</span>
+              </div>
+              <template v-else>
+                <div
+                  v-for="file in uploadedFiles"
+                  :key="file.name"
+                  class="pending-file"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
+                    <path d="M14 2v6h6M8 13h8M8 17h5" />
+                  </svg>
+                  <span class="pending-file-name">{{ file.file }}</span>
+                  <span class="pending-file-size">{{ formatFileSize(file.size) }}</span>
+                  <button
+                    type="button"
+                    class="remove-file"
+                    :disabled="isBusy"
+                    aria-label="移除文档"
+                    @click="resetFile"
+                  >
+                    ×
+                  </button>
+                </div>
+              </template>
+            </div>
+            <label
+              class="sr-only"
+              for="dnd-agent-message"
+            >消息</label>
+            <div class="composer-input">
+              <button
+                type="button"
+                class="attach-button"
+                :disabled="isBusy"
+                aria-label="上传 Word 文档"
+                title="上传 .docx 文档"
+                @click="selectFile"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path d="m21 11-8.5 8.5a6 6 0 0 1-8.5-8.5l9-9a4 4 0 0 1 5.7 5.7l-9 9a2 2 0 0 1-2.8-2.8L15 5.7" />
+                </svg>
+              </button>
+              <textarea
+                id="dnd-agent-message"
+                v-model="draft"
+                :placeholder="placeholder"
+                rows="1"
+                :disabled="isBusy"
+                @keydown="handleComposerKeydown"
+              />
+            </div>
+            <p
+              v-if="fileError"
+              class="file-error"
+              role="alert"
+            >
+              {{ fileError }}
+            </p>
+          </div>
           <button
             v-if="isStreaming"
             type="button"
@@ -180,7 +244,7 @@
             v-else
             type="submit"
             class="send-button"
-            :disabled="!draft.trim()"
+            :disabled="isBusy || (!draft.trim() && uploadedFiles.length === 0)"
             aria-label="发送消息"
           >
             <svg
@@ -191,9 +255,16 @@
               <path d="m11.7 13.8 3-3" />
             </svg>
           </button>
+          <input
+            ref="fileInput"
+            class="file-input"
+            type="file"
+            accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            @change="handleFileChange"
+          >
         </form>
         <div class="composer-hint">
-          <span>Enter 发送 · Shift + Enter 换行</span>
+          <span>Enter 发送 · Shift + Enter 换行 · 支持 .docx</span>
           <span>思考 + 工具调用</span>
         </div>
       </footer>
@@ -211,8 +282,13 @@
 
 <script setup lang="ts">
 import type { AgentRuntime } from '../runtime'
-import type { ChatMessage, ChatMode } from '../types'
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import type { ChatMessage, ChatMode, FilePart } from '../types'
+import { computed, onBeforeUnmount, ref, useTemplateRef, watch } from 'vue'
+import { useFile } from '../composables'
+import {
+  formatAgentDocumentContext,
+  readAgentDocumentMarkdown,
+} from '../services'
 import MessagePart from './MessagePart.vue'
 
 const props = withDefaults(
@@ -270,8 +346,25 @@ function saveMessages(messages: ChatMessage[]) {
 const messages = ref<ChatMessage[]>(loadMessages())
 const draft = ref('')
 const isStreaming = ref(false)
+const submitting = ref(false)
 const error = ref('')
 const messageList = ref<HTMLElement>()
+const fileInput = useTemplateRef<HTMLInputElement>('fileInput')
+const fileUpload = useFile(
+  fileInput,
+  () => props.runtime.config.baseURL,
+)
+const {
+  list: uploadedFiles,
+  uploading,
+  error: fileError,
+  selectFile,
+  handleFileChange,
+  reset: resetFile,
+} = fileUpload
+const isBusy = computed(() => (
+  isStreaming.value || submitting.value || uploading.value
+))
 let activeRun = 0
 let scrollFrame = 0
 let activeController: AbortController | undefined
@@ -299,28 +392,64 @@ function stopStreaming() {
 }
 
 function useExample(example: string) {
-  if (!isStreaming.value)
+  if (!isBusy.value)
     draft.value = example
 }
 
 async function sendMessage() {
   const prompt = draft.value.trim()
-  if (!prompt || isStreaming.value)
+  const selectedFile = uploadedFiles.value[0]
+  if ((!prompt && !selectedFile) || isBusy.value)
     return
+
+  submitting.value = true
+  error.value = ''
+  let filePart: FilePart | undefined
+  try {
+    if (selectedFile) {
+      filePart = {
+        type: 'file',
+        ...selectedFile,
+        text: await readAgentDocumentMarkdown(
+          props.runtime.config.baseURL,
+          selectedFile,
+        ),
+      }
+    }
+  }
+  catch (readError) {
+    error.value = `文档解析失败：${readError instanceof Error ? readError.message : String(readError)}`
+    return
+  }
+  finally {
+    submitting.value = false
+  }
+
+  const promptForAgent = [
+    filePart ? formatAgentDocumentContext(filePart) : '',
+    prompt,
+  ].filter(Boolean).join('\n\n')
+  if (!promptForAgent) {
+    error.value = '文档中没有可读取的文字，请换一个文件或补充说明。'
+    return
+  }
 
   const run = ++activeRun
   const controller = new AbortController()
   activeController = controller
-  error.value = ''
   isStreaming.value = true
   draft.value = ''
+  resetFile()
   const history = messages.value.slice()
-
-  messages.value.push({
+  const userMessage: ChatMessage = {
     id: crypto.randomUUID(),
     role: 'user',
-    parts: [{ type: 'text', text: prompt }],
-  })
+    parts: [
+      ...(filePart ? [filePart] : []),
+      ...(prompt ? [{ type: 'text' as const, text: prompt }] : []),
+    ],
+  }
+  messages.value.push(userMessage)
 
   const assistantMessage: ChatMessage = {
     id: crypto.randomUUID(),
@@ -335,7 +464,7 @@ async function sendMessage() {
   try {
     await props.runtime.runTurn({
       runtimeSessionId: `${props.mode}:${props.sessionId}`,
-      prompt,
+      prompt: promptForAgent,
       mode: props.mode,
       message: activeAssistantMessage,
       history,
@@ -368,10 +497,20 @@ async function sendMessage() {
 }
 
 function handleComposerKeydown(event: KeyboardEvent) {
-  if (event.key === 'Enter' && !event.shiftKey) {
+  if (event.key === 'Enter' && !event.shiftKey && !isBusy.value) {
     event.preventDefault()
     void sendMessage()
   }
+}
+
+function formatFileSize(size: number | undefined) {
+  if (size === undefined)
+    return ''
+  if (size < 1024)
+    return `${size} B`
+  if (size < 1024 * 1024)
+    return `${(size / 1024).toFixed(1)} KB`
+  return `${(size / 1024 / 1024).toFixed(1)} MB`
 }
 
 onBeforeUnmount(() => {

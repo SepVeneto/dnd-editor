@@ -20,6 +20,7 @@ import {
   DEFAULT_AGENT_BFF_URL,
   DEFAULT_AGENT_MODEL,
 } from './agents'
+import { formatAgentDocumentContext } from './services'
 
 export interface AgentRuntimeConfig {
   baseURL: string
@@ -192,9 +193,15 @@ function handleRunItemEvent(
 
 function messageText(message: ChatMessage) {
   return message.parts
-    .filter(part => part.type === 'text')
-    .map(part => part.text)
-    .join('')
+    .map((part) => {
+      if (part.type === 'text')
+        return part.text
+      if (part.type === 'file')
+        return formatAgentDocumentContext(part)
+      return ''
+    })
+    .filter(Boolean)
+    .join('\n\n')
 }
 
 function toAgentHistory(messages: ChatMessage[]): AgentInputItem[] {

@@ -27,6 +27,10 @@ export type {
 } from './runtime'
 
 export { createAgentRuntime } from './runtime'
+
+export type { AgentUploadedFile } from './services'
+export { resolveAgentServiceURL } from './services'
+
 export type {
   AgentToolApprovalOptions,
   AgentToolContext,
@@ -46,6 +50,7 @@ export type {
   ChatMessage,
   ChatMode,
   DataPart,
+  FilePart,
   MessagePart,
   MessageRole,
   ReasoningPart,

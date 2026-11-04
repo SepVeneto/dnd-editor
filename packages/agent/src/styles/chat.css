@@ -335,6 +335,57 @@ svg {
   white-space: pre-wrap;
 }
 
+.message-file {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid #353b47;
+  border-radius: 9px;
+  background: rgba(10, 12, 17, 0.35);
+}
+
+.message-row.user .message-file {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(9, 18, 54, 0.22);
+}
+
+.message-file-icon {
+  display: grid;
+  width: 29px;
+  height: 29px;
+  flex: 0 0 29px;
+  place-items: center;
+  border-radius: 7px;
+  color: #b9c5ff;
+  background: rgba(82, 113, 255, 0.15);
+}
+
+.message-file-icon svg {
+  width: 16px;
+}
+
+.message-file > span:last-child {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.message-file strong {
+  overflow: hidden;
+  color: #f3f5ff;
+  font-size: 12.5px;
+  font-weight: 570;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.message-file small {
+  color: rgba(240, 243, 255, 0.62);
+  font-size: 10.5px;
+}
+
 .markdown-content {
   min-width: 0;
   overflow-wrap: anywhere;
@@ -590,6 +641,20 @@ svg {
     box-shadow 160ms ease;
 }
 
+.composer-main {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  gap: 7px;
+}
+
+.composer-input {
+  display: flex;
+  min-width: 0;
+  align-items: flex-end;
+  gap: 8px;
+}
+
 .composer:focus-within {
   border-color: #5369bd;
   box-shadow: 0 0 0 3px rgba(82, 113, 255, 0.1);
@@ -616,6 +681,126 @@ svg {
 .composer textarea:disabled {
   cursor: not-allowed;
   opacity: 0.7;
+}
+
+.attach-button {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  margin-bottom: 2px;
+  place-items: center;
+  border: 1px solid #2c323d;
+  border-radius: 8px;
+  color: #9ca6b5;
+  background: #171a21;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    color 160ms ease,
+    background 160ms ease;
+}
+
+.attach-button:hover:not(:disabled) {
+  border-color: #465064;
+  color: #cbd4e5;
+  background: #1c2028;
+}
+
+.attach-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.attach-button svg {
+  width: 17px;
+}
+
+.pending-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pending-file {
+  display: flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 7px;
+  border: 1px solid #303745;
+  border-radius: 8px;
+  color: #bac3d1;
+  background: #171a21;
+  font-size: 11.5px;
+}
+
+.pending-file.uploading {
+  color: #9ca8ba;
+}
+
+.pending-file svg {
+  width: 15px;
+  flex: 0 0 15px;
+  color: #9bafff;
+}
+
+.pending-file-name {
+  overflow: hidden;
+  max-width: 220px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pending-file-size {
+  color: #717b8a;
+  font-size: 10.5px;
+}
+
+.remove-file {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 4px;
+  color: #8993a2;
+  background: transparent;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.remove-file:hover:not(:disabled) {
+  color: #fff;
+  background: #303642;
+}
+
+.remove-file:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.file-spinner {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 12px;
+  border: 1.5px solid #4a5364;
+  border-top-color: #a4b5ff;
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+
+.file-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+.file-input {
+  display: none;
 }
 
 .send-button {
@@ -718,6 +903,12 @@ svg {
   }
 }
 
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (max-width: 560px) {
   .message-list {
     padding: 18px 14px;
@@ -733,6 +924,10 @@ svg {
 
   .composer-hint span:first-child {
     display: none;
+  }
+
+  .pending-file-name {
+    max-width: 150px;
   }
 }
 

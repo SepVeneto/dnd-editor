@@ -63,7 +63,18 @@ export interface DataPart {
   data?: unknown
 }
 
-export type MessagePart = TextPart | ReasoningPart | ToolPart | DataPart
+export interface FilePart {
+  type: 'file'
+  /** Server-side upload id used to retrieve the converted document. */
+  name: string
+  /** Original file name shown to the user. */
+  file: string
+  size?: number
+  /** Converted document content sent to the agent as context. */
+  text?: string
+}
+
+export type MessagePart = TextPart | ReasoningPart | ToolPart | DataPart | FilePart
 
 export interface ChatMessage {
   id: string

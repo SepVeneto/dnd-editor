@@ -1,16 +1,17 @@
 // server.ts
-import { existsSync, readFileSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
+import { existsSync, mkdirSync, readFileSync } from 'node:fs'
+import { basename, dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import express from 'express'
 import cors from 'cors'
-import multer from 'multer'
-
+import express from 'express'
 import mammoth from 'mammoth'
+import multer from 'multer'
 import TurndownService from 'turndown'
 import turndownPluginGfm from 'turndown-plugin-gfm'
 
 const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const uploadsDir = resolve(packageDir, 'uploads')
+mkdirSync(uploadsDir, { recursive: true })
 
 /**
  * 轻量加载 .env 文件，避免引入额外依赖。
@@ -58,11 +59,18 @@ for (const file of [
 const app = express()
 
 const upload = multer({
-  dest: './uploads/',
+  dest: uploadsDir,
   defParamCharset: 'utf8',
   limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB
-  }
+    fileSize: 10 * 1024 * 1024, // 10MB
+  },
+  fileFilter(_req, file, callback) {
+    if (!file.originalname.toLowerCase().endsWith('.docx')) {
+      callback(new Error('目前仅支持上传 .docx 文档'))
+      return
+    }
+    callback(null, true)
+  },
 })
 
 app.use(cors({
@@ -71,7 +79,7 @@ app.use(cors({
   //   // 'http://localhost:8083',
   //   // 'http://localhost:4000',
   // ],
-  methods: ['POST', 'OPTIONS'],
+  methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: '*',
 }))
 
@@ -199,6 +207,11 @@ app.post('/v1/business/scene', async (req, res) => {
 })
 
 app.post('/upload', upload.single('file'), (req, res) => {
+  if (!req.file) {
+    res.status(400).json({ code: 1, msg: '请选择要上传的文档' })
+    return
+  }
+
   res.json({ code: 0, msg: 'success', data: {
     name: req.file.filename,
     file: req.file.originalname,
@@ -235,8 +248,35 @@ async function docx2markdown(input) {
 }
 
 app.get('/docx-markdown', async (req, res) => {
-  const _res = await docx2markdown(`./uploads/${req.query.id}`)
-  res.json({ code: 0, data: _res })
+  try {
+    const id = typeof req.query.id === 'string' ? req.query.id : ''
+    if (!id || basename(id) !== id) {
+      res.status(400).json({ code: 1, msg: '无效的文档 ID' })
+      return
+    }
+
+    const markdown = await docx2markdown(resolve(uploadsDir, id))
+    res.json({ code: 0, data: markdown })
+  }
+  catch (error) {
+    console.error(error)
+    res.status(500).json({ code: 1, msg: '文档解析失败' })
+  }
+})
+
+app.use((error, _req, res, next) => {
+  if (error instanceof multer.MulterError) {
+    const message = error.code === 'LIMIT_FILE_SIZE'
+      ? '文档不能超过 10 MB'
+      : error.message
+    res.status(400).json({ code: 1, msg: message })
+    return
+  }
+  if (error?.message === '目前仅支持上传 .docx 文档') {
+    res.status(400).json({ code: 1, msg: error.message })
+    return
+  }
+  next(error)
 })
 
 app.listen(PORT, () => {
