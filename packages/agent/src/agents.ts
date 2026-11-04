@@ -1,12 +1,21 @@
 import type { FunctionTool, RunContext } from '@openai/agents'
 import type { AgentToolDefinition } from './tool'
 import type { AgentEditorOperation, AgentHostApi, EditorAgentContext } from './types'
-import { Agent, tool } from '@openai/agents'
+import { Agent, handoff, tool } from '@openai/agents'
 import { z } from 'zod'
 import {
   completeEditorOperation,
   prepareEditorOperation,
 } from './editorContext'
+import {
+  buildInitializationAgentInstructions,
+  buildInitializationInstructions,
+  findInitializationTool,
+  INITIALIZATION_AGENT_NAME,
+  INITIALIZATION_HANDOFF_TOOL_NAME,
+  INITIALIZATION_RETURN_TOOL_NAME,
+  INITIALIZATION_TOOL_ROLE,
+} from './initialization'
 
 export const DEFAULT_AGENT_MODEL = 'qwen3.6-flash'
 export const DEFAULT_AGENT_BFF_URL = 'http://localhost:4000/v1'
@@ -97,7 +106,7 @@ function createEditorTools(api: AgentHostApi): FunctionTool<any, any, any>[] {
 
   const getCurrentEditor = tool({
     name: 'get_current_editor',
-    description: '获取当前编辑器文档、选中节点和页面结构。修改前应先读取当前内容。',
+    description: '获取当前编辑器文档、选中节点和页面结构。判断是初始化还是增删改前，应先读取当前内容。',
     parameters: emptyParameters,
     strict: false,
     async execute(_input: unknown) {
@@ -205,12 +214,34 @@ function createEditorTools(api: AgentHostApi): FunctionTool<any, any, any>[] {
  */
 export function createAgents(options: CreateAgentsOptions) {
   const getContext = options.getContext ?? (() => ({}))
+  const hostTools = options.tools ?? []
+  const initializationTool = findInitializationTool(hostTools)
   const tools = [
     ...createEditorTools(options.api),
-    ...(options.tools ?? []).map(item =>
-      adaptHostTool(item, options.api, getContext),
-    ),
+    ...hostTools
+      .filter(item => item.role !== INITIALIZATION_TOOL_ROLE)
+      .map(item =>
+        adaptHostTool(item, options.api, getContext),
+      ),
   ]
+
+  const initializationAgent = initializationTool
+    ? new Agent({
+        name: INITIALIZATION_AGENT_NAME,
+        model: options.model || DEFAULT_AGENT_MODEL,
+        modelSettings: {
+          reasoning: { effort: 'none' },
+          text: { verbosity: 'low' },
+        },
+        instructions: buildInitializationAgentInstructions(
+          initializationTool.name,
+          'Diy Copilot',
+        ).join('\n'),
+        tools: [
+          adaptHostTool(initializationTool, options.api, getContext),
+        ],
+      })
+    : undefined
 
   const agent = new Agent({
     name: 'Diy Copilot',
@@ -221,9 +252,16 @@ export function createAgents(options: CreateAgentsOptions) {
     },
     instructions: [
       '你是一个 DIY 页面设计助手，负责通过宿主提供的 API 和业务工具帮助用户完成页面设计。',
-      '修改页面时先调用 get_current_editor 和 get_widgets，确认节点 UUID、组件类型和数据结构。',
+      '收到页面设计或编辑请求后，先调用 get_current_editor，结合页面现状、当前对话和附件内容判断工作模式。',
+      '工作模式分为“初始化”和“增量修改”。用户提供装修清单、文档或整页设计需求时，进入初始化；用户要求对当前页面的具体节点或局部内容进行新增、修改、删除、移动时，进入增量修改。',
+      '即使请求中包含多项内容，只要用户明确表示添加到当前页面或保留现有内容，仍属于增量修改。页面已有实质内容但用户提供整页清单且未明确是否覆盖时，先询问用户是覆盖初始化还是增量追加，不要擅自清空或覆盖。',
+      ...buildInitializationInstructions({
+        toolName: initializationTool?.name,
+        agentName: initializationAgent?.name,
+      }),
+      '执行初始化，或增量修改需要新增组件、调整组件类型时，调用 get_widgets 确认组件类型、配置规则和数据结构。',
       '只通过 editor_operator 修改编辑器，不要臆造节点 UUID 或组件类型。',
-      '初始化布局时所有组件都平铺添加到页面根节点，不存在嵌套添加；add 时不要传 target。',
+      '所有通过 editor_operator add 的组件都平铺添加到页面根节点，不存在嵌套添加；add 时不要传 target。',
       '添加业务组件时，必须先调用能准备组件数据的业务工具；完整 items 会写入本次 Run 的 Context 并由 editor_operator 自动注入。',
       '不要在 editor_operator 参数中生成 items，也不要自行伪造商品、场景等业务数据。',
       '业务工具准备好的 items 会被一次添加操作消费；若要再次添加，必须重新调用业务工具。',
@@ -231,7 +269,28 @@ export function createAgents(options: CreateAgentsOptions) {
       '写入或不可逆操作需要用户明确同意；完成后用简洁的中文总结实际发生的变化。',
     ].join('\n'),
     tools,
+    handoffs: initializationAgent
+      ? [
+          handoff(initializationAgent, {
+            toolNameOverride: INITIALIZATION_HANDOFF_TOOL_NAME,
+            toolDescriptionOverride: '判断用户需要按清单初始化装修时，暂时移交初始化子 Agent。',
+          }),
+        ]
+      : [],
   })
 
-  return { agent }
+  if (initializationAgent) {
+    initializationAgent.handoffs = [
+      handoff(agent, {
+        toolNameOverride: INITIALIZATION_RETURN_TOOL_NAME,
+        toolDescriptionOverride: '初始化工具调用完成后，将控制权交还主 Agent。',
+      }),
+    ]
+  }
+
+  return {
+    agent,
+    initializationAgent,
+    agents: initializationAgent ? [agent, initializationAgent] : [agent],
+  }
 }

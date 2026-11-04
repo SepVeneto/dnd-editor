@@ -252,15 +252,15 @@ export function createAgentRuntime(
     model: options.model?.trim() || DEFAULT_AGENT_MODEL,
     apiMode: normalizeApiMode(options.apiMode),
   }
-  const { agent } = createAgents({
+  const { agent, agents } = createAgents({
     model: config.model,
     api: options.api ?? {},
     tools: options.tools,
     getContext: options.getContext,
   })
-  const agentRegistry = new Map<string, Agent<any, any>>([
-    [agent.name, agent],
-  ])
+  const agentRegistry = new Map<string, Agent<any, any>>(
+    agents.map(item => [item.name, item]),
+  )
   const sessionStore = new Map<string, Promise<RuntimeSession>>()
   const runtimeStoragePrefix = [
     'dnd-agent:runtime',

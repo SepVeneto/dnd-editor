@@ -31,6 +31,18 @@ export {
 } from './editorContext'
 
 export type {
+  AgentInitializationMode,
+  AgentInitializationRequest,
+  AgentInitializationResult,
+  AgentInitializationTool,
+} from './initialization'
+export {
+  defineInitializationTool,
+  findInitializationTool,
+  INITIALIZATION_TOOL_ROLE,
+} from './initialization'
+
+export type {
   AgentRuntime,
   AgentRuntimeConfig,
   AgentRuntimeOptions,

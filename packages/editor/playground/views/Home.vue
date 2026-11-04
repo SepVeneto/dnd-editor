@@ -25,7 +25,10 @@
 import type { AgentToolDefinition } from '@sepveneto/dnde-agent'
 import type { IWidget } from '@sepveneto/dnde-core'
 import type { EditorInstance } from '@/main'
-import { defineAgentTool } from '@sepveneto/dnde-agent'
+import {
+  defineAgentTool,
+  defineInitializationTool,
+} from '@sepveneto/dnde-agent'
 import { schema, widget } from '@sepveneto/dnde-core/helper'
 // import { register } from '../dist/editor.js'
 import { onMounted, ref, useTemplateRef, watchEffect } from 'vue'
@@ -84,7 +87,53 @@ const enableScenario = defineAgentTool({
   },
 })
 
-const agentTools: AgentToolDefinition<any, any>[] = [queryScenario, checkScenario, enableScenario]
+/** 初始化子 Agent 唯一可调用的宿主工具。 */
+const confirmInitialization = defineInitializationTool({
+  name: 'confirm_initialization',
+  description: '让用户确认本次初始化方式。',
+  inputSchema: z.object({
+    checklistSummary: z.string().optional(),
+  }),
+  async execute({ checklistSummary }) {
+    // eslint-disable-next-line no-alert
+    const useExisting = window.confirm([
+      checklistSummary ? `当前清单：${checklistSummary}` : '检测到初始化装修请求。',
+      '是否使用已有装修配置作为参考？\n确定：使用已有配置\n取消：按当前清单自定义',
+    ].join('\n\n'))
+
+    if (!useExisting)
+      return { mode: 'custom' }
+
+    const referenceId = window.prompt('请输入参考数据 ID')?.trim()
+    if (!referenceId)
+      return { mode: 'cancelled' }
+
+    const response = await fetch('http://localhost:4000/v1/mch/app/mall/getLandingPageOne', {
+      method: 'post',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ id: referenceId }),
+    })
+    if (!response.ok)
+      return { mode: 'cancelled' }
+
+    const result = await response.json()
+    if (result?.code !== 0 || !result?.data)
+      return { mode: 'cancelled' }
+
+    return {
+      mode: 'reference',
+      referenceId,
+      referenceData: result.data,
+    }
+  },
+})
+
+const agentTools: AgentToolDefinition<any, any>[] = [
+  queryScenario,
+  checkScenario,
+  enableScenario,
+  confirmInitialization,
+]
 const agentApi = {
   model: {
     baseURL: 'http://localhost:4000/v1',

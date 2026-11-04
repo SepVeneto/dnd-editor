@@ -30,7 +30,7 @@ const tools: AgentToolDefinition<any, any>[] = [
 const api: AgentHostApi = {
   model: {
     baseURL: 'http://localhost:4000/v1',
-    model: 'qwen3.6-flash',
+    model: 'qwen3.6-plus',
     apiMode: 'responses',
   },
   editor: {

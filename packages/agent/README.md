@@ -51,6 +51,64 @@ interface AgentHostApi {
 默认带三个基于编辑器 API 的工具：`get_current_editor`、`get_widgets`、
 `editor_operator`。写操作和历史不可逆操作应先取得用户确认。
 
+### 初始化与增量修改
+
+Agent 会先读取 `get_current_editor` 的快照，再结合用户当前消息、聊天记录和
+附件内容判断工作模式：
+
+- **初始化**：用户要求按清单、文档或整页需求从零创建页面，或明确要求重建；
+- **增量修改**：用户要求在现有页面上新增、编辑、删除或移动局部内容。
+
+页面已有内容、但请求又像是一份完整清单时，Agent 会先向用户确认是否覆盖，
+不会自行清空页面。初始化和增量修改都可以通过同一个 `editor_operator` 写入，
+区别在于进入初始化后需要先调用宿主提供的初始化工具。
+
+宿主可以提供一个 `initialization` 角色的工具。主 Agent 判断为初始化后，通过
+`start_initialization` 暂时移交给独立的初始化子 Agent；子 Agent 只绑定这个
+指定名称的工具，调用完成后通过 `finish_initialization` 交还主 Agent。用户交互、
+业务接口查询以及返回数据都由宿主工具自己决定：
+
+```ts
+import {
+  defineInitializationTool,
+} from '@sepveneto/dnde-agent'
+import { z } from 'zod'
+
+const confirmInitialization = defineInitializationTool({
+  name: 'confirm_initialization',
+  description: '让用户确认本次初始化方式。',
+  parameters: z.object({
+    checklistSummary: z.string().optional(),
+  }),
+  async execute({ checklistSummary }) {
+    return host.confirmInitialization(checklistSummary)
+  },
+})
+```
+
+提供这个工具后，主 Agent 不会直接调用它，也不会把它暴露在普通增删改流程中。
+初始化子 Agent 仅能使用该工具，不能使用编辑器工具或其他业务工具。工具返回后
+控制权交还主 Agent，由主 Agent 重新确认组件类型并通过 `editor_operator`
+创建页面。未提供初始化工具时，Agent 会在对话中询问用户是否按清单继续。
+
+初始化工具必须返回以下三种结果之一：
+
+```ts
+{ mode: 'custom' } // 模型按用户清单自主设计
+{
+  mode: 'reference',
+  referenceId: '用户输入的参考数据 ID',
+  referenceData: { /* 宿主根据 ID 查询到的实际参考数据 */ }
+}
+{ mode: 'cancelled' } // 用户取消初始化
+```
+
+`reference` 模式必须由用户提供参考数据 ID。宿主工具应使用该 ID 调用参考数据
+详情接口，并把实际数据作为 `referenceData` 返回给主 Agent；主 Agent 不得自行
+选择、编造参考项，也不得只凭裸 ID 继续。完成选择后，仍按正常编辑流程依次调用
+可用组件查询、业务数据工具和 `editor_operator`，不会跳过业务工具直接生成业务
+数据。
+
 ### 添加组件时的业务数据
 
 `items` 通常是由业务 ID 查询并组装的复杂数据，不能交给模型生成。业务工具
