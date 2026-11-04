@@ -532,6 +532,15 @@ svg {
   gap: 9px;
 }
 
+.tool summary.tool-heading {
+  list-style: none;
+  cursor: pointer;
+}
+
+.tool summary.tool-heading::-webkit-details-marker {
+  display: none;
+}
+
 .status-pill {
   margin-left: auto;
   padding: 3px 7px;
@@ -548,6 +557,22 @@ svg {
 .status-pill.complete {
   color: #9ce5b7;
   background: rgba(77, 193, 117, 0.13);
+}
+
+.tool-chevron {
+  width: 15px;
+  flex: 0 0 15px;
+  transition: transform 160ms ease;
+}
+
+.tool[open] .tool-chevron {
+  transform: rotate(90deg);
+}
+
+.tool-body {
+  margin-top: 11px;
+  padding-top: 1px;
+  border-top: 1px solid #282d36;
 }
 
 .tool-section {

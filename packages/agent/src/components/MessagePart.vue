@@ -54,11 +54,11 @@
     </div>
   </details>
 
-  <div
+  <details
     v-else-if="part.type === 'tool'"
     class="part-card tool"
   >
-    <div class="tool-heading">
+    <summary class="tool-heading">
       <span
         class="part-icon"
         aria-hidden="true"
@@ -79,31 +79,40 @@
       >
         {{ part.state === 'output-available' ? '已完成' : '执行中' }}
       </span>
-    </div>
+      <svg
+        class="tool-chevron"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+      >
+        <path d="m9 18 6-6-6-6" />
+      </svg>
+    </summary>
 
-    <div
-      v-if="part.input !== undefined"
-      class="tool-section"
-    >
-      <span class="tool-label">输入</span>
-      <pre><code>{{ formatJson(part.input) }}</code></pre>
-    </div>
+    <div class="tool-body">
+      <div
+        v-if="part.input !== undefined"
+        class="tool-section"
+      >
+        <span class="tool-label">输入</span>
+        <pre><code>{{ formatJson(part.input) }}</code></pre>
+      </div>
 
-    <div
-      v-if="part.output !== undefined"
-      class="tool-section"
-    >
-      <span class="tool-label">输出</span>
-      <pre><code>{{ formatJson(part.output) }}</code></pre>
-    </div>
+      <div
+        v-if="part.output !== undefined"
+        class="tool-section"
+      >
+        <span class="tool-label">输出</span>
+        <pre><code>{{ formatJson(part.output) }}</code></pre>
+      </div>
 
-    <p
-      v-if="part.errorText"
-      class="tool-error"
-    >
-      {{ part.errorText }}
-    </p>
-  </div>
+      <p
+        v-if="part.errorText"
+        class="tool-error"
+      >
+        {{ part.errorText }}
+      </p>
+    </div>
+  </details>
 
   <div
     v-else-if="part.type === 'data'"
