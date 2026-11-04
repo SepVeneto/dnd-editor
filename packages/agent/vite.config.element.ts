@@ -2,43 +2,27 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import vue from '@vitejs/plugin-vue'
 import { defineConfig } from 'vite'
-import type { Plugin } from 'vite'
-import { agentDefine, agentExternals } from './vite.externals'
+import { agentDefine } from './vite.externals'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const PACKAGE_NAME = '@sepveneto/dnde-agent'
-
-/**
- * 把 element.ts 里对 `./index` 的 import / re-export 重写成包名，
- * 这样产物会保留 `@sepveneto/dnde-agent`，由宿主打包器解析到同一个库实例。
- */
-function rewriteIndexImport(): Plugin {
-  return {
-    name: 'rewrite-agent-index-import',
-    enforce: 'pre',
-    transform(code, id) {
-      if (!id.replace(/\\/g, '/').endsWith('/src/element.ts'))
-        return null
-      return code.replace(
-        /(\bfrom\s*)(['"])\.\/index\2/g,
-        (_match, prefix: string, quote: string) => `${prefix}${quote}${PACKAGE_NAME}${quote}`,
-      )
-    },
-  }
-}
 
 /**
  * web component 构建：注册 `<dnd-agent>`。
  *
- * - 只包含“注册自定义元素”这一薄层，具体实现（组件、runtime、能力方法）来自库入口 `index.js`，
- *   保证业务侧 import 的方法与 `<dnd-agent>` 共享同一份模块实例；
- * - 只保留 `index`（包名）为 external，交给宿主打包器解析；`vue` 等运行时依赖由 `index.js`
- *   打包并复用，本入口不再直接依赖它们。
- * - 同样使用 `agentDefine`：本入口（或将来被加进来的组件）一旦把运行时打进产物，也不能写宿主
- *   全局，否则会劫持宿主的 HMR（详见 `vite.externals.ts`）。
+ * - 与旧版一致，产出一个自包含的 web component；组件、runtime、Vue、Agents SDK 和工具函数
+ *   全部打进 `element.js`，不保留任何包级 external；
+ * - `features.customElement: true` 让 SFC 样式内联到组件上，随 shadow DOM 一起生效；
+ * - 使用 `agentDefine` 固化内联 Vue 的生产分支，避免污染宿主 HMR
+ *   （详见 `vite.externals.ts`）。
  */
 export default defineConfig({
-  plugins: [rewriteIndexImport(), vue()],
+  plugins: [
+    vue({
+      features: {
+        customElement: true,
+      },
+    }),
+  ],
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
@@ -54,8 +38,9 @@ export default defineConfig({
       fileName: () => 'element.js',
     },
     rollupOptions: {
-      external: (id: string) =>
-        agentExternals.some(re => re.test(id)) || id === PACKAGE_NAME,
+      output: {
+        inlineDynamicImports: true,
+      },
     },
   },
 })
