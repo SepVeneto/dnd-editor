@@ -1,9 +1,11 @@
 import type { z } from 'zod'
-import type { AgentHostApi } from './types'
+import type { AgentHostApi, EditorAgentContext } from './types'
 
 export interface AgentToolContext {
   api: AgentHostApi
   getContext: () => Record<string, unknown>
+  /** Mutable context belonging to the current Agent Run. */
+  context: EditorAgentContext
   signal?: AbortSignal
 }
 

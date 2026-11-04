@@ -20,6 +20,7 @@ import {
   DEFAULT_AGENT_BFF_URL,
   DEFAULT_AGENT_MODEL,
 } from './agents'
+import { createEditorAgentContext } from './editorContext'
 import { formatAgentDocumentContext } from './services'
 
 export interface AgentRuntimeConfig {
@@ -339,10 +340,12 @@ export function createAgentRuntime(
       return
 
     const activeAgent = agentRegistry.get(runtime.activeAgentName) ?? agent
+    const runContext = createEditorAgentContext(options.getContext?.())
     const stream = await getRunner().run(activeAgent, prompt, {
       stream: true,
       session: runtime.session,
       signal,
+      context: runContext,
     })
 
     let textPart: { type: 'text', text: string } | undefined

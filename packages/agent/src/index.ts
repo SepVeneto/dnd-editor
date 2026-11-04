@@ -20,12 +20,22 @@ export {
   DEFAULT_AGENT_MODEL,
 } from './agents'
 export type {
+  PreparedEditorOperation,
+} from './editorContext'
+
+export {
+  completeEditorOperation,
+  createEditorAgentContext,
+  editorOperationSucceeded,
+  prepareEditorOperation,
+} from './editorContext'
+
+export type {
   AgentRuntime,
   AgentRuntimeConfig,
   AgentRuntimeOptions,
   AgentRuntimeTurn,
 } from './runtime'
-
 export { createAgentRuntime } from './runtime'
 
 export type { AgentUploadedFile } from './services'
@@ -50,6 +60,7 @@ export type {
   ChatMessage,
   ChatMode,
   DataPart,
+  EditorAgentContext,
   FilePart,
   MessagePart,
   MessageRole,

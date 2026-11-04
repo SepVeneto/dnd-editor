@@ -1,8 +1,12 @@
-import type { FunctionTool } from '@openai/agents'
+import type { FunctionTool, RunContext } from '@openai/agents'
 import type { AgentToolDefinition } from './tool'
-import type { AgentHostApi } from './types'
+import type { AgentEditorOperation, AgentHostApi, EditorAgentContext } from './types'
 import { Agent, tool } from '@openai/agents'
 import { z } from 'zod'
+import {
+  completeEditorOperation,
+  prepareEditorOperation,
+} from './editorContext'
 
 export const DEFAULT_AGENT_MODEL = 'qwen3.6-flash'
 export const DEFAULT_AGENT_BFF_URL = 'http://localhost:4000/v1'
@@ -55,7 +59,10 @@ function adaptHostTool(
     // Host tools may legitimately use optional fields. Non-strict mode accepts
     // their JSON schema without requiring every property to be nullable.
     strict: false,
-    async execute(input: unknown) {
+    async execute(
+      input: unknown,
+      runContext?: RunContext<EditorAgentContext>,
+    ) {
       if (!await resolveApproval(definition, input)) {
         return {
           ok: false,
@@ -68,6 +75,7 @@ function adaptHostTool(
         return await definition.execute(input, {
           api,
           getContext,
+          context: runContext?.context ?? getContext() as EditorAgentContext,
         })
       }
       catch (error) {
@@ -113,7 +121,10 @@ function createEditorTools(api: AgentHostApi): FunctionTool<any, any, any>[] {
 
   const editorOperator = tool({
     name: 'editor_operator',
-    description: '通过节点 UUID 添加、编辑、删除或移动编辑器组件。',
+    description: [
+      '通过节点 UUID 添加、编辑、删除或移动编辑器组件。',
+      'add 的 items 由业务工具写入本次 Run 的 Context 后自动注入，禁止在参数中生成 items。',
+    ].join(''),
     parameters: {
       type: 'object',
       properties: {
@@ -128,12 +139,7 @@ function createEditorTools(api: AgentHostApi): FunctionTool<any, any, any>[] {
         },
         widget: {
           type: 'string',
-          description: 'add 时使用的组件类型 ID',
-        },
-        items: {
-          type: 'array',
-          description: 'add 时写入业务组件的数据',
-          items: {},
+          description: 'add 时使用的组件类型 ID；必须来自 get_widgets',
         },
         changes: {
           type: 'object',
@@ -158,10 +164,34 @@ function createEditorTools(api: AgentHostApi): FunctionTool<any, any, any>[] {
       additionalProperties: false,
     },
     strict: false,
-    async execute(operation: any) {
+    async execute(
+      rawOperation: unknown,
+      runContext?: RunContext<EditorAgentContext>,
+    ) {
       if (!api.editor?.operateEditor)
         throw new Error('宿主未提供 operateEditor API')
-      return api.editor.operateEditor(operation)
+
+      const context = runContext?.context
+      if (!context)
+        throw new Error('缺少当前 Agent Run 的 Context')
+
+      const prepared = prepareEditorOperation(rawOperation, context)
+      if (prepared.error)
+        return { ok: false, error: prepared.error }
+
+      try {
+        const result = await api.editor.operateEditor(
+          prepared.operation as AgentEditorOperation,
+        )
+        completeEditorOperation(context, prepared, result)
+        return result
+      }
+      catch (error) {
+        return {
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        }
+      }
     },
   } as any)
 
@@ -192,6 +222,9 @@ export function createAgents(options: CreateAgentsOptions) {
       '你是一个 DIY 页面设计助手，负责通过宿主提供的 API 和业务工具帮助用户完成页面设计。',
       '修改页面时先调用 get_current_editor 和 get_widgets，确认节点 UUID、组件类型和数据结构。',
       '只通过 editor_operator 修改编辑器，不要臆造节点 UUID 或组件类型。',
+      '添加业务组件时，必须先调用能准备组件数据的业务工具；完整 items 会写入本次 Run 的 Context 并由 editor_operator 自动注入。',
+      '不要在 editor_operator 参数中生成 items，也不要自行伪造商品、场景等业务数据。',
+      '业务工具准备好的 items 会被一次添加操作消费；若要再次添加，必须重新调用业务工具。',
       '业务数据只能通过已注册的业务工具获取或写入，不要伪造接口结果。',
       '写入或不可逆操作需要用户明确同意；完成后用简洁的中文总结实际发生的变化。',
     ].join('\n'),

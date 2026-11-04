@@ -41,15 +41,42 @@ interface AgentHostApi {
     apiMode?: 'responses' | 'chat_completions'
   }
   editor?: {
-    getCurrentEditor(): unknown | Promise<unknown>
-    getWidgets(): unknown | Promise<unknown>
-    operateEditor(operation: AgentEditorOperation): unknown | Promise<unknown>
+    getCurrentEditor: () => unknown | Promise<unknown>
+    getWidgets: () => unknown | Promise<unknown>
+    operateEditor: (operation: AgentEditorOperation) => unknown | Promise<unknown>
   }
 }
 ```
 
 默认带三个基于编辑器 API 的工具：`get_current_editor`、`get_widgets`、
 `editor_operator`。写操作和历史不可逆操作应先取得用户确认。
+
+### 添加组件时的业务数据
+
+`items` 通常是由业务 ID 查询并组装的复杂数据，不能交给模型生成。业务工具
+应把组装结果写入当前 Agent Run 的 Context，`editor_operator` 会在 `add`
+时自动注入，并在操作成功后一次性消费：
+
+```ts
+const queryProduct = defineAgentTool({
+  name: 'query_product',
+  description: '查询商品并准备添加到编辑器。',
+  parameters: z.object({ keyword: z.string() }),
+  async execute({ keyword }, toolContext) {
+    const product = await api.product.search(keyword)
+    const items = await api.product.buildEditorItems([product.id])
+
+    // 只返回模型需要做决策的轻量信息。
+    toolContext.context.pendingItems = items
+    return { id: product.id, name: product.name }
+  },
+})
+```
+
+模型随后只调用
+`editor_operator({ action: 'add', widget: 'product', target: '页面节点 UUID' })`。
+工具参数不包含 `items`；即使模型额外传入也会被移除。每次 Agent Run 都会
+创建独立的 Context，失败时保留待添加数据以支持同一轮重试，成功后清空。
 
 ## 业务工具
 

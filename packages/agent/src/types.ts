@@ -15,11 +15,26 @@ export interface AgentEditorOperation {
   target?: string
   /** Widget type id used by `add`. */
   widget?: string
+  /**
+   * Editor data assembled by a business tool and injected by the host.
+   * This field is intentionally absent from the model-facing tool schema.
+   */
   items?: unknown[]
   changes?: Record<string, unknown>
   style?: Record<string, unknown>
   before?: string
   after?: string
+}
+
+/**
+ * Mutable state scoped to one Agent Run.
+ *
+ * Business tools write complete editor data into `pendingItems`; the editor
+ * tool consumes it after a successful operation. A fresh object is created for
+ * every turn so concurrent runs and conversations never share business data.
+ */
+export interface EditorAgentContext extends Record<string, unknown> {
+  pendingItems: unknown[]
 }
 
 /**
