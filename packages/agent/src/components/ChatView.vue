@@ -154,15 +154,23 @@
                 class="pending-file uploading"
               >
                 <span class="file-spinner" />
-                <span>正在上传文档...</span>
+                <span>正在上传附件...</span>
               </div>
               <template v-else>
                 <div
                   v-for="file in uploadedFiles"
                   :key="file.name"
                   class="pending-file"
+                  :class="{ 'is-image': file.kind === 'image' }"
                 >
+                  <img
+                    v-if="file.kind === 'image'"
+                    :src="file.url"
+                    :alt="file.file"
+                    class="pending-file-preview"
+                  >
                   <svg
+                    v-else
                     viewBox="0 0 24 24"
                     aria-hidden="true"
                   >
@@ -175,7 +183,7 @@
                     type="button"
                     class="remove-file"
                     :disabled="isBusy"
-                    aria-label="移除文档"
+                    aria-label="移除附件"
                     @click="resetFile"
                   >
                     ×
@@ -192,8 +200,8 @@
                 type="button"
                 class="attach-button"
                 :disabled="isBusy"
-                aria-label="上传 Word 文档"
-                title="上传 .docx 文档"
+                aria-label="上传文档或图片"
+                title="上传 .docx、JPG、PNG、WebP 等文件"
                 @click="selectFile"
               >
                 <svg
@@ -259,12 +267,12 @@
             ref="fileInput"
             class="file-input"
             type="file"
-            accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            accept=".docx,.jpg,.jpeg,.jpe,.png,.webp,.bmp,.tif,.tiff,.heic,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*"
             @change="handleFileChange"
           >
         </form>
         <div class="composer-hint">
-          <span>Enter 发送 · Shift + Enter 换行 · 支持 .docx</span>
+          <span>Enter 发送 · Shift + Enter 换行 · 支持文档和图片</span>
           <span>思考 + 工具调用</span>
         </div>
       </footer>
@@ -282,11 +290,12 @@
 
 <script setup lang="ts">
 import type { AgentRuntime } from '../runtime'
-import type { ChatMessage, ChatMode, FilePart } from '../types'
+import type { AgentFileKind, ChatMessage, ChatMode, FilePart } from '../types'
 import { computed, onBeforeUnmount, ref, useTemplateRef, watch } from 'vue'
 import { useFile } from '../composables'
 import {
   formatAgentDocumentContext,
+  isAgentImageFilePart,
   readAgentDocumentMarkdown,
 } from '../services'
 import MessagePart from './MessagePart.vue'
@@ -407,30 +416,47 @@ async function sendMessage() {
   let filePart: FilePart | undefined
   try {
     if (selectedFile) {
+      const kind: AgentFileKind = selectedFile.kind
       filePart = {
         type: 'file',
-        ...selectedFile,
-        text: await readAgentDocumentMarkdown(
+        name: selectedFile.name,
+        file: selectedFile.file,
+        kind,
+        mimeType: selectedFile.mimeType,
+        size: selectedFile.size,
+        url: selectedFile.url,
+      }
+      if (kind === 'document') {
+        filePart.text = await readAgentDocumentMarkdown(
           props.runtime.config.baseURL,
           selectedFile,
-        ),
+        )
       }
     }
   }
   catch (readError) {
-    error.value = `文档解析失败：${readError instanceof Error ? readError.message : String(readError)}`
+    error.value = `附件读取失败：${readError instanceof Error ? readError.message : String(readError)}`
     return
   }
   finally {
     submitting.value = false
   }
 
+  const imagePart = filePart && isAgentImageFilePart(filePart)
+    ? filePart
+    : undefined
   const promptForAgent = [
-    filePart ? formatAgentDocumentContext(filePart) : '',
-    prompt,
+    filePart?.kind === 'document'
+      ? formatAgentDocumentContext(filePart)
+      : '',
+    prompt || (imagePart
+      ? '请分析这张图片的内容、布局和视觉风格，并参考该图设计当前页面。'
+      : ''),
   ].filter(Boolean).join('\n\n')
   if (!promptForAgent) {
-    error.value = '文档中没有可读取的文字，请换一个文件或补充说明。'
+    error.value = filePart?.kind === 'document'
+      ? '文档中没有可读取的文字，请换一个文件或补充说明。'
+      : '附件内容无法读取，请换一个文件或补充说明。'
     return
   }
 
@@ -468,6 +494,7 @@ async function sendMessage() {
       mode: props.mode,
       message: activeAssistantMessage,
       history,
+      attachments: filePart ? [filePart] : [],
       signal: controller.signal,
       onUpdate: scrollToLatest,
     })

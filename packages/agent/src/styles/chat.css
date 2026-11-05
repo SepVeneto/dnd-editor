@@ -362,6 +362,26 @@ svg {
   background: rgba(255, 255, 255, 0.08);
 }
 
+.message-file.is-image {
+  display: grid;
+  width: min(100%, 300px);
+  gap: 7px;
+  padding: 6px;
+}
+
+.message-file-image {
+  display: block;
+  width: 100%;
+  max-height: 190px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: #ecece8;
+}
+
+.message-file.is-image > span:last-child {
+  padding: 0 4px 3px;
+}
+
 .message-file-icon {
   display: grid;
   width: 29px;
@@ -793,6 +813,19 @@ svg {
   width: 15px;
   flex: 0 0 15px;
   color: #333330;
+}
+
+.pending-file.is-image {
+  padding: 4px 7px 4px 4px;
+}
+
+.pending-file-preview {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: #e6e6e1;
 }
 
 .pending-file-name {

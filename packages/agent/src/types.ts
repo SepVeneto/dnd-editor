@@ -1,6 +1,7 @@
 export type ChatMode = 'data' | 'text'
 export type MessageRole = 'system' | 'user' | 'assistant'
 export type AgentApiMode = 'responses' | 'chat_completions'
+export type AgentFileKind = 'document' | 'image'
 
 export interface AgentModelConfig {
   /** OpenAI-compatible endpoint exposed by the host or its BFF. */
@@ -84,13 +85,18 @@ export interface DataPart {
 
 export interface FilePart {
   type: 'file'
-  /** Server-side upload id used to retrieve the converted document. */
+  /** Server-side upload id used to retrieve the file content. */
   name: string
   /** Original file name shown to the user. */
   file: string
+  /** Missing on legacy stored document parts. */
+  kind?: AgentFileKind
+  mimeType?: string
   size?: number
   /** Converted document content sent to the agent as context. */
   text?: string
+  /** BFF URL used to render an image preview without persisting Base64 data. */
+  url?: string
 }
 
 export type MessagePart = TextPart | ReasoningPart | ToolPart | DataPart | FilePart

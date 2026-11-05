@@ -2,8 +2,10 @@ import type { Ref } from 'vue'
 import type { AgentUploadedFile } from '../services'
 import { ref, shallowRef } from 'vue'
 import {
-  AGENT_UPLOAD_MAX_SIZE,
-  uploadAgentDocument,
+  AGENT_DOCUMENT_MAX_SIZE,
+  AGENT_IMAGE_MAX_SIZE,
+  getAgentFileKind,
+  uploadAgentFile,
 } from '../services'
 
 export function useFile(
@@ -33,26 +35,30 @@ export function useFile(
       return
 
     error.value = ''
-    if (!file.name.toLowerCase().endsWith('.docx')) {
-      error.value = '目前仅支持上传 .docx 文档'
+    const kind = getAgentFileKind(file)
+    if (!kind) {
+      error.value = '目前支持 .docx 文档及 JPG、PNG、WebP 等图片'
       input.value = ''
       return
     }
-    if (file.size > AGENT_UPLOAD_MAX_SIZE) {
-      error.value = '文档不能超过 10 MB'
+    const maxSize = kind === 'image'
+      ? AGENT_IMAGE_MAX_SIZE
+      : AGENT_DOCUMENT_MAX_SIZE
+    if (file.size > maxSize) {
+      error.value = `${kind === 'image' ? '图片' : '文档'}不能超过 10 MB`
       input.value = ''
       return
     }
 
     uploading.value = true
     try {
-      list.value = [await uploadAgentDocument(getBaseURL(), file)]
+      list.value = [await uploadAgentFile(getBaseURL(), file)]
     }
     catch (uploadError) {
       list.value = []
       error.value = uploadError instanceof Error
         ? uploadError.message
-        : '文档上传失败'
+        : '文件上传失败'
     }
     finally {
       uploading.value = false

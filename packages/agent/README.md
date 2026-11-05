@@ -109,6 +109,23 @@ const confirmInitialization = defineInitializationTool({
 可用组件查询、业务数据工具和 `editor_operator`，不会跳过业务工具直接生成业务
 数据。
 
+### 图片参考
+
+输入框支持上传 `.docx` 文档以及 JPG、PNG、WebP、BMP、TIFF、HEIC 图片。图片
+上传后显示缩略图，Agent 会读取图片的布局、层级、间距、比例、配色和组件关系，
+再结合当前编辑器和可用组件执行初始化或增量修改。图片中的业务数据不会被当作
+真实接口数据，商品等内容仍须通过宿主业务工具准备。
+
+本地图片遵循千问 OpenAI 兼容接口的多模态格式：BFF 将图片转换为
+`data:image/<type>;base64,...`，与文本一起放入同一条用户消息。会话历史保存
+图片引用而不是 Base64，避免撑满浏览器 `localStorage`。例如把 `qwen3.6-plus`
+作为模型时，可以直接使用“参考这张图的布局设计首页”这类指令。包含图片的
+Qwen 对话会使用官方文档中的 Chat Completions 兼容格式；纯文本对话继续遵循
+宿主配置的 API 模式。
+
+图片输入格式参考千问官方文档：
+<https://help.aliyun.com/zh/model-studio/vision>。
+
 ### 添加组件时的业务数据
 
 `items` 通常是由业务 ID 查询并组装的复杂数据，不能交给模型生成。业务工具
@@ -158,5 +175,5 @@ const queryOrder = defineAgentTool({
 ## UI
 
 UI 保留原装修助手的悬浮按钮交互。展开后使用 `llm-agent` 的聊天视图：
-空状态示例、Markdown、reasoning、工具调用、数据事件、流式文本、停止生成和历史记录，
+空状态示例、图片/文档附件、Markdown、reasoning、工具调用、数据事件、流式文本、停止生成和历史记录，
 全部位于 `dnd-agent` 的 Shadow DOM 内。

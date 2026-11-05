@@ -67,6 +67,7 @@ export type {
   AgentApiMode,
   AgentEditorApi,
   AgentEditorOperation,
+  AgentFileKind,
   AgentHostApi,
   AgentModelConfig,
   ChatMessage,

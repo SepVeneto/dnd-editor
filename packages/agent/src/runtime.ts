@@ -5,7 +5,14 @@ import type {
   RunStreamEvent,
 } from '@openai/agents'
 import type { AgentToolDefinition } from './tool'
-import type { AgentHostApi, ChatMessage, ChatMode, MessagePart, ToolPart } from './types'
+import type {
+  AgentHostApi,
+  ChatMessage,
+  ChatMode,
+  FilePart,
+  MessagePart,
+  ToolPart,
+} from './types'
 import {
   assistant,
   MemorySession,
@@ -21,7 +28,12 @@ import {
   DEFAULT_AGENT_MODEL,
 } from './agents'
 import { createEditorAgentContext } from './editorContext'
-import { formatAgentDocumentContext } from './services'
+import {
+  buildAgentUserContent,
+  formatAgentDocumentContext,
+  isAgentImageFilePart,
+  readAgentImageData,
+} from './services'
 
 export interface AgentRuntimeConfig {
   baseURL: string
@@ -41,6 +53,7 @@ export interface AgentRuntimeTurn {
   mode: ChatMode
   message: ChatMessage
   history: ChatMessage[]
+  attachments?: FilePart[]
   signal: AbortSignal
   onUpdate: () => void
 }
@@ -205,23 +218,6 @@ function messageText(message: ChatMessage) {
     .join('\n\n')
 }
 
-function toAgentHistory(messages: ChatMessage[]): AgentInputItem[] {
-  const items: AgentInputItem[] = []
-  for (const message of messages) {
-    const text = messageText(message).trim()
-    if (!text)
-      continue
-
-    if (message.role === 'assistant')
-      items.push(assistant(text))
-    else if (message.role === 'system')
-      items.push(system(text))
-    else
-      items.push(user(text))
-  }
-  return items
-}
-
 function readStoredAgent(key: string) {
   try {
     return localStorage.getItem(key) ?? undefined
@@ -262,14 +258,66 @@ export function createAgentRuntime(
     agents.map(item => [item.name, item]),
   )
   const sessionStore = new Map<string, Promise<RuntimeSession>>()
+  const imageDataCache = new Map<string, Promise<string>>()
   const runtimeStoragePrefix = [
     'dnd-agent:runtime',
     encodeURIComponent(config.baseURL),
     encodeURIComponent(config.model),
   ].join(':')
-  let runner: Runner | undefined
+  const runners = new Map<AgentRuntimeConfig['apiMode'], Runner>()
 
-  function getRunner() {
+  function resolveImageData(file: FilePart) {
+    const cacheKey = `${file.name}:${file.url ?? ''}`
+    let pending = imageDataCache.get(cacheKey)
+    if (!pending) {
+      pending = readAgentImageData(config.baseURL, file).catch((error) => {
+        imageDataCache.delete(cacheKey)
+        throw error
+      })
+      imageDataCache.set(cacheKey, pending)
+    }
+    return pending
+  }
+
+  async function toAgentHistory(
+    messages: ChatMessage[],
+  ): Promise<AgentInputItem[]> {
+    const items: AgentInputItem[] = []
+    for (const message of messages) {
+      const imageDataUrls: string[] = []
+      for (const part of message.parts) {
+        if (
+          message.role === 'user'
+          && part.type === 'file'
+          && isAgentImageFilePart(part)
+        ) {
+          try {
+            imageDataUrls.push(await resolveImageData(part))
+          }
+          catch {
+            // Keep the remaining conversation usable if an old upload has
+            // expired. The current attachment is handled separately and
+            // reports its own error before starting a run.
+          }
+        }
+      }
+
+      const text = messageText(message).trim()
+      if (!text && imageDataUrls.length === 0)
+        continue
+
+      if (message.role === 'assistant')
+        items.push(assistant(text))
+      else if (message.role === 'system')
+        items.push(system(text))
+      else
+        items.push(user(buildAgentUserContent(text, imageDataUrls)))
+    }
+    return items
+  }
+
+  function getRunner(apiMode: AgentRuntimeConfig['apiMode']) {
+    let runner = runners.get(apiMode)
     if (!runner) {
       const client = new OpenAI({
         apiKey: browserProxyPlaceholder,
@@ -279,11 +327,12 @@ export function createAgentRuntime(
       runner = new Runner({
         modelProvider: new OpenAIProvider({
           openAIClient: client,
-          useResponses: config.apiMode === 'responses',
+          useResponses: apiMode === 'responses',
           cacheResponsesWebSocketModels: false,
         }),
         tracingDisabled: true,
       })
+      runners.set(apiMode, runner)
     }
     return runner
   }
@@ -296,10 +345,10 @@ export function createAgentRuntime(
     saveStoredAgent(agentStorageKey(runtimeSessionId), agentName)
   }
 
-  function createRuntimeSession(
+  async function createRuntimeSession(
     runtimeSessionId: string,
     history: ChatMessage[],
-  ): RuntimeSession {
+  ): Promise<RuntimeSession> {
     const storedAgentName = readStoredAgent(agentStorageKey(runtimeSessionId))
     const activeAgentName = storedAgentName && agentRegistry.has(storedAgentName)
       ? storedAgentName
@@ -309,7 +358,7 @@ export function createAgentRuntime(
       activeAgentName,
       session: new MemorySession({
         sessionId: runtimeSessionId,
-        initialItems: toAgentHistory(history),
+        initialItems: await toAgentHistory(history),
       }),
     }
   }
@@ -320,7 +369,7 @@ export function createAgentRuntime(
   ) {
     let pending = sessionStore.get(runtimeSessionId)
     if (!pending) {
-      pending = Promise.resolve(createRuntimeSession(runtimeSessionId, history))
+      pending = createRuntimeSession(runtimeSessionId, history)
       sessionStore.set(runtimeSessionId, pending)
     }
     return pending
@@ -332,6 +381,7 @@ export function createAgentRuntime(
     mode,
     message,
     history,
+    attachments = [],
     signal,
     onUpdate,
   }: AgentRuntimeTurn) {
@@ -341,13 +391,32 @@ export function createAgentRuntime(
 
     const activeAgent = agentRegistry.get(runtime.activeAgentName) ?? agent
     const runContext = createEditorAgentContext(options.getContext?.())
-    const stream = await getRunner().run(activeAgent, prompt, {
-      stream: true,
-      session: runtime.session,
-      signal,
-      context: runContext,
-      maxTurns: null,
-    })
+    const hasImage = attachments.some(isAgentImageFilePart)
+      || history.some(message => message.parts.some(
+        part => part.type === 'file' && isAgentImageFilePart(part),
+      ))
+    // Aliyun's visual-understanding guide documents images through the
+    // OpenAI-compatible Chat Completions endpoint. Text-only Qwen runs keep
+    // the host's configured API mode.
+    const runApiMode = hasImage && /^qwen/i.test(config.model)
+      ? 'chat_completions'
+      : config.apiMode
+    const imageDataUrls = await Promise.all(
+      attachments
+        .filter(isAgentImageFilePart)
+        .map(resolveImageData),
+    )
+    const stream = await getRunner(runApiMode).run(
+      activeAgent,
+      [user(buildAgentUserContent(prompt, imageDataUrls))],
+      {
+        stream: true,
+        session: runtime.session,
+        signal,
+        context: runContext,
+        maxTurns: null,
+      },
+    )
 
     let textPart: { type: 'text', text: string } | undefined
 

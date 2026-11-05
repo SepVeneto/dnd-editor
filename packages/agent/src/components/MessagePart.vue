@@ -2,8 +2,18 @@
   <div
     v-if="part.type === 'file'"
     class="message-file"
+    :class="{ 'is-image': isImageFilePart(part) }"
   >
-    <span class="message-file-icon">
+    <img
+      v-if="imageURL(part)"
+      :src="imageURL(part)"
+      :alt="fileName(part)"
+      class="message-file-image"
+    >
+    <span
+      v-else
+      class="message-file-icon"
+    >
       <svg
         viewBox="0 0 24 24"
         aria-hidden="true"
@@ -13,8 +23,8 @@
       </svg>
     </span>
     <span>
-      <strong>{{ part.file }}</strong>
-      <small>Word 文档</small>
+      <strong>{{ fileName(part) }}</strong>
+      <small>{{ isImageFilePart(part) ? '参考图片' : 'Word 文档' }}</small>
     </span>
   </div>
 
@@ -138,11 +148,26 @@
 
 <script setup lang="ts">
 import type { MessagePart } from '../types'
+import { isAgentImageFilePart } from '../services'
 import MarkdownContent from './MarkdownContent.vue'
 
 defineProps<{
   part: MessagePart
 }>()
+
+function isImageFilePart(part: MessagePart) {
+  return part.type === 'file' && isAgentImageFilePart(part)
+}
+
+function imageURL(part: MessagePart) {
+  return part.type === 'file' && isImageFilePart(part)
+    ? part.url
+    : undefined
+}
+
+function fileName(part: MessagePart) {
+  return part.type === 'file' ? part.file : ''
+}
 
 function formatJson(value: unknown) {
   try {
