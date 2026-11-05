@@ -154,6 +154,8 @@ const queryProduct = defineAgentTool({
 `editor_operator({ action: 'add', widget: 'product', target: '页面节点 UUID' })`。
 工具参数不包含 `items`；即使模型额外传入也会被移除。每次 Agent Run 都会
 创建独立的 Context，失败时保留待添加数据以支持同一轮重试，成功后清空。
+同一轮模型回复中的 function tools 会按调用顺序串行执行，保证前序工具写入的
+Context 在后续工具（例如 `editor_operator`）执行时已经可见。
 
 ## 业务工具
 

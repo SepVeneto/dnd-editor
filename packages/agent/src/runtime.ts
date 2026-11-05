@@ -34,6 +34,7 @@ import {
   isAgentImageFilePart,
   readAgentImageData,
 } from './services'
+import { AGENT_TOOL_EXECUTION } from './toolExecution'
 
 export interface AgentRuntimeConfig {
   baseURL: string
@@ -330,6 +331,7 @@ export function createAgentRuntime(
           useResponses: apiMode === 'responses',
           cacheResponsesWebSocketModels: false,
         }),
+        toolExecution: AGENT_TOOL_EXECUTION,
         tracingDisabled: true,
       })
       runners.set(apiMode, runner)
