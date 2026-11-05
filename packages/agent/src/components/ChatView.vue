@@ -156,40 +156,38 @@
                 <span class="file-spinner" />
                 <span>正在上传附件...</span>
               </div>
-              <template v-else>
-                <div
-                  v-for="file in uploadedFiles"
-                  :key="file.name"
-                  class="pending-file"
-                  :class="{ 'is-image': file.kind === 'image' }"
+              <div
+                v-for="file in uploadedFiles"
+                :key="file.name"
+                class="pending-file"
+                :class="{ 'is-image': file.kind === 'image' }"
+              >
+                <img
+                  v-if="file.kind === 'image'"
+                  :src="file.url"
+                  :alt="file.file"
+                  class="pending-file-preview"
                 >
-                  <img
-                    v-if="file.kind === 'image'"
-                    :src="file.url"
-                    :alt="file.file"
-                    class="pending-file-preview"
-                  >
-                  <svg
-                    v-else
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
-                    <path d="M14 2v6h6M8 13h8M8 17h5" />
-                  </svg>
-                  <span class="pending-file-name">{{ file.file }}</span>
-                  <span class="pending-file-size">{{ formatFileSize(file.size) }}</span>
-                  <button
-                    type="button"
-                    class="remove-file"
-                    :disabled="isBusy"
-                    aria-label="移除附件"
-                    @click="resetFile"
-                  >
-                    ×
-                  </button>
-                </div>
-              </template>
+                <svg
+                  v-else
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
+                  <path d="M14 2v6h6M8 13h8M8 17h5" />
+                </svg>
+                <span class="pending-file-name">{{ file.file }}</span>
+                <span class="pending-file-size">{{ formatFileSize(file.size) }}</span>
+                <button
+                  type="button"
+                  class="remove-file"
+                  :disabled="isBusy"
+                  :aria-label="`移除 ${file.file}`"
+                  @click="removeFile(file.name)"
+                >
+                  ×
+                </button>
+              </div>
             </div>
             <label
               class="sr-only"
@@ -200,8 +198,8 @@
                 type="button"
                 class="attach-button"
                 :disabled="isBusy"
-                aria-label="上传文档或图片"
-                title="上传 .docx、JPG、PNG、WebP 等文件"
+                aria-label="上传文档或图片，支持多选"
+                title="上传 .docx、JPG、PNG、WebP 等文件，支持多选"
                 @click="selectFile"
               >
                 <svg
@@ -267,12 +265,13 @@
             ref="fileInput"
             class="file-input"
             type="file"
+            multiple
             accept=".docx,.jpg,.jpeg,.jpe,.png,.webp,.bmp,.tif,.tiff,.heic,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*"
             @change="handleFileChange"
           >
         </form>
         <div class="composer-hint">
-          <span>Enter 发送 · Shift + Enter 换行 · 支持文档和图片</span>
+          <span>Enter 发送 · Shift + Enter 换行 · 支持多个文档和图片</span>
           <span>思考 + 工具调用</span>
         </div>
       </footer>
@@ -370,6 +369,7 @@ const {
   selectFile,
   handleFileChange,
   reset: resetFile,
+  remove: removeFile,
 } = fileUpload
 const isBusy = computed(() => (
   isStreaming.value || submitting.value || uploading.value
@@ -407,17 +407,17 @@ function useExample(example: string) {
 
 async function sendMessage() {
   const prompt = draft.value.trim()
-  const selectedFile = uploadedFiles.value[0]
-  if ((!prompt && !selectedFile) || isBusy.value)
+  const selectedFiles = uploadedFiles.value.slice()
+  if ((!prompt && selectedFiles.length === 0) || isBusy.value)
     return
 
   submitting.value = true
   error.value = ''
-  let filePart: FilePart | undefined
+  let fileParts: FilePart[] = []
   try {
-    if (selectedFile) {
+    fileParts = await Promise.all(selectedFiles.map(async (selectedFile) => {
       const kind: AgentFileKind = selectedFile.kind
-      filePart = {
+      const filePart: FilePart = {
         type: 'file',
         name: selectedFile.name,
         file: selectedFile.file,
@@ -432,7 +432,8 @@ async function sendMessage() {
           selectedFile,
         )
       }
-    }
+      return filePart
+    }))
   }
   catch (readError) {
     error.value = `附件读取失败：${readError instanceof Error ? readError.message : String(readError)}`
@@ -442,19 +443,23 @@ async function sendMessage() {
     submitting.value = false
   }
 
-  const imagePart = filePart && isAgentImageFilePart(filePart)
-    ? filePart
-    : undefined
+  const imageParts = fileParts.filter(isAgentImageFilePart)
+  const documentContext = fileParts
+    .filter(part => part.kind === 'document')
+    .map(formatAgentDocumentContext)
+    .filter(Boolean)
+    .join('\n\n')
+  const defaultImagePrompt = imageParts.length > 1
+    ? '请分析这些图片的内容、布局和视觉风格，并综合参考它们设计当前页面。'
+    : '请分析这张图片的内容、布局和视觉风格，并参考该图设计当前页面。'
   const promptForAgent = [
-    filePart?.kind === 'document'
-      ? formatAgentDocumentContext(filePart)
-      : '',
-    prompt || (imagePart
-      ? '请分析这张图片的内容、布局和视觉风格，并参考该图设计当前页面。'
+    documentContext,
+    prompt || (imageParts.length > 0
+      ? defaultImagePrompt
       : ''),
   ].filter(Boolean).join('\n\n')
   if (!promptForAgent) {
-    error.value = filePart?.kind === 'document'
+    error.value = fileParts.some(part => part.kind === 'document')
       ? '文档中没有可读取的文字，请换一个文件或补充说明。'
       : '附件内容无法读取，请换一个文件或补充说明。'
     return
@@ -471,7 +476,7 @@ async function sendMessage() {
     id: crypto.randomUUID(),
     role: 'user',
     parts: [
-      ...(filePart ? [filePart] : []),
+      ...fileParts,
       ...(prompt ? [{ type: 'text' as const, text: prompt }] : []),
     ],
   }
@@ -494,7 +499,7 @@ async function sendMessage() {
       mode: props.mode,
       message: activeAssistantMessage,
       history,
-      attachments: filePart ? [filePart] : [],
+      attachments: fileParts,
       signal: controller.signal,
       onUpdate: scrollToLatest,
     })

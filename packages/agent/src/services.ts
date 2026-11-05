@@ -2,6 +2,8 @@ import type { AgentFileKind, FilePart } from './types'
 
 export const AGENT_DOCUMENT_MAX_SIZE = 10 * 1024 * 1024
 export const AGENT_IMAGE_MAX_SIZE = 10 * 1024 * 1024
+export const AGENT_ATTACHMENT_MAX_COUNT = 6
+export const AGENT_ATTACHMENT_MAX_TOTAL_SIZE = 20 * 1024 * 1024
 /** @deprecated Use the format-specific upload limits. */
 export const AGENT_UPLOAD_MAX_SIZE = AGENT_DOCUMENT_MAX_SIZE
 

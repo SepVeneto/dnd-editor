@@ -2,6 +2,8 @@ import type { Ref } from 'vue'
 import type { AgentUploadedFile } from '../services'
 import { ref, shallowRef } from 'vue'
 import {
+  AGENT_ATTACHMENT_MAX_COUNT,
+  AGENT_ATTACHMENT_MAX_TOTAL_SIZE,
   AGENT_DOCUMENT_MAX_SIZE,
   AGENT_IMAGE_MAX_SIZE,
   getAgentFileKind,
@@ -23,6 +25,11 @@ export function useFile(
       fileInput.value.value = ''
   }
 
+  function remove(name: string) {
+    list.value = list.value.filter(file => file.name !== name)
+    error.value = ''
+  }
+
   function selectFile() {
     if (!uploading.value)
       fileInput.value?.click()
@@ -30,32 +37,52 @@ export function useFile(
 
   async function handleFileChange(event: Event) {
     const input = event.target as HTMLInputElement
-    const file = input.files?.[0]
-    if (!file)
+    const files = Array.from(input.files ?? [])
+    if (files.length === 0)
       return
 
     error.value = ''
-    const kind = getAgentFileKind(file)
-    if (!kind) {
-      error.value = '目前支持 .docx 文档及 JPG、PNG、WebP 等图片'
+    if (list.value.length + files.length > AGENT_ATTACHMENT_MAX_COUNT) {
+      error.value = `最多添加 ${AGENT_ATTACHMENT_MAX_COUNT} 个附件`
       input.value = ''
       return
     }
-    const maxSize = kind === 'image'
-      ? AGENT_IMAGE_MAX_SIZE
-      : AGENT_DOCUMENT_MAX_SIZE
-    if (file.size > maxSize) {
-      error.value = `${kind === 'image' ? '图片' : '文档'}不能超过 10 MB`
+
+    for (const file of files) {
+      const kind = getAgentFileKind(file)
+      if (!kind) {
+        error.value = `${file.name} 不是支持的文件类型`
+        input.value = ''
+        return
+      }
+      const maxSize = kind === 'image'
+        ? AGENT_IMAGE_MAX_SIZE
+        : AGENT_DOCUMENT_MAX_SIZE
+      if (file.size > maxSize) {
+        error.value = `${file.name} 不能超过 10 MB`
+        input.value = ''
+        return
+      }
+    }
+
+    const totalSize = list.value.reduce(
+      (total, file) => total + (file.size ?? 0),
+      0,
+    ) + files.reduce((total, file) => total + file.size, 0)
+    if (totalSize > AGENT_ATTACHMENT_MAX_TOTAL_SIZE) {
+      error.value = '附件总大小不能超过 20 MB'
       input.value = ''
       return
     }
 
     uploading.value = true
     try {
-      list.value = [await uploadAgentFile(getBaseURL(), file)]
+      const uploaded = await Promise.all(
+        files.map(file => uploadAgentFile(getBaseURL(), file)),
+      )
+      list.value = [...list.value, ...uploaded]
     }
     catch (uploadError) {
-      list.value = []
       error.value = uploadError instanceof Error
         ? uploadError.message
         : '文件上传失败'
@@ -73,5 +100,6 @@ export function useFile(
     selectFile,
     handleFileChange,
     reset,
+    remove,
   }
 }

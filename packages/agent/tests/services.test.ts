@@ -54,6 +54,19 @@ describe('multimodal attachments', () => {
     )
   })
 
+  it('一次请求可以携带多张图片', () => {
+    const first = 'data:image/png;base64,AAAA'
+    const second = 'data:image/jpeg;base64,BBBB'
+    assert.deepEqual(
+      buildAgentUserContent('综合参考', [first, second]),
+      [
+        { type: 'input_image', image: first, detail: 'high' },
+        { type: 'input_image', image: second, detail: 'high' },
+        { type: 'input_text', text: '综合参考' },
+      ],
+    )
+  })
+
   it('纯文本消息保持字符串输入', () => {
     assert.equal(buildAgentUserContent('生成首页', []), '生成首页')
   })
