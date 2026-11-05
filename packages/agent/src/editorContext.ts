@@ -51,12 +51,6 @@ export function prepareEditorOperation(
     return { operation: prepared }
 
   const pendingItems = context.pendingItems
-  if (!Array.isArray(pendingItems) || pendingItems.length === 0) {
-    return {
-      operation: prepared,
-      error: '缺少待添加的业务数据，请先调用业务工具准备 items',
-    }
-  }
 
   return {
     operation: {
