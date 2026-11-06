@@ -28,9 +28,14 @@ describe('editor context', () => {
       widget: 'product',
       target: 'root',
       items: [{ id: 999, name: '伪造商品' }],
+      changes: { list: [{ name: '模型伪造内容' }] },
+      style: { width: 375 },
     }, context)
 
     assert.deepEqual(prepared.operation.items, [{ id: 1, name: '大米' }])
+    assert.equal(prepared.operation.target, undefined)
+    assert.equal(prepared.operation.changes, undefined)
+    assert.deepEqual(prepared.operation.style, { width: 375 })
   })
 
   it('add 时移除 target，布局操作不允许嵌套', () => {
@@ -44,6 +49,29 @@ describe('editor context', () => {
     }, context)
 
     assert.equal(prepared.operation.target, undefined)
+  })
+
+  it('edit 时丢弃模型 changes，但保留 style', () => {
+    const prepared = prepareEditorOperation({
+      action: 'edit',
+      target: 'node-1',
+      changes: { list: [{ name: '模型伪造内容' }] },
+      style: { marginTop: 12 },
+    }, createEditorAgentContext())
+
+    assert.equal(prepared.operation.changes, undefined)
+    assert.deepEqual(prepared.operation.style, { marginTop: 12 })
+  })
+
+  it('add 不能仅凭静态 changes 完成数据准备', () => {
+    const prepared = prepareEditorOperation({
+      action: 'add',
+      widget: 'topEntry',
+      changes: { data: { list: [] } },
+    }, createEditorAgentContext())
+
+    assert.match(prepared.error ?? '', /业务工具/)
+    assert.equal(prepared.operation.changes, undefined)
   })
 
   it('没有业务工具准备的数据时拒绝 add', () => {

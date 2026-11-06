@@ -245,9 +245,8 @@ function operateEditor(
     widget.agent?.update?.(node, {
       widget: operation.widget,
       items: operation.items ?? [],
+      changes: operation.changes ?? {},
     }, context)
-    if (operation.changes)
-      Object.assign(node.data, operation.changes)
     if (operation.style)
       Object.assign(node.style, operation.style)
     editor.addNode(node, parent, true)
@@ -259,7 +258,11 @@ function operateEditor(
 
   if (operation.action === 'edit') {
     if (operation.changes)
-      Object.assign(node.data, operation.changes)
+      node.widget.agent?.update?.(node, {
+        widget: node.widget.view,
+        items: [],
+        changes: operation.changes,
+      }, context)
     if (operation.style)
       Object.assign(node.style, operation.style)
     return { ok: true, node: serializeAgentNode(node) }

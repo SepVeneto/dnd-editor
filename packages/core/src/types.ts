@@ -14,6 +14,7 @@ export interface WidgetPos {
 export interface WidgetLayoutItem {
   widget: string
   items: Array<{ category: string, id: any }>
+  changes?: Record<string, any>
 }
 
 export interface WidgetAgent {

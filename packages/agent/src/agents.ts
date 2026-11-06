@@ -125,6 +125,7 @@ function createEditorTools(api: AgentHostApi): FunctionTool<any, any, any>[] {
     description: [
       '通过节点 UUID 添加、编辑、删除或移动编辑器组件。',
       'add 的 items 由业务工具写入本次 Run 的 Context 后自动注入，禁止在参数中生成 items。',
+      '模型不得提交 changes；名称、跳转类型、分类等静态配置也不能通过 changes 填充。',
     ].join(''),
     parameters: {
       type: 'object',
@@ -141,11 +142,6 @@ function createEditorTools(api: AgentHostApi): FunctionTool<any, any, any>[] {
         widget: {
           type: 'string',
           description: 'add 时使用的组件类型 ID；必须来自 get_widgets',
-        },
-        changes: {
-          type: 'object',
-          description: 'edit 时合并到节点 data 的字段',
-          additionalProperties: true,
         },
         style: {
           type: 'object',

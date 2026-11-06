@@ -43,14 +43,23 @@ export function prepareEditorOperation(
   }
   const prepared = operation as unknown as AgentEditorOperation
 
-  // Layout is always flat: adding a widget never targets a nested parent.
-  if (prepared.action === 'add')
-    delete prepared.target
+  // Model-authored changes are never a fill channel, including static config.
+  delete prepared.changes
 
   if (prepared.action !== 'add')
     return { operation: prepared }
 
   const pendingItems = context.pendingItems
+
+  // Add operations receive content only from host tools.
+  delete prepared.target
+
+  if (pendingItems.length === 0) {
+    return {
+      operation: prepared,
+      error: 'add 操作必须由业务工具先准备 pendingItems',
+    }
+  }
 
   return {
     operation: {
