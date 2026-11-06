@@ -1,9 +1,6 @@
 import type { z } from 'zod'
 import type { AgentHostApi, EditorAgentContext } from './types'
 
-/** Workflow roles understood by the built-in agent topology. */
-export type AgentToolRole = 'initialization'
-
 export interface AgentToolContext {
   api: AgentHostApi
   getContext: () => Record<string, unknown>
@@ -21,8 +18,6 @@ export interface AgentToolDefinition<TInput = unknown, TOutput = unknown> {
   kind?: 'agent-tool'
   name: string
   description: string
-  /** Optional workflow role used by the agent topology. */
-  role?: AgentToolRole
   parameters?: z.ZodType
   /** Alias kept for existing capability definitions. */
   inputSchema?: z.ZodType

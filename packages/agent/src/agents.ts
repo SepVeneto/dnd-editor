@@ -1,21 +1,12 @@
 import type { FunctionTool, RunContext } from '@openai/agents'
 import type { AgentToolDefinition } from './tool'
 import type { AgentEditorOperation, AgentHostApi, EditorAgentContext } from './types'
-import { Agent, handoff, tool } from '@openai/agents'
+import { Agent, tool } from '@openai/agents'
 import { z } from 'zod'
 import {
   completeEditorOperation,
   prepareEditorOperation,
 } from './editorContext'
-import {
-  buildInitializationAgentInstructions,
-  buildInitializationInstructions,
-  findInitializationTool,
-  INITIALIZATION_AGENT_NAME,
-  INITIALIZATION_HANDOFF_TOOL_NAME,
-  INITIALIZATION_RETURN_TOOL_NAME,
-  INITIALIZATION_TOOL_ROLE,
-} from './initialization'
 
 export const DEFAULT_AGENT_MODEL = 'qwen3.6-flash'
 export const DEFAULT_AGENT_BFF_URL = 'http://localhost:4000/v1'
@@ -215,33 +206,12 @@ function createEditorTools(api: AgentHostApi): FunctionTool<any, any, any>[] {
 export function createAgents(options: CreateAgentsOptions) {
   const getContext = options.getContext ?? (() => ({}))
   const hostTools = options.tools ?? []
-  const initializationTool = findInitializationTool(hostTools)
   const tools = [
     ...createEditorTools(options.api),
-    ...hostTools
-      .filter(item => item.role !== INITIALIZATION_TOOL_ROLE)
-      .map(item =>
-        adaptHostTool(item, options.api, getContext),
-      ),
+    ...hostTools.map(item =>
+      adaptHostTool(item, options.api, getContext),
+    ),
   ]
-
-  const initializationAgent = initializationTool
-    ? new Agent({
-        name: INITIALIZATION_AGENT_NAME,
-        model: options.model || DEFAULT_AGENT_MODEL,
-        modelSettings: {
-          reasoning: { effort: 'none' },
-          text: { verbosity: 'low' },
-        },
-        instructions: buildInitializationAgentInstructions(
-          initializationTool.name,
-          'Diy Copilot',
-        ).join('\n'),
-        tools: [
-          adaptHostTool(initializationTool, options.api, getContext),
-        ],
-      })
-    : undefined
 
   const agent = new Agent({
     name: 'Diy Copilot',
@@ -257,10 +227,6 @@ export function createAgents(options: CreateAgentsOptions) {
       '用户上传图片作为视觉参考时，先分析图片中的整体布局、信息层级、分区结构、栅格与间距、比例、颜色和组件关系，再结合 get_current_editor 与 get_widgets 的可用能力落地。参考图片可以用于初始化整页，也可以用于增量修改局部布局。',
       '只根据图片中清晰可辨的内容做判断。图片中的文案、价格、商品信息或接口数据无法确认时，不要臆造；需要业务数据时仍须调用宿主提供的业务工具。',
       '即使请求中包含多项内容，只要用户明确表示添加到当前页面或保留现有内容，仍属于增量修改。页面已有实质内容但用户提供整页清单且未明确是否覆盖时，先询问用户是覆盖初始化还是增量追加，不要擅自清空或覆盖。',
-      ...buildInitializationInstructions({
-        toolName: initializationTool?.name,
-        agentName: initializationAgent?.name,
-      }),
       '执行初始化，或增量修改需要新增组件、调整组件类型时，调用 get_widgets 确认组件类型、配置规则和数据结构。',
       '只通过 editor_operator 修改编辑器，不要臆造节点 UUID 或组件类型。',
       '所有通过 editor_operator add 的组件都平铺添加到页面根节点，不存在嵌套添加；add 时不要传 target。',
@@ -271,28 +237,10 @@ export function createAgents(options: CreateAgentsOptions) {
       '写入或不可逆操作需要用户明确同意；完成后用简洁的中文总结实际发生的变化。',
     ].join('\n'),
     tools,
-    handoffs: initializationAgent
-      ? [
-          handoff(initializationAgent, {
-            toolNameOverride: INITIALIZATION_HANDOFF_TOOL_NAME,
-            toolDescriptionOverride: '判断用户需要按清单初始化装修时，暂时移交初始化子 Agent。',
-          }),
-        ]
-      : [],
   })
-
-  if (initializationAgent) {
-    initializationAgent.handoffs = [
-      handoff(agent, {
-        toolNameOverride: INITIALIZATION_RETURN_TOOL_NAME,
-        toolDescriptionOverride: '初始化工具调用完成后，将控制权交还主 Agent。',
-      }),
-    ]
-  }
 
   return {
     agent,
-    initializationAgent,
-    agents: initializationAgent ? [agent, initializationAgent] : [agent],
+    agents: [agent],
   }
 }
