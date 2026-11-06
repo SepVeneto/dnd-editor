@@ -3,6 +3,7 @@ import type { AgentToolDefinition } from './tool'
 import type { AgentEditorOperation, AgentHostApi, EditorAgentContext } from './types'
 import { Agent, tool } from '@openai/agents'
 import { z } from 'zod'
+import { buildAgentInstructions } from './agentInstructions'
 import {
   completeEditorOperation,
   prepareEditorOperation,
@@ -109,7 +110,7 @@ function createEditorTools(api: AgentHostApi): FunctionTool<any, any, any>[] {
 
   const getWidgets = tool({
     name: 'get_widgets',
-    description: '获取当前页面可供添加的组件列表及组件配置规则。添加组件前应先查询。',
+    description: '获取当前页面可供添加的组件列表、功能描述、布局适配性和配置规则。确定组件类型并为组件规划内容前应先查询。',
     parameters: emptyParameters,
     strict: false,
     async execute(_input: unknown) {
@@ -220,22 +221,7 @@ export function createAgents(options: CreateAgentsOptions) {
       reasoning: { effort: 'none' },
       text: { verbosity: 'low' },
     },
-    instructions: [
-      '你是一个 DIY 页面设计助手，负责通过宿主提供的 API 和业务工具帮助用户完成页面设计。',
-      '收到页面设计或编辑请求后，先调用 get_current_editor，结合页面现状、当前对话和附件内容判断工作模式。',
-      '工作模式分为“初始化”和“增量修改”。用户提供装修清单、文档或整页设计需求时，进入初始化；用户要求对当前页面的具体节点或局部内容进行新增、修改、删除、移动时，进入增量修改。',
-      '用户上传图片作为视觉参考时，先分析图片中的整体布局、信息层级、分区结构、栅格与间距、比例、颜色和组件关系，再结合 get_current_editor 与 get_widgets 的可用能力落地。参考图片可以用于初始化整页，也可以用于增量修改局部布局。',
-      '只根据图片中清晰可辨的内容做判断。图片中的文案、价格、商品信息或接口数据无法确认时，不要臆造；需要业务数据时仍须调用宿主提供的业务工具。',
-      '即使请求中包含多项内容，只要用户明确表示添加到当前页面或保留现有内容，仍属于增量修改。页面已有实质内容但用户提供整页清单且未明确是否覆盖时，先询问用户是覆盖初始化还是增量追加，不要擅自清空或覆盖。',
-      '执行初始化，或增量修改需要新增组件、调整组件类型时，调用 get_widgets 确认组件类型、配置规则和数据结构。',
-      '只通过 editor_operator 修改编辑器，不要臆造节点 UUID 或组件类型。',
-      '所有通过 editor_operator add 的组件都平铺添加到页面根节点，不存在嵌套添加；add 时不要传 target。',
-      '添加业务组件时，必须先调用能准备组件数据的业务工具；完整 items 会写入本次 Run 的 Context 并由 editor_operator 自动注入。',
-      '不要在 editor_operator 参数中生成 items，也不要自行伪造商品、场景等业务数据。',
-      '业务工具准备好的 items 会被一次添加操作消费；若要再次添加，必须重新调用业务工具。',
-      '业务数据只能通过已注册的业务工具获取或写入，不要伪造接口结果。',
-      '写入或不可逆操作需要用户明确同意；完成后用简洁的中文总结实际发生的变化。',
-    ].join('\n'),
+    instructions: buildAgentInstructions(),
     tools,
   })
 
