@@ -1,13 +1,20 @@
 import type { FunctionTool, RunContext } from '@openai/agents'
 import type { AgentToolDefinition } from './tool'
 import type { AgentEditorOperation, AgentHostApi, EditorAgentContext } from './types'
-import { Agent, tool } from '@openai/agents'
+import { Agent, handoff, tool } from '@openai/agents'
 import { z } from 'zod'
-import { buildAgentInstructions } from './agentInstructions'
+import {
+  buildChecklistAgentInstructions,
+  buildMainAgentInstructions,
+  CONFIG_CHECKLIST_AGENT_NAME,
+  CONFIG_CHECKLIST_HANDOFF_TOOL_NAME,
+  CONFIG_CHECKLIST_RETURN_TOOL_NAME,
+  MAIN_AGENT_NAME,
+} from './agentInstructions.ts'
 import {
   completeEditorOperation,
   prepareEditorOperation,
-} from './editorContext'
+} from './editorContext.ts'
 
 export const DEFAULT_AGENT_MODEL = 'qwen3.6-flash'
 export const DEFAULT_AGENT_BFF_URL = 'http://localhost:4000/v1'
@@ -203,6 +210,11 @@ function createEditorTools(api: AgentHostApi): FunctionTool<any, any, any>[] {
 export function createAgents(options: CreateAgentsOptions) {
   const getContext = options.getContext ?? (() => ({}))
   const hostTools = options.tools ?? []
+  const model = options.model || DEFAULT_AGENT_MODEL
+  const modelSettings = {
+    reasoning: { effort: 'none' as const },
+    text: { verbosity: 'low' as const },
+  }
   const tools = [
     ...createEditorTools(options.api),
     ...hostTools.map(item =>
@@ -210,19 +222,40 @@ export function createAgents(options: CreateAgentsOptions) {
     ),
   ]
 
-  const agent = new Agent({
-    name: 'Diy Copilot',
-    model: options.model || DEFAULT_AGENT_MODEL,
-    modelSettings: {
-      reasoning: { effort: 'none' },
-      text: { verbosity: 'low' },
-    },
-    instructions: buildAgentInstructions(),
+  const checklistAgent = new Agent({
+    name: CONFIG_CHECKLIST_AGENT_NAME,
+    handoffDescription: '专门处理配置清单、需求文档、整页方案和多组件配置要求。',
+    model,
+    modelSettings,
+    instructions: buildChecklistAgentInstructions(),
     tools,
   })
 
+  const agent = new Agent({
+    name: MAIN_AGENT_NAME,
+    handoffDescription: '负责分诊请求并直接处理简单、局部的页面编辑命令。',
+    model,
+    modelSettings,
+    instructions: buildMainAgentInstructions(),
+    tools,
+    handoffs: [
+      handoff(checklistAgent, {
+        toolNameOverride: CONFIG_CHECKLIST_HANDOFF_TOOL_NAME,
+        toolDescriptionOverride: '用户提供配置清单、需求文档、整页方案或多组件配置要求时，移交配置清单子 Agent。',
+      }),
+    ],
+  })
+
+  checklistAgent.handoffs = [
+    handoff(agent, {
+      toolNameOverride: CONFIG_CHECKLIST_RETURN_TOOL_NAME,
+      toolDescriptionOverride: '配置清单处理完成、被取消，或用户切换到简单命令时，将控制权交还主 Agent。',
+    }),
+  ]
+
   return {
     agent,
-    agents: [agent],
+    checklistAgent,
+    agents: [agent, checklistAgent],
   }
 }

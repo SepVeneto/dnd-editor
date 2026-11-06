@@ -212,7 +212,8 @@ function listAgentWidgets() {
       description: item.agent?.description ?? item.agent?.layout?.description ?? '',
       defaultData: item.defaultData,
       defaultStyle: item.defaultStyle,
-      propsSchema: schema.props ?? [],
+      // 自定义配置项没有通用的数据结构，Agent 无法可靠地填写。
+      propsSchema: (schema.props ?? []).filter(item => item.type !== 'custom'),
       styleSchema: schema.style ?? [],
     }
   })

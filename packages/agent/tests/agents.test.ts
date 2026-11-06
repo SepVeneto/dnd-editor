@@ -1,9 +1,27 @@
 /* eslint-disable test/no-import-node-test */
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { buildAgentInstructions } from '../src/agentInstructions.ts'
+import {
+  buildAgentInstructions,
+  buildMainAgentInstructions,
+  CONFIG_CHECKLIST_AGENT_NAME,
+  CONFIG_CHECKLIST_HANDOFF_TOOL_NAME,
+  CONFIG_CHECKLIST_RETURN_TOOL_NAME,
+} from '../src/agentInstructions.ts'
+import { createAgents } from '../src/agents.ts'
 
 describe('agent instructions', () => {
+  it('主 Agent 只处理简单命令，并将配置清单移交子 Agent', () => {
+    const instructions = buildMainAgentInstructions()
+
+    assert.match(instructions, /配置清单请求/)
+    assert.match(instructions, /简单命令/)
+    assert.match(instructions, new RegExp(CONFIG_CHECKLIST_HANDOFF_TOOL_NAME))
+    assert.match(instructions, new RegExp(CONFIG_CHECKLIST_AGENT_NAME))
+    assert.match(instructions, /不要把.*升级为配置清单任务/)
+    assert.match(instructions, /移交后不要继续规划页面/)
+  })
+
   it('参考图先规划布局和组件内容，再查询业务数据并填充', () => {
     const instructions = buildAgentInstructions()
 
@@ -39,5 +57,37 @@ describe('agent instructions', () => {
     assert.match(instructions, /静态配置白名单只用于判断当前任务是否需要参考附件/)
     assert.match(instructions, /不得作为填充值来源/)
     assert.match(instructions, /不得伪造接口结果或自行编造数据/)
+  })
+
+  it('配置清单子 Agent 完成后交还主 Agent', () => {
+    const instructions = buildAgentInstructions()
+
+    assert.match(instructions, /配置清单子 Agent/)
+    assert.match(instructions, new RegExp(CONFIG_CHECKLIST_RETURN_TOOL_NAME))
+    assert.match(instructions, /因缺少必要信息而向用户提问时不要交还控制权/)
+    assert.match(instructions, /再由主 Agent 依据实际执行结果向用户做简洁总结/)
+  })
+})
+
+describe('agent topology', () => {
+  it('创建主 Agent、配置清单子 Agent 及双向 handoff', () => {
+    const { agent, checklistAgent, agents } = createAgents({
+      api: {},
+    } as any)
+
+    assert.equal(agent.name, 'Diy Copilot')
+    assert.equal(checklistAgent.name, CONFIG_CHECKLIST_AGENT_NAME)
+    assert.deepEqual(agents.map(item => item.name), [
+      agent.name,
+      checklistAgent.name,
+    ])
+    assert.equal(
+      (agent.handoffs[0] as any).toolName,
+      CONFIG_CHECKLIST_HANDOFF_TOOL_NAME,
+    )
+    assert.equal(
+      (checklistAgent.handoffs[0] as any).toolName,
+      CONFIG_CHECKLIST_RETURN_TOOL_NAME,
+    )
   })
 })
