@@ -5,7 +5,7 @@ import type {
   RunStreamEvent,
 } from '@openai/agents'
 import type { DebugInitializationStart } from './debug'
-import type { AgentToolDefinition } from './tool'
+import type { AgentHostTool } from './tool'
 import type {
   AgentDebugConfig,
   AgentHostApi,
@@ -51,7 +51,7 @@ export interface AgentRuntimeConfig {
 
 export interface AgentRuntimeOptions extends Partial<AgentRuntimeConfig> {
   api?: AgentHostApi
-  tools?: AgentToolDefinition[]
+  tools?: AgentHostTool[]
   getContext?: () => Record<string, unknown>
 }
 

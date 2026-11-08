@@ -1,6 +1,7 @@
 /* eslint-disable test/no-import-node-test */
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
+import { tool } from '@openai/agents'
 import {
   buildAgentInstructions,
   buildMainAgentInstructions,
@@ -137,5 +138,31 @@ describe('agent topology', () => {
       agent.tools.some(item => (item as any).name === 'editor_operator'),
       false,
     )
+  })
+
+  it('保留 SDK Agent 工具的原始 FunctionTool 形态', () => {
+    const nativeTool = tool({
+      name: 'classify_resources',
+      description: '分类资源',
+      parameters: {
+        type: 'object',
+        properties: {
+          content: { type: 'string' },
+        },
+        required: ['content'],
+        additionalProperties: false,
+      },
+      strict: true,
+      async execute() {
+        return '{}'
+      },
+    })
+    const { agent, checklistAgent } = createAgents({
+      api: {},
+      tools: [nativeTool],
+    } as any)
+
+    assert.equal(agent.tools.includes(nativeTool), true)
+    assert.equal(checklistAgent.tools.includes(nativeTool), true)
   })
 })

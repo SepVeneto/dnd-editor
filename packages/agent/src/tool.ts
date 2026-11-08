@@ -1,3 +1,4 @@
+import type { FunctionTool } from '@openai/agents'
 import type { z } from 'zod'
 import type { AgentHostApi, EditorAgentContext } from './types'
 
@@ -27,6 +28,15 @@ export interface AgentToolDefinition<TInput = unknown, TOutput = unknown> {
     input: TInput,
     context: AgentToolContext,
   ) => TOutput | Promise<TOutput>
+}
+
+export type AgentHostTool = AgentToolDefinition | FunctionTool<any, any, any>
+
+export function isAgentSdkTool(tool: AgentHostTool): tool is FunctionTool<any, any, any> {
+  if ('kind' in tool && tool.kind === 'agent-tool')
+    return false
+  return (tool as FunctionTool<any, any, any>).type === 'function'
+    && typeof (tool as FunctionTool<any, any, any>).invoke === 'function'
 }
 
 /**

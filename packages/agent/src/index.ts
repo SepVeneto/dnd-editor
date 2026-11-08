@@ -47,6 +47,7 @@ export type {
   AgentToolApprovalOptions,
   AgentToolContext,
   AgentToolDefinition,
+  AgentHostTool,
 } from './tool'
 
 export {

@@ -130,7 +130,7 @@
 </template>
 
 <script setup lang="ts">
-import type { AgentToolDefinition } from '../tool'
+import type { AgentHostTool } from '../tool'
 import type { AgentHostApi } from '../types'
 import {
   computed,
@@ -146,7 +146,7 @@ import { createAgentRuntime } from '../runtime'
 
 const props = withDefaults(defineProps<{
   api?: AgentHostApi
-  tools?: AgentToolDefinition[]
+  tools?: AgentHostTool[]
   context?: () => Record<string, unknown>
   sessionId?: string
   storageKey?: string

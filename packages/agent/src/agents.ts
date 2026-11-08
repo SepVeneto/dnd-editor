@@ -1,5 +1,5 @@
 import type { FunctionTool, RunContext } from '@openai/agents'
-import type { AgentToolDefinition } from './tool'
+import type { AgentHostTool, AgentToolDefinition } from './tool'
 import type { AgentHostApi, EditorAgentContext } from './types'
 import { Agent, handoff, tool } from '@openai/agents'
 import { IR_RESOURCE_TYPES } from '@sepveneto/dnde-core'
@@ -13,6 +13,7 @@ import {
   MAIN_AGENT_NAME,
 } from './agentInstructions.ts'
 import { initializeEditorContext } from './initialization.ts'
+import { isAgentSdkTool } from './tool.ts'
 
 export const DEFAULT_AGENT_MODEL = 'qwen3.6-flash'
 export const DEFAULT_AGENT_BFF_URL = 'http://localhost:4000/v1'
@@ -32,7 +33,7 @@ function requireInitializationIr(context?: EditorAgentContext) {
 export interface CreateAgentsOptions {
   model?: string
   api: AgentHostApi
-  tools?: AgentToolDefinition[]
+  tools?: AgentHostTool[]
   getContext?: () => Record<string, unknown>
   debugStartAt?: 'prepare_initialization'
 }
@@ -328,7 +329,9 @@ export function createAgents(options: CreateAgentsOptions) {
   const tools = [
     ...createEditorTools(options.api),
     ...hostTools.map(item =>
-      adaptHostTool(item, options.api, getContext),
+      isAgentSdkTool(item)
+        ? item
+        : adaptHostTool(item, options.api, getContext),
     ),
   ]
   const checklistAgent = new Agent({
