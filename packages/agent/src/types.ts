@@ -1,3 +1,8 @@
+import type {
+  DslValidationResult,
+  EditorDsl,
+} from '@sepveneto/dnde-core'
+
 export type ChatMode = 'data' | 'text'
 export type MessageRole = 'system' | 'user' | 'assistant'
 export type AgentApiMode = 'responses' | 'chat_completions'
@@ -10,33 +15,12 @@ export interface AgentModelConfig {
   apiMode?: AgentApiMode
 }
 
-export interface AgentEditorOperation {
-  action: 'add' | 'edit' | 'delete' | 'move'
-  /** Existing node UUID used by edit, delete, and move operations. */
-  target?: string
-  /** Widget type id used by `add`. */
-  widget?: string
-  /**
-   * Editor data assembled by a business tool and injected by the host.
-   * This field is intentionally absent from the model-facing tool schema.
-   */
-  items?: unknown[]
-  changes?: Record<string, unknown>
-  style?: Record<string, unknown>
-  before?: string
-  after?: string
-}
+/** The public, versioned DSL used by host sub-agents to edit the document. */
+export type AgentEditorDsl = EditorDsl
+export type AgentEditorDslValidation = DslValidationResult
 
-/**
- * Mutable state scoped to one Agent Run.
- *
- * Business tools write complete editor data into `pendingItems`; the editor
- * tool consumes it after a successful operation. A fresh object is created for
- * every turn so concurrent runs and conversations never share business data.
- */
-export interface EditorAgentContext extends Record<string, unknown> {
-  pendingItems: unknown[]
-}
+/** Mutable state scoped to one Agent Run. */
+export type EditorAgentContext = Record<string, unknown>
 
 /**
  * APIs implemented by the host. The agent runtime only knows this contract, so
@@ -45,10 +29,19 @@ export interface EditorAgentContext extends Record<string, unknown> {
 export interface AgentEditorApi {
   getCurrentEditor: () => unknown | Promise<unknown>
   getWidgets: () => unknown | Promise<unknown>
-  /** Context contains business data prepared by tools during the current Agent Run. */
-  operateEditor: (
-    operation: AgentEditorOperation,
+  /** Stable widget capability catalog used for component and DSL validation. */
+  getCapabilities?: () => unknown | Promise<unknown>
+  getRevision?: () => number | Promise<number>
+  validateDsl: (
+    dsl: AgentEditorDsl,
     context?: EditorAgentContext,
+  ) => AgentEditorDslValidation | Promise<AgentEditorDslValidation>
+  applyDsl: (
+    dsl: AgentEditorDsl,
+    context?: EditorAgentContext,
+  ) => unknown | Promise<unknown>
+  undo?: (
+    revision?: number,
   ) => unknown | Promise<unknown>
 }
 

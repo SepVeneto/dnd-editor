@@ -1,4 +1,6 @@
 export * from './class'
+export * from './capability'
+export * from './dsl'
 export * from './helper'
 export * from './internal'
 export * from './tokens'

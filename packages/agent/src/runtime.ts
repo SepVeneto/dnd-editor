@@ -4,9 +4,8 @@ import type {
   RunItemStreamEvent,
   RunStreamEvent,
 } from '@openai/agents'
-import type { AgentToolDefinition } from './tool'
+import type { AgentSubAgent } from './agents'
 import type {
-  AgentHostApi,
   ChatMessage,
   ChatMode,
   FilePart,
@@ -27,7 +26,6 @@ import {
   DEFAULT_AGENT_BFF_URL,
   DEFAULT_AGENT_MODEL,
 } from './agents'
-import { createEditorAgentContext } from './editorContext'
 import {
   buildAgentUserContent,
   formatAgentDocumentContext,
@@ -43,8 +41,7 @@ export interface AgentRuntimeConfig {
 }
 
 export interface AgentRuntimeOptions extends Partial<AgentRuntimeConfig> {
-  api?: AgentHostApi
-  tools?: AgentToolDefinition[]
+  subAgents?: AgentSubAgent[]
   getContext?: () => Record<string, unknown>
 }
 
@@ -251,9 +248,7 @@ export function createAgentRuntime(
   }
   const { agent, agents } = createAgents({
     model: config.model,
-    api: options.api ?? {},
-    tools: options.tools,
-    getContext: options.getContext,
+    subAgents: options.subAgents,
   })
   const agentRegistry = new Map<string, Agent<any, any>>(
     agents.map(item => [item.name, item]),
@@ -391,12 +386,14 @@ export function createAgentRuntime(
     if (signal.aborted)
       return
 
+    const runContext = { ...(options.getContext?.() ?? {}) }
     const activeAgent = agentRegistry.get(runtime.activeAgentName) ?? agent
-    const runContext = createEditorAgentContext(options.getContext?.())
-    const hasImage = attachments.some(isAgentImageFilePart)
+    const hasImage = (
+      attachments.some(isAgentImageFilePart)
       || history.some(message => message.parts.some(
         part => part.type === 'file' && isAgentImageFilePart(part),
       ))
+    )
     // Aliyun's visual-understanding guide documents images through the
     // OpenAI-compatible Chat Completions endpoint. Text-only Qwen runs keep
     // the host's configured API mode.
@@ -408,9 +405,11 @@ export function createAgentRuntime(
         .filter(isAgentImageFilePart)
         .map(resolveImageData),
     )
+    const turnContent = buildAgentUserContent(prompt, imageDataUrls)
+    const turnInput: AgentInputItem[] = [user(turnContent)]
     const stream = await getRunner(runApiMode).run(
       activeAgent,
-      [user(buildAgentUserContent(prompt, imageDataUrls))],
+      turnInput,
       {
         stream: true,
         session: runtime.session,

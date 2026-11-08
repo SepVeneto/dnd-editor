@@ -14,7 +14,7 @@
     :widgets="widgets"
     agent
     :agent-api="agentApi"
-    :agent-tools="agentTools"
+    :agent-sub-agents="agentSubAgents"
     :extra="{ obj: 'test' }"
     @change="onUpdate"
   />
@@ -22,42 +22,76 @@
 </template>
 
 <script setup lang="ts">
-import type { AgentToolDefinition } from '@sepveneto/dnde-agent'
+import type {
+  AgentHostApi,
+  AgentSubAgent,
+} from '@sepveneto/dnde-agent'
 import type { IWidget } from '@sepveneto/dnde-core'
 import type { EditorInstance } from '@/main'
-import { defineAgentTool } from '@sepveneto/dnde-agent'
+import {
+  Agent,
+  createEditorDslTools,
+  tool,
+} from '@sepveneto/dnde-agent'
 import { schema, widget } from '@sepveneto/dnde-core/helper'
 // import { register } from '../dist/editor.js'
 import { onMounted, ref, useTemplateRef, watchEffect } from 'vue'
-import z from 'zod'
 import { register } from '@/main'
 
 /**
  * 业务侧（playground）：
- * 宿主只提供编辑器 API 配置与业务工具，Agent Runtime 由 <dnd-agent> 自带。
+ * 宿主提供编辑器 API、业务工具和可选的业务子 Agent；主 Agent Runtime 由 <dnd-agent> 提供。
  */
 
 /** 查询指定场景的业务数据，供编辑流程补全组件内容。 */
-const queryScenario = defineAgentTool({
+const queryScenario = tool({
   name: 'query_scenario',
   description: '查询指定场景的业务数据，用于编辑时补全组件内容。',
-  inputSchema: z.object({ name: z.string() }),
-  async execute(input: { name: string }) {
+  parameters: {
+    type: 'object',
+    properties: {
+      name: { type: 'string' },
+    },
+    required: ['name'],
+    additionalProperties: false,
+  },
+  strict: false,
+  async execute(input) {
+    const { name } = input as { name: string }
     const res = await fetch('http://localhost:4000/v1/business/scenes')
     const resJson = await res.json()
-    return resJson.data.find((each: any) => each.name === input.name) ?? null
+    return resJson.data.find((each: any) => each.name === name) ?? null
   },
 })
 
 /** 查询场景是否已经开通（只读）。 */
-const checkScenario = defineAgentTool({
+const checkScenario = tool({
   name: 'check_scenario',
   description: '查询业务系统中指定场景的开通状态，只查询不修改。',
-  inputSchema: z.object({ scenarios: z.array(z.object({ name: z.string() })) }),
-  async execute(input: { scenarios: Array<{ name: string }> }) {
+  parameters: {
+    type: 'object',
+    properties: {
+      scenarios: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            name: { type: 'string' },
+          },
+          required: ['name'],
+          additionalProperties: false,
+        },
+      },
+    },
+    required: ['scenarios'],
+    additionalProperties: false,
+  },
+  strict: false,
+  async execute(input) {
+    const { scenarios } = input as { scenarios: Array<{ name: string }> }
     const res = await fetch('http://localhost:4000/v1/business/scenes')
     const resJson = await res.json()
-    return input.scenarios.map((item) => {
+    return scenarios.map((item) => {
       const target = resJson.data.find((each: any) => each.name === item.name)
       if (!target)
         throw new Error(`cannot find scene ${item.name}`)
@@ -67,29 +101,78 @@ const checkScenario = defineAgentTool({
 })
 
 /** 开通场景（写操作，需要人工确认）。 */
-const enableScenario = defineAgentTool({
+const enableScenario = tool({
   name: 'enable_scenario',
   description: '开通业务系统中指定的场景。',
-  inputSchema: z.object({ id: z.number(), name: z.string() }),
-  needsApproval: true,
-  approval: {
-    message: (input: { id: number, name: string }) => `场景「${input.name}」未开通，是否需要开通？`,
+  parameters: {
+    type: 'object',
+    properties: {
+      id: { type: 'number' },
+      name: { type: 'string' },
+    },
+    required: ['id', 'name'],
+    additionalProperties: false,
   },
-  async execute(input: { id: number, name: string }) {
+  strict: false,
+  async execute(input) {
+    const { id, name } = input as { id: number, name: string }
+    // eslint-disable-next-line no-alert
+    if (!window.confirm(`场景「${name}」未开通，是否需要开通？`))
+      return { rejected: true }
+
     const res = await fetch('http://localhost:4000/v1/business/scene', { method: 'post' })
     const resJson = await res.json()
     if (resJson.code !== 0)
-      throw new Error(resJson.message ?? `场景 ${input.name} 开通失败`)
-    return { id: input.id, name: input.name, enabled: true }
+      throw new Error(resJson.message ?? `场景 ${name} 开通失败`)
+    return { id, name, enabled: true }
   },
 })
 
-const agentTools: AgentToolDefinition<any, any>[] = [
+const agentTools = [
   queryScenario,
   checkScenario,
   enableScenario,
 ]
-const agentApi = {
+
+const refEditor = useTemplateRef<EditorInstance>('editorRef')
+const agentEditorTools = createEditorDslTools({
+  editor: {
+    getCurrentEditor: () => ({
+      page: refEditor.value?.getData(),
+      revision: refEditor.value?.getRevision(),
+    }),
+    getWidgets: () => refEditor.value?.getCapabilities(),
+    validateDsl: (dsl, context) => refEditor.value?.validateDsl(dsl, context) ?? {
+      ok: false,
+      issues: [{
+        code: 'editor_unavailable',
+        path: '',
+        message: '编辑器尚未就绪',
+      }],
+    },
+    applyDsl: (dsl, context) => refEditor.value?.applyDsl(dsl, context),
+    undo: revision => refEditor.value?.undo(revision),
+  },
+})
+
+const pageAgent = new Agent({
+  name: 'Page Agent',
+  handoffDescription: '处理页面编辑、布局和业务数据查询请求。',
+  model: 'qwen3.6-plus',
+  instructions: [
+    '先读取当前编辑器与组件能力目录，再规划修改。',
+    '所有页面修改都通过 apply_editor_dsl 提交完整、版本化的 DSL。',
+    '业务数据只能来自宿主业务工具；完成后直接结束并返回处理结果。',
+  ].join('\n'),
+  tools: [
+    ...agentEditorTools,
+    ...agentTools,
+  ],
+})
+
+const agentSubAgents: AgentSubAgent[] = [pageAgent]
+
+const agentApi: AgentHostApi = {
   model: {
     baseURL: 'http://localhost:4000/v1',
     model: 'qwen3.6-plus',
@@ -108,7 +191,6 @@ watchEffect(() => {
   console.log(config.value)
 })
 
-const refEditor = useTemplateRef<EditorInstance>('editorRef')
 // 元素在 import 时就注册好了：不需要等 register() 完成，也不需要 v-if 去卡渲染时机
 register({
   // ?remote= 用来连到临时起的生产者（默认 8090 可能已被别的进程占用）

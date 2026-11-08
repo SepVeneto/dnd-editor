@@ -12,10 +12,24 @@ export interface WidgetPos {
 
 /** 布局子 Agent 的输出项：选中的组件 + 要放进去的元素 */
 export interface WidgetLayoutItem {
-  widget: string
-  items: Array<{ category: string, id: any }>
+  widget?: string
+  items?: Array<{ category: string, id: any }>
+  componentKey?: string
   changes?: Record<string, any>
 }
+
+export interface WidgetCapabilityExecutionContext {
+  node: Node
+  args: Record<string, unknown>
+  context: Record<string, unknown>
+}
+
+export type WidgetCapabilityAdapter = (
+  input: WidgetCapabilityExecutionContext,
+) =>
+  | void
+  | Record<string, unknown>
+  | Promise<void | Record<string, unknown>>
 
 export interface WidgetAgent {
   /**

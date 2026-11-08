@@ -1,17 +1,20 @@
 # `@sepveneto/dnde-agent`
 
-装修助手以一个独立自定义元素接入编辑器。Agent 实现来自
-`llm-agent`：Agents SDK 负责 Agent Loop、工具调用、流式输出和会话历史；
-本包只保留 Web Component 外壳、宿主 API 协议和业务工具适配。
+`@sepveneto/dnde-agent` 提供 Web Component 外壳和最小 Agent Runtime。运行时本身只有
+一个主 Agent；主 Agent 不持有任何 function tool，只通过 handoff 调度宿主提供的子
+Agent。
+
+本包同时公开版本化的编辑器 DSL，以及给宿主子 Agent 使用的 DSL 工具。具体业务角色、
+业务工具和编辑策略均由宿主定义。
 
 ## 接入
 
-宿主提供编辑器 API、业务工具和运行时上下文：
+宿主提供模型配置、编辑器 DSL API、子 Agent 和运行上下文：
 
 ```vue
 <dnd-agent
   :api="agentApi"
-  :tools="businessTools"
+  :sub-agents="subAgents"
   :context="getContext"
 ></dnd-agent>
 ```
@@ -31,135 +34,186 @@ register({
 })
 ```
 
+编辑器侧通过 `<mpd-editor :agent-sub-agents="subAgents">` 注入子 Agent。
+
+## Runtime 边界
+
+- 运行时只构造固定主 Agent `Diy Copilot`。
+- 主 Agent 的 `tools` 始终为空，只负责分诊和 handoff。
+- 子 Agent 由宿主定义，或直接注入已经构造好的 Agents SDK `Agent`。
+- 子 Agent 负责实际分析、业务查询和页面编辑。
+- 未提供匹配子 Agent 时，主 Agent 会说明当前能力不足，不会自行读取或修改页面。
+
+这种边界可确保业务权限、工具实现和具体编辑策略不进入 Agent Runtime。
+
 ## 宿主 API
 
+编辑器向 Runtime 提供查询、校验和应用 DSL 所需的能力；宿主需要将导出的 DSL 工具
+显式加入具体子 Agent 的 `tools`：
+
 ```ts
-interface AgentHostApi {
-  model?: {
-    baseURL?: string
-    model?: string
-    apiMode?: 'responses' | 'chat_completions'
-  }
-  editor?: {
-    getCurrentEditor: () => unknown | Promise<unknown>
-    getWidgets: () => unknown | Promise<unknown>
-    operateEditor: (operation: AgentEditorOperation) => unknown | Promise<unknown>
-  }
+import type { AgentHostApi } from '@sepveneto/dnde-agent'
+
+const agentApi: AgentHostApi = {
+  model: {
+    baseURL: 'http://localhost:4000/v1',
+    model: 'qwen3.6-plus',
+    apiMode: 'responses',
+  },
+  editor: {
+    getCurrentEditor: () => editor.getAgentEditor(),
+    getWidgets: () => editor.getCapabilities(),
+    validateDsl: dsl => editor.validateDsl(dsl),
+    applyDsl: dsl => editor.applyDsl(dsl),
+    undo: revision => editor.undo(revision),
+  },
 }
 ```
 
-默认带三个基于编辑器 API 的工具：`get_current_editor`、`get_widgets`、
-`editor_operator`。写操作和历史不可逆操作应先取得用户确认。
+`<mpd-editor>` 会自动注入这组编辑器 API，业务宿主通常只需配置 `model`。
 
-### 主 Agent 与配置清单子 Agent
+## 宿主子 Agent
 
-主 Agent 负责分诊请求，并直接处理简单、局部的页面编辑命令。用户提供装修清单、
-需求文档、编号或分项列表、整页方案，或要求一次实现多个组件及内容配置时，主 Agent
-会通过 `handle_configuration_checklist` 移交给配置清单子 Agent：
-
-- **简单命令**：新增单个组件，或编辑、删除、移动一个目标明确的节点、局部配置或样式，
-  由主 Agent 直接完成；
-- **配置清单**：解析清单中的页面结构、多个组件和内容要求，由子 Agent 统一规划、查询
-  业务数据并通过 `editor_operator` 完成配置。
-
-页面已有内容、但请求又像是一份完整清单时，Agent 会先向用户确认是否覆盖，
-不会自行清空页面。用户明确要求保留现有内容时，子 Agent 会按清单逐项增量配置。
-清单完成、取消或用户切换回简单命令时，子 Agent 会通过
-`finish_configuration_checklist` 交还控制权。两种路径共用组件查询、业务工具和
-`editor_operator`，不会形成独立的初始化写入通道。
-
-### 图片参考
-
-输入框支持多选和分批追加附件，包括 `.docx` 文档以及 JPG、PNG、WebP、BMP、
-TIFF、HEIC 图片；一次最多 6 个附件、总计不超过 20 MB。例如可以同时上传一份
-装修文档和一张参考图。文档会逐个转换为文本上下文，所有图片会作为多模态内容
-一起发送。图片上传后显示缩略图，Agent 会按以下顺序执行：
-
-1. 解析图片的布局、层级、间距、比例、配色和组件关系，确定需要的组件角色及数量；
-2. 查询可用组件，结合组件功能描述和清单配置需求，先规划每个组件承载的内容；
-3. 整页组件和内容计划完成后，再查询业务数据、准备填充内容并调用 `editor_operator`。
-
-图片、文档等参考附件可以辅助布局，包括层级、间距、比例、配色和组件关系。
-模型不参与数据选择、直填或拼装，只负责根据意图调用宿主工具。本项目的
-`query_internal_routes` 是内部路由意图工具：模型只传入页面名称、路由名称或
-路径关键词，宿主匹配 `entry.dialog` 的 `H5Entry` 静态路由，将结果写入
-`context.internalRoutes`，并把匹配路由准备到 `context.pendingItems`。
-`editor_operator` 后续自动注入宿主机准备好的数据，模型不得改写、推断或自行
-生成路由及其它填充数据。应用名称、卡券品牌、会员直充分类、落地页、商品、
-价格等接口动态内容不能从参考附件中提取或作为候选，只能根据用户当前请求中的
-需求清单并通过宿主业务工具获取或准备。所有填充内容都必须来自需求清单或宿主
-工具写入的 Context；清单中没有提供的内容不能从参考附件、模型推测或既有经验
-中补全，缺少必要内容时应先询问用户。参考附件中出现品牌信息不构成指定或授权。
-数据准备边界不影响编辑器 DSL 工具的正常调用：模型仍必须调用
-`get_current_editor` 读取页面、调用 `get_widgets` 查询组件，并通过
-`editor_operator` 添加、编辑、删除或移动节点。意图工具和业务工具只负责准备
-数据，不能替代编辑器 DSL 操作。
-`editor_operator` 的 add 操作只注入宿主工具写入 `pendingItems` 的数据。模型
-不可提交 `changes`：名称、跳转类型、分类等纯静态配置也不能通过 changes
-填充。静态配置白名单和路由查询只用于判断当前任务是否需要参考附件，不作为
-页面填充值来源。宿主内部的 changes 仍会经过组件 `agent.update`，不会由 DSL
-直接合并到节点数据。
-
-本地图片遵循千问 OpenAI 兼容接口的多模态格式：BFF 将图片转换为
-`data:image/<type>;base64,...`，与文本一起放入同一条用户消息。会话历史保存
-图片引用而不是 Base64，避免撑满浏览器 `localStorage`。例如把 `qwen3.6-plus`
-作为模型时，可以直接使用“参考这张图的布局设计首页”这类指令。包含图片的
-Qwen 对话会使用官方文档中的 Chat Completions 兼容格式；纯文本对话继续遵循
-宿主配置的 API 模式。
-
-图片输入格式参考千问官方文档：
-<https://help.aliyun.com/zh/model-studio/vision>。
-
-### 添加组件时的业务数据
-
-`items` 通常是由业务 ID 查询并组装的复杂数据，不能交给模型生成。业务工具
-应把组装结果写入当前 Agent Run 的 Context，`editor_operator` 会在 `add`
-时自动注入，并在操作成功后一次性消费：
+宿主直接使用 OpenAI Agents SDK 创建子 Agent，并将 `Agent[]` 传给编辑器：
 
 ```ts
-const queryProduct = defineAgentTool({
+import {
+  Agent,
+  createEditorDslTools,
+  type AgentSubAgent,
+} from '@sepveneto/dnde-agent'
+
+const editorTools = createEditorDslTools(agentApi)
+
+const pageAgent = new Agent({
+  name: 'Page Agent',
+  handoffDescription: '处理页面布局、组件编辑和业务数据查询。',
+  model: 'qwen3.6-plus',
+  instructions: [
+    '先调用 get_current_editor 和 get_widgets。',
+    '页面修改必须通过 apply_editor_dsl 提交完整、版本化的 DSL。',
+    '完成后直接结束并返回处理结果。',
+  ].join('\n'),
+  tools: [
+    ...editorTools,
+    queryProduct,
+    queryCoupon,
+  ],
+})
+
+const subAgents: AgentSubAgent[] = [pageAgent]
+```
+
+`Agent` 会原样成为主 Agent 的 handoff 值，模型、工具、结构化输出等配置都由宿主
+决定。运行时不会重复创建 Agent、包装 handoff 或适配普通工具定义，也不会修改子
+Agent 的 `handoffs`。
+
+只读子 Agent 不添加 `editorTools` 即可，不会自动获得文档修改能力。结构化输出等其它
+SDK 能力直接在创建 Agent 时配置 `outputType`。
+
+## 编辑器 DSL
+
+Agent 不提供节点级增删改工具，而是将完整 DSL 作为一个受校验、可批量执行的操作批次：
+
+```ts
+interface EditorDsl {
+  dslVersion: '1.1'
+  baseRevision: number
+  scope: {
+    mode: 'style_only' | 'content_only' | 'layout_only' | 'any'
+    targets: string[]
+  }
+  operations: Array<
+    | {
+        op: 'add'
+        key: string
+        widget: string
+        placement?: {
+          afterUuid?: string
+          beforeUuid?: string
+          afterKey?: string
+          beforeKey?: string
+          group?: string
+        }
+        props?: Record<string, unknown>
+        style?: Record<string, unknown>
+        custom?: DslCustomOperation[]
+      }
+    | {
+        op: 'update'
+        uuid: string
+        props?: Record<string, unknown>
+        style?: Record<string, unknown>
+        custom?: DslCustomOperation[]
+      }
+    | {
+        op: 'delete'
+        uuid: string
+        confirmToken?: string
+      }
+  >
+}
+```
+
+`baseRevision` 必须来自 `get_current_editor`。宿主在应用前校验 revision、组件能力、
+字段作用域和删除确认令牌；整批操作由编辑器原子执行。
+
+### 公开 DSL 工具
+
+`createEditorDslTools(api)` 是可选导出，不会由 Runtime 自动注册。将返回值展开到某个
+子 Agent 自己的 `tools` 中后，该子 Agent 才会获得以下工具：
+
+| 工具 | 作用 |
+| --- | --- |
+| `get_current_editor` | 读取文档、选中节点和 revision |
+| `get_widgets` | 读取组件能力目录 |
+| `validate_editor_dsl` | 校验 DSL，不修改文档 |
+| `apply_editor_dsl` | 校验后一次性应用 DSL |
+| `undo_editor_dsl` | 按 revision 撤销最近一次 DSL 操作 |
+
+也可以通过 `CreateEditorDslToolsOptions` 只注册需要的工具。不需要编辑器能力时，
+直接省略 `createEditorDslTools(api)`。
+
+所有 DSL 类型，包括 `EditorDsl`、`DslOperation`、`DslValidationResult`，均从
+`@sepveneto/dnde-agent` 导出。
+
+## 业务工具
+
+业务工具属于宿主，由宿主挂到具体子 Agent 上。工具可以把需要跨工具共享的数据写入
+当前 Run 的 Context：
+
+```ts
+import { tool } from '@sepveneto/dnde-agent'
+
+const queryProduct = tool({
   name: 'query_product',
   description: '查询商品并准备添加到编辑器。',
-  parameters: z.object({ keyword: z.string() }),
-  async execute({ keyword }, toolContext) {
+  parameters: {
+    type: 'object',
+    properties: {
+      keyword: { type: 'string' },
+    },
+    required: ['keyword'],
+    additionalProperties: false,
+  },
+  strict: false,
+  async execute(input, runContext) {
+    const { keyword } = input as { keyword: string }
     const product = await api.product.search(keyword)
-    const items = await api.product.buildEditorItems([product.id])
-
-    // 只返回模型需要做决策的轻量信息。
-    toolContext.context.pendingItems = items
+    runContext.context.product = product
     return { id: product.id, name: product.name }
   },
 })
 ```
 
-模型随后只调用
-`editor_operator({ action: 'add', widget: 'product', target: '页面节点 UUID' })`。
-工具参数不包含 `items`；即使模型额外传入也会被移除。每次 Agent Run 都会
-创建独立的 Context，失败时保留待添加数据以支持同一轮重试，成功后清空。
-同一轮模型回复中的 function tools 会按调用顺序串行执行，保证前序工具写入的
-Context 在后续工具（例如 `editor_operator`）执行时已经可见。
+宿主初始 Context 会复制到当前 Run。模型请求走宿主代理或 BFF，浏览器侧不保存真实
+密钥。
 
-## 业务工具
+## 附件与会话
 
-```ts
-import { defineAgentTool } from '@sepveneto/dnde-agent'
-import { z } from 'zod'
+输入框支持多选附件，包括 `.docx`、JPG、PNG、WebP、BMP、TIFF 和 HEIC；一次最多
+6 个附件、总计不超过 20 MB。文档会转换为文本上下文，图片以千问 OpenAI 兼容的多模态
+格式发送。会话历史保存图片引用而不是 Base64。
 
-const queryOrder = defineAgentTool({
-  name: 'query_order',
-  description: '查询订单状态',
-  parameters: z.object({ id: z.string() }),
-  async execute({ id }, context) {
-    return fetch(`/api/orders/${id}`).then(response => response.json())
-  },
-})
-```
-
-工具的 `execute` 在浏览器内运行，并可读取宿主通过 `context` 注入的只读上下文。
-模型请求走兼容 OpenAI 的宿主代理/BFF，浏览器侧不保存真实密钥。
-
-## UI
-
-UI 保留原装修助手的悬浮按钮交互。展开后使用 `llm-agent` 的聊天视图：
-空状态示例、图片/文档附件、Markdown、reasoning、工具调用、数据事件、流式文本、停止生成和历史记录，
-全部位于 `dnd-agent` 的 Shadow DOM 内。
+聊天 UI、流式输出、reasoning、工具调用、停止生成和历史记录全部位于
+`<dnd-agent>` 的 Shadow DOM 内。

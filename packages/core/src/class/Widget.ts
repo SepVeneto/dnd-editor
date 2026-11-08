@@ -3,6 +3,9 @@ import type {
   CheckboxProps,
   ColorPickerProps,
   DatePickerProps,
+  ElOption,
+  ElRadio,
+  ElRadioButton,
   FormItemProps,
   FormItemRule,
   InputNumberProps,
@@ -12,10 +15,8 @@ import type {
   SelectOptionProps,
   SelectProps,
   SwitchProps,
-  ElOption,
-  ElRadio,
-  ElRadioButton,
 } from 'element-plus'
+import type { FieldScope } from '@/capability'
 import type { IWidget } from '@/types'
 import Validator from 'async-validator'
 
@@ -28,6 +29,10 @@ interface SchemaItemBase {
   _role?: string
   label: string
   key: string
+  /** Capability range used by DSL scope validation. */
+  scope?: FieldScope
+  /** A field may be discovered but not written by the configuration Agent. */
+  readOnly?: boolean
   formItem?: Partial<FormItemProps>
   rules?: FormItemRule | FormItemRule[]
 }

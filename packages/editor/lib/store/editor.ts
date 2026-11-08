@@ -1,15 +1,27 @@
-import type { IWidget } from '@sepveneto/dnde-core'
+import type {
+  CapabilityCatalog,
+  DslCustomOperation,
+  IWidget,
+  WidgetCapabilityAdapter,
+  WidgetCapabilityRegistry,
+} from '@sepveneto/dnde-core'
 import type { SchemaItem } from '@sepveneto/dnde-core/class'
 import type { Rule } from 'async-validator'
 import type { Raw } from 'vue'
 import type { HelperAction } from '@/type'
-import { widget } from '@sepveneto/dnde-core'
+import {
+  createCapabilityCatalog,
+  validateEditorDsl,
+  widget,
+} from '@sepveneto/dnde-core'
 import { Node, Widget } from '@sepveneto/dnde-core/class'
 import Validator from 'async-validator'
 import { defineStore } from 'pinia'
 import { computed, customRef, ref, shallowRef, watchEffect } from 'vue'
 import { createDebug, removePopper } from '@/utils'
 import { useApp } from './app'
+import { toReactiveNode } from './reactiveNode'
+import { applyWidgetAgentUpdate } from './widgetAgent'
 
 const debug = createDebug('store/editor')
 
@@ -70,7 +82,7 @@ class WidgetPlugin {
 export const CONFIG_PANEL_SHOW_KEY = 'isShow'
 
 export interface ConfigPluginContext {
-  addNode: (node: Node, pNode?: Node, manual?: boolean) => void
+  addNode: (node: Node, pNode?: Node, manual?: boolean) => Node
   rootNode: () => Node
 }
 export interface ConfigPanelOptions {
@@ -137,10 +149,10 @@ class ConfigPlugin {
       style: JSON.parse(JSON.stringify(instance.defaultStyle ?? {})),
     })
     // 注册进 nodeMap 以便通过 wid 定位/选中，但不进入页面拖拽列表（manual = false）
-    this.ctx.addNode(node, root, false)
+    const registeredNode = this.ctx.addNode(node, root, false)
 
-    this.list.push(node)
-    return node
+    this.list.push(registeredNode)
+    return registeredNode
   }
 
   /**
@@ -217,6 +229,13 @@ export const useEditor = defineStore('editor', () => {
   const selected = ref<string>(rootNode.value.wid)
   /** 当前配置标签，固定组件预览的选中态也跟随它。 */
   const activeConfigPane = ref<string>('props')
+  const revision = ref(0)
+  const undoStack: Array<{ data: Record<string, any>, revision: number }> = []
+  let lastDocumentFingerprint = ''
+  const capabilityRegistry = shallowRef<WidgetCapabilityRegistry>({})
+  const capabilityAdapters = shallowRef<
+    Record<string, Record<string, Record<string, WidgetCapabilityAdapter>>>
+  >({})
 
   const showTopbar = computed(() => {
     const topbar = rootNode.value.widget._data.schema?.props?.find((item) => {
@@ -271,10 +290,14 @@ export const useEditor = defineStore('editor', () => {
   }
 
   function addNode(node: Node, pNode: Node = rootNode.value as Node, manual = false) {
-    node.level = pNode.level + 1
-    nodeMap.set(node.wid, node)
-    node.parent = pNode
-    manual && pNode.list.push(node)
+    // addNode 的返回值会被业务侧直接修改（例如 Agent 创建金刚区后写 node.data），
+    // 必须返回和文档树同一份响应式代理；返回原始 Node 会绕过 Vue 的依赖追踪。
+    const registeredNode = toReactiveNode(node)
+    registeredNode.level = pNode.level + 1
+    registeredNode.parent = pNode
+    manual && pNode.list.push(registeredNode)
+    nodeMap.set(registeredNode.wid, registeredNode)
+    return registeredNode
   }
   /** 递归注销节点及其子树，避免被删除的节点残留在 nodeMap 中造成泄漏 */
   function unregister(node: Node) {
@@ -314,6 +337,276 @@ export const useEditor = defineStore('editor', () => {
     return rootNode.value.parse()
   }
 
+  function documentFingerprint() {
+    return JSON.stringify(getData())
+  }
+
+  function syncDocumentFingerprint() {
+    lastDocumentFingerprint = documentFingerprint()
+  }
+
+  /** Called by the deep document watcher for manual/canvas edits. */
+  function noteDocumentChange() {
+    const fingerprint = documentFingerprint()
+    if (fingerprint === lastDocumentFingerprint)
+      return
+    lastDocumentFingerprint = fingerprint
+    revision.value += 1
+  }
+
+  function getAgentCapabilities(): CapabilityCatalog {
+    return createCapabilityCatalog(
+      app.widgetsFlat.map(item => item._data),
+      capabilityRegistry.value,
+    )
+  }
+
+  function setCapabilityRegistry(input: {
+    definitions?: WidgetCapabilityRegistry
+    adapters?: Record<string, Record<string, Record<string, WidgetCapabilityAdapter>>>
+  }) {
+    capabilityRegistry.value = input.definitions ?? {}
+    capabilityAdapters.value = input.adapters ?? {}
+  }
+
+  function getAgentSnapshot() {
+    const nodes = [...nodeMap.values()].map(node => ({
+      uuid: node.wid,
+      type: node.type,
+      parentUuid: node.parent?.wid,
+    }))
+    return {
+      revision: revision.value,
+      nodes,
+    }
+  }
+
+  function getAgentEditor() {
+    return {
+      page: rootNode.value.parse(),
+      selected: selected.value,
+      revision: revision.value,
+    }
+  }
+
+  function validateAgentDsl(dsl: unknown, context: Record<string, any> = {}) {
+    return validateEditorDsl(dsl, {
+      catalog: getAgentCapabilities(),
+      snapshot: getAgentSnapshot(),
+    })
+  }
+
+  function setPath(target: Record<string, any>, path: string, value: unknown) {
+    const parts = path.split('.')
+    let current = target
+    for (let index = 0; index < parts.length - 1; index++) {
+      const key = parts[index]
+      if (!current[key] || typeof current[key] !== 'object')
+        current[key] = {}
+      current = current[key]
+    }
+    current[parts.at(-1)!] = value
+  }
+
+  function applyNodeProps(node: Node, props: Record<string, unknown>) {
+    for (const [key, value] of Object.entries(props))
+      setPath(node.data, key, value)
+  }
+
+  function applyNodeStyle(node: Node, style: Record<string, unknown>) {
+    Object.assign(node.style, style)
+  }
+
+  async function applyNodeCapabilities(
+    node: Node,
+    custom: DslCustomOperation[] | undefined,
+    context: Record<string, any>,
+    ignoreUnsupported = false,
+  ) {
+    if (!Array.isArray(custom))
+      return
+
+    for (const operation of custom) {
+      const adapter = capabilityAdapters.value[node.widget.view]?.[operation.type]?.[operation.capability]
+      if (!adapter) {
+        if (ignoreUnsupported)
+          continue
+        throw new Error(`组件 ${node.type} 缺少能力适配器 ${operation.type}.${operation.capability}`)
+      }
+      const patch = await adapter({
+        node,
+        args: operation.args,
+        context,
+      })
+      if (patch && typeof patch === 'object') {
+        applyNodeProps(node, patch as Record<string, unknown>)
+      }
+    }
+  }
+
+  async function addAgentNode(
+    input: unknown,
+    context: Record<string, any> = {},
+  ) {
+    const operation = input as Record<string, any>
+    const before = JSON.parse(JSON.stringify(getData()))
+    const beforeRevision = revision.value
+    const widgetType = typeof operation.widget === 'string' ? operation.widget : ''
+
+    try {
+      if (!widgetType)
+        throw new Error('添加组件必须提供 widget')
+      const definition = app.widgetMap.get(widgetType)
+      if (!definition)
+        throw new Error(`找不到组件 ${widgetType}`)
+
+      let node = new Node(definition as Widget, {
+        props: JSON.parse(JSON.stringify(definition.defaultData ?? {})),
+        style: JSON.parse(JSON.stringify(definition.defaultStyle ?? {})),
+      })
+      applyNodeProps(node, operation.props ?? {})
+      applyNodeStyle(node, operation.style ?? {})
+      node = addNode(node, rootNode.value as Node, true)
+      await applyNodeCapabilities(node, operation.custom, context)
+      await applyWidgetAgentUpdate(node, operation.props ?? {}, context)
+
+      undoStack.push({ data: before, revision: beforeRevision })
+      revision.value += 1
+      syncDocumentFingerprint()
+      return {
+        ok: true,
+        revision: revision.value,
+        node,
+        nodeId: node.wid,
+        nodeType: node.type,
+      }
+    }
+    catch (error) {
+      setData(before, false)
+      revision.value = beforeRevision
+      return {
+        ok: false,
+        revision: revision.value,
+        error: error instanceof Error ? error.message : String(error),
+      }
+    }
+  }
+
+  async function applyAgentDsl(
+    input: unknown,
+    context: Record<string, any> = {},
+  ) {
+    const validation = validateAgentDsl(input, context)
+    if (!validation.ok || !validation.normalized) {
+      return {
+        ok: false,
+        revision: revision.value,
+        issues: validation.issues,
+      }
+    }
+
+    const dsl = validation.normalized
+    const before = JSON.parse(JSON.stringify(getData()))
+    const beforeRevision = revision.value
+    const keyMap = new Map<string, Node>()
+    const affected: string[] = []
+
+    try {
+      for (const operation of dsl.operations) {
+        if (operation.op === 'add') {
+          const definition = app.widgetMap.get(operation.widget)
+          if (!definition)
+            throw new Error(`找不到组件 ${operation.widget}`)
+
+          let node = new Node(definition as Widget, {
+            props: JSON.parse(JSON.stringify(definition.defaultData ?? {})),
+            style: JSON.parse(JSON.stringify(definition.defaultStyle ?? {})),
+          })
+          applyNodeProps(node, operation.props ?? {})
+          applyNodeStyle(node, operation.style ?? {})
+          node = addNode(node, rootNode.value as Node, true)
+
+          const placement = operation.placement ?? {}
+          const referenceKey = placement.afterKey ?? placement.beforeKey
+          const reference = referenceKey ? keyMap.get(referenceKey) : undefined
+          if (reference) {
+            const currentIndex = rootNode.value.list.indexOf(node)
+            if (currentIndex >= 0)
+              rootNode.value.list.splice(currentIndex, 1)
+            const referenceIndex = rootNode.value.list.indexOf(reference)
+            const insertAt = placement.beforeKey
+              ? referenceIndex
+              : referenceIndex + 1
+            rootNode.value.list.splice(insertAt, 0, node)
+          }
+
+          await applyNodeCapabilities(node, operation.custom, context)
+          await applyWidgetAgentUpdate(node, operation.props ?? {}, context)
+          keyMap.set(operation.key, node)
+          affected.push(node.wid)
+          continue
+        }
+
+        const node = nodeMap.get(operation.uuid)
+        if (!node)
+          throw new Error(`找不到节点 ${operation.uuid}`)
+
+        if (operation.op === 'delete') {
+          delNode(node.wid)
+          affected.push(operation.uuid)
+          continue
+        }
+
+        applyNodeProps(node, operation.props ?? {})
+        applyNodeStyle(node, operation.style ?? {})
+        await applyNodeCapabilities(node, operation.custom, context)
+        await applyWidgetAgentUpdate(node, operation.props ?? {}, context)
+        affected.push(node.wid)
+      }
+
+      undoStack.push({ data: before, revision: beforeRevision })
+      revision.value += 1
+      syncDocumentFingerprint()
+      return {
+        ok: true,
+        revision: revision.value,
+        affected,
+        operationCount: dsl.operations.length,
+      }
+    }
+    catch (error) {
+      setData(before, false)
+      revision.value = beforeRevision
+      return {
+        ok: false,
+        revision: revision.value,
+        issues: [{
+          code: 'execution_failed',
+          path: 'operations',
+          message: error instanceof Error ? error.message : String(error),
+        }],
+      }
+    }
+  }
+
+  function undoAgentDsl(expectedRevision?: number) {
+    const previous = undoStack.at(-1)
+    if (!previous)
+      return { ok: false, error: '没有可撤销的 Agent 操作' }
+    if (expectedRevision !== undefined && expectedRevision !== revision.value) {
+      return {
+        ok: false,
+        error: `撤销基于 revision ${expectedRevision}，当前为 ${revision.value}`,
+      }
+    }
+
+    undoStack.pop()
+    const targetRevision = previous.revision
+    setData(previous.data, false)
+    revision.value = targetRevision
+    return { ok: true, revision: targetRevision }
+  }
+
   function createNodes(data: any[], parent = rootNode.value) {
     data.forEach((item) => {
       const widget = app.widgetMap.get(item._view) as Widget
@@ -327,8 +620,7 @@ export const useEditor = defineStore('editor', () => {
         style,
         list: [],
       }
-      const node = new Node(widget, info)
-      addNode(node, parent, true)
+      const node = addNode(new Node(widget, info), parent, true)
       if (list && list.length > 0) {
         createNodes(list, node)
       }
@@ -341,10 +633,12 @@ export const useEditor = defineStore('editor', () => {
     plugins.config.bindRoot(rootNode.value as Node)
     selected.value = node.wid
     activeConfigPane.value = 'props'
-    nodeMap.set(node.wid, node)
+    // ref 会把新根节点转换为响应式代理；nodeMap 也必须保存同一代理，
+    // 否则 selectedNode / 配置面板读取不到后续变更。
+    nodeMap.set(node.wid, rootNode.value as Node)
   }
 
-  function setData(data: any) {
+  function setData(data: any, clearUndo = true) {
     const widget = app.widgetMap.get(data._view) as Widget || defaultPage
 
     const { _uuid, style, list = [], data: props } = data
@@ -357,6 +651,10 @@ export const useEditor = defineStore('editor', () => {
     setRoot(new Node(widget, info))
 
     createNodes(list)
+    if (clearUndo)
+      undoStack.length = 0
+    revision.value += 1
+    syncDocumentFingerprint()
   }
 
   function setSchema(schema: IWidget['schema']) {
@@ -386,6 +684,16 @@ export const useEditor = defineStore('editor', () => {
     showTopbar,
 
     getData,
+    getAgentCapabilities,
+    setCapabilityRegistry,
+    getAgentSnapshot,
+    getAgentEditor,
+    validateAgentDsl,
+    addAgentNode,
+    applyAgentDsl,
+    undoAgentDsl,
+    noteDocumentChange,
+    revision,
     setData,
     setSchema,
   }

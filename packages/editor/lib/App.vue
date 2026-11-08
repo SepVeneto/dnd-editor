@@ -101,15 +101,15 @@
     <dnd-agent
       v-if="agentReady"
       :api="agentApi"
-      :tools="agentTools"
+      :sub-agents="agentSubAgents"
       :context="runtimeContext"
     />
   </ElConfigProvider>
 </template>
 
 <script lang="ts" setup>
+import type { Node } from '@sepveneto/dnde-core/class'
 import { editorContextKey, EventEmitter } from '@sepveneto/dnde-core'
-import { Node } from '@sepveneto/dnde-core/class'
 import { ElConfigProvider, ElScrollbar } from 'element-plus'
 // @ts-expect-error: no def
 import zhCn from 'element-plus/dist/locale/zh-cn.mjs'
@@ -123,14 +123,13 @@ import ConfigPanel from './layout/configPanel.vue'
 import TreePanel from './layout/treePanel.vue'
 import WidgetsMenu from './layout/widgetsMenu.vue'
 import { editorProps } from './props'
-import { useApp, useEditor } from './store'
+import { useEditor } from './store'
 import { EditorKey, loadFromRemote, normalizeStyle } from './utils'
 
 const props = defineProps(editorProps)
 
 const editorNamespace = 'mpd'
 const editor = useEditor()
-const app = useApp()
 const inst = getCurrentInstance()
 const bus = new EventEmitter((event: string, ...args: any) => {
   inst?.parent?.emit(event, ...args)
@@ -148,7 +147,7 @@ provide(EditorKey, {
 // 命令式弹层（如 basic-comp 的 createDialog）只继承 app 级别的 provide，
 // 其 Element Plus 配置在 main.ts 安装插件时与默认配置一次性写入，避免重复 provide。
 
-const agentTools = computed(() => props.agentTools ?? [])
+const agentSubAgents = computed(() => props.agentSubAgents ?? [])
 
 const agentApi = computed(() => {
   const hostApi = props.agentApi ?? {}
@@ -160,7 +159,11 @@ const agentApi = computed(() => {
     editor: {
       getCurrentEditor: snapshotEditor,
       getWidgets: listAgentWidgets,
-      operateEditor,
+      getCapabilities: editor.getAgentCapabilities,
+      getRevision: () => editor.revision,
+      validateDsl: editor.validateAgentDsl,
+      applyDsl: editor.applyAgentDsl,
+      undo: editor.undoAgentDsl,
       ...(hostApi.editor ?? {}),
     },
   }
@@ -200,106 +203,12 @@ function snapshotEditor() {
   return {
     page: serializeAgentNode(editor.rootNode),
     selected: editor.selected,
+    revision: editor.revision,
   }
 }
 
 function listAgentWidgets() {
-  return app.widgetsFlat.map((item) => {
-    const schema = item._data.schema ?? {}
-    return {
-      typeId: item.view,
-      name: item.name,
-      description: item.agent?.description ?? item.agent?.layout?.description ?? '',
-      defaultData: item.defaultData,
-      defaultStyle: item.defaultStyle,
-      // 自定义配置项没有通用的数据结构，Agent 无法可靠地填写。
-      propsSchema: (schema.props ?? []).filter(item => item.type !== 'custom'),
-      styleSchema: schema.style ?? [],
-    }
-  })
-}
-
-function requireAgentNode(id: string | undefined) {
-  const node = id ? editor.nodeMap.get(id) : undefined
-  if (!node)
-    throw new Error(`找不到节点 ${id ?? ''}`)
-  return node
-}
-
-function operateEditor(
-  operation: Record<string, any>,
-  context: Record<string, any> = {},
-) {
-  if (operation.action === 'add') {
-    const widget = app.widgetMap.get(operation.widget)
-    if (!widget)
-      throw new Error(`找不到组件 ${operation.widget ?? ''}`)
-
-    // Layout is flat: agent-created widgets always go under the page root.
-    const parent = editor.rootNode
-    // eslint-disable-next-line ts/ban-ts-comment
-    // @ts-ignore
-    const node = new Node(widget, JSON.parse(JSON.stringify({
-      props: widget.defaultData,
-      style: widget.defaultStyle,
-    })))
-    widget.agent?.update?.(node, {
-      widget: operation.widget,
-      items: operation.items ?? [],
-      changes: operation.changes ?? {},
-    }, context)
-    if (operation.style)
-      Object.assign(node.style, operation.style)
-    editor.addNode(node, parent, true)
-    editor.selectNode(node.wid)
-    return { ok: true, node: serializeAgentNode(node) }
-  }
-
-  const node = requireAgentNode(operation.target)
-
-  if (operation.action === 'edit') {
-    if (operation.changes)
-      node.widget.agent?.update?.(node, {
-        widget: node.widget.view,
-        items: [],
-        changes: operation.changes,
-      }, context)
-    if (operation.style)
-      Object.assign(node.style, operation.style)
-    return { ok: true, node: serializeAgentNode(node) }
-  }
-
-  if (operation.action === 'delete') {
-    editor.delNode(node.wid)
-    return { ok: true, node: { id: node.wid } }
-  }
-
-  if (operation.action === 'move') {
-    const parent = node.parent
-    if (!parent)
-      throw new Error('页面根节点不能移动')
-
-    const index = parent.list.findIndex(item => item.wid === node.wid)
-    if (index < 0)
-      throw new Error(`节点 ${node.wid} 不在父节点中`)
-    parent.list.splice(index, 1)
-
-    const before = operation.before
-      ? parent.list.findIndex(item => item.wid === operation.before)
-      : -1
-    const after = operation.after
-      ? parent.list.findIndex(item => item.wid === operation.after)
-      : -1
-    const insertAt = before >= 0
-      ? before
-      : after >= 0
-        ? after + 1
-        : parent.list.length
-    parent.list.splice(insertAt, 0, node)
-    return { ok: true, node: serializeAgentNode(node) }
-  }
-
-  throw new Error(`不支持的编辑器操作 ${operation.action}`)
+  return editor.getAgentCapabilities()
 }
 
 // 编辑器卸载时清掉生产者经模块联邦加载的模块缓存，下次挂载重新导入，拿到最新的组件代码。

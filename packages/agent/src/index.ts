@@ -12,7 +12,14 @@ export function createAgentElement(): VueElementConstructor {
   return defineCustomElement(MpdAgent)
 }
 
-export type { CreateAgentsOptions } from './agents'
+export {
+  MAIN_AGENT_NAME,
+} from './agentInstructions'
+export type { MainAgentInfo } from './agentInstructions'
+export type {
+  AgentSubAgent,
+  CreateAgentsOptions,
+} from './agents'
 
 export {
   createAgents,
@@ -20,16 +27,17 @@ export {
   DEFAULT_AGENT_MODEL,
 } from './agents'
 export type {
-  PreparedEditorOperation,
-} from './editorContext'
-
+  CreateEditorDslToolsOptions,
+} from './editorDsl'
 export {
-  completeEditorOperation,
-  createEditorAgentContext,
-  editorOperationSucceeded,
-  prepareEditorOperation,
-} from './editorContext'
-
+  APPLY_EDITOR_DSL_TOOL_NAME,
+  createEditorDslTools,
+  createEditorTools,
+  GET_CURRENT_EDITOR_TOOL_NAME,
+  GET_WIDGETS_TOOL_NAME,
+  UNDO_EDITOR_DSL_TOOL_NAME,
+  VALIDATE_EDITOR_DSL_TOOL_NAME,
+} from './editorDsl'
 export type {
   AgentRuntime,
   AgentRuntimeConfig,
@@ -42,19 +50,10 @@ export type { AgentUploadedFile } from './services'
 export { resolveAgentServiceURL } from './services'
 
 export type {
-  AgentToolApprovalOptions,
-  AgentToolContext,
-  AgentToolDefinition,
-} from './tool'
-
-export {
-  defineAgentTool,
-  defineCapability,
-} from './tool'
-export type {
   AgentApiMode,
   AgentEditorApi,
-  AgentEditorOperation,
+  AgentEditorDsl,
+  AgentEditorDslValidation,
   AgentFileKind,
   AgentHostApi,
   AgentModelConfig,
@@ -77,3 +76,19 @@ export {
   Runner,
   tool,
 } from '@openai/agents'
+
+export type {
+  DslAddOperation,
+  DslCustomOperation,
+  DslDeleteOperation,
+  DslDocumentSnapshot,
+  DslIssue,
+  DslOperation,
+  DslPlacement,
+  DslScope,
+  DslScopeMode,
+  DslUpdateOperation,
+  DslValidationOptions,
+  DslValidationResult,
+  EditorDsl,
+} from '@sepveneto/dnde-core'

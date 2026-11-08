@@ -130,7 +130,7 @@
 </template>
 
 <script setup lang="ts">
-import type { AgentToolDefinition } from '../tool'
+import type { AgentSubAgent } from '../agents'
 import type { AgentHostApi } from '../types'
 import {
   computed,
@@ -146,7 +146,7 @@ import { createAgentRuntime } from '../runtime'
 
 const props = withDefaults(defineProps<{
   api?: AgentHostApi
-  tools?: AgentToolDefinition[]
+  subAgents?: AgentSubAgent[]
   context?: () => Record<string, unknown>
   sessionId?: string
   storageKey?: string
@@ -155,11 +155,11 @@ const props = withDefaults(defineProps<{
   placeholder?: string
 }>(), {
   api: () => ({}),
-  tools: () => [],
+  subAgents: () => [],
   sessionId: '',
   storageKey: 'dnd-agent-chat',
   title: '装修助手',
-  description: '通过宿主 API 与业务工具完成页面设计。',
+  description: '由宿主子 Agent 完成页面设计。',
   placeholder: '描述你想设计的页面...',
 })
 
@@ -177,8 +177,7 @@ const runtime = computed(() => createAgentRuntime({
   baseURL: props.api.model?.baseURL,
   model: props.api.model?.model,
   apiMode: props.api.model?.apiMode,
-  api: props.api,
-  tools: props.tools,
+  subAgents: props.subAgents,
   getContext: props.context,
 }))
 
