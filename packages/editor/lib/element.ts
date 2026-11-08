@@ -94,6 +94,30 @@ export function createEditorElement({ definition, configureApp }: EditorElementI
     setData(data: { _view: string, list: any[] }) {
       return invokeEditorApi(this, 'setData', [data])
     }
+
+    getCapabilities() {
+      return invokeEditorApi(this, 'getCapabilities', [])
+    }
+
+    getRevision() {
+      return invokeEditorApi(this, 'getRevision', [])
+    }
+
+    validateDsl(dsl: unknown, context?: Record<string, unknown>) {
+      return invokeEditorApi(this, 'validateDsl', [dsl, context])
+    }
+
+    addNode(operation: Record<string, unknown>, context?: Record<string, unknown>) {
+      return invokeEditorApi(this, 'addNode', [operation, context])
+    }
+
+    applyDsl(dsl: unknown, context?: Record<string, unknown>) {
+      return invokeEditorApi(this, 'applyDsl', [dsl, context])
+    }
+
+    undo(revision?: number) {
+      return invokeEditorApi(this, 'undo', [revision])
+    }
   }
 }
 

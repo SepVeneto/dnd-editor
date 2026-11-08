@@ -1,5 +1,5 @@
 /**
- * `<mpd-editor>` 的指令式 API（`register` / `validate` / `getData` / `setData`）。
+ * `<mpd-editor>` 的指令式 API（注册、文档读写、能力目录与受控 DSL 执行）。
  *
  * 元素在模块加载时就已经注册好（见 main.ts），但真正的编辑器要等宿主调用 `register()`
  * 拿到生产者地址、生产者 `setup` 加载完成之后才会挂载。也就是说「元素已经在页面上」和
@@ -11,7 +11,17 @@
  */
 
 /** 编辑器对外暴露的方法名（与 Editor.vue 的 defineExpose 保持一致） */
-export type EditorApiMethod = 'register' | 'validate' | 'getData' | 'setData'
+export type EditorApiMethod
+  = | 'register'
+    | 'validate'
+    | 'getData'
+    | 'setData'
+    | 'getCapabilities'
+    | 'getRevision'
+    | 'validateDsl'
+    | 'addNode'
+    | 'applyDsl'
+    | 'undo'
 
 /** 已挂载编辑器的真实实现，由 Editor.vue 提供 */
 export type EditorApi = Record<EditorApiMethod, (...args: any[]) => any>

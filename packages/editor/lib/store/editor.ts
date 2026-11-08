@@ -1,9 +1,21 @@
-import type { IWidget } from '@sepveneto/dnde-core'
+import type {
+  CapabilityCatalog,
+  DslCustomOperation,
+  DslResourceContext,
+  DslResolvedResource,
+  IWidget,
+  WidgetCapabilityAdapter,
+  WidgetCapabilityRegistry,
+} from '@sepveneto/dnde-core'
 import type { SchemaItem } from '@sepveneto/dnde-core/class'
 import type { Rule } from 'async-validator'
 import type { Raw } from 'vue'
 import type { HelperAction } from '@/type'
-import { widget } from '@sepveneto/dnde-core'
+import {
+  createCapabilityCatalog,
+  validateEditorDsl,
+  widget,
+} from '@sepveneto/dnde-core'
 import { Node, Widget } from '@sepveneto/dnde-core/class'
 import Validator from 'async-validator'
 import { defineStore } from 'pinia'
@@ -198,6 +210,13 @@ export const useEditor = defineStore('editor', () => {
   const selected = ref<string>(rootNode.value.wid)
   /** 当前配置标签，固定组件预览的选中态也跟随它。 */
   const activeConfigPane = ref<string>('props')
+  const revision = ref(0)
+  const undoStack: Array<{ data: Record<string, any>, revision: number }> = []
+  let lastDocumentFingerprint = ''
+  const capabilityRegistry = shallowRef<WidgetCapabilityRegistry>({})
+  const capabilityAdapters = shallowRef<
+    Record<string, Record<string, Record<string, WidgetCapabilityAdapter>>>
+  >({})
 
   const showTopbar = computed(() => {
     const topbar = rootNode.value.widget._data.schema?.props?.find((item) => {
@@ -295,6 +314,317 @@ export const useEditor = defineStore('editor', () => {
     return rootNode.value.parse()
   }
 
+  function documentFingerprint() {
+    return JSON.stringify(getData())
+  }
+
+  function syncDocumentFingerprint() {
+    lastDocumentFingerprint = documentFingerprint()
+  }
+
+  /** Called by the deep document watcher for manual/canvas edits. */
+  function noteDocumentChange() {
+    const fingerprint = documentFingerprint()
+    if (fingerprint === lastDocumentFingerprint)
+      return
+    lastDocumentFingerprint = fingerprint
+    revision.value += 1
+  }
+
+  function getAgentCapabilities(): CapabilityCatalog {
+    return createCapabilityCatalog(
+      app.widgetsFlat.map(item => item._data),
+      capabilityRegistry.value,
+    )
+  }
+
+  function setCapabilityRegistry(input: {
+    definitions?: WidgetCapabilityRegistry
+    adapters?: Record<string, Record<string, Record<string, WidgetCapabilityAdapter>>>
+  }) {
+    capabilityRegistry.value = input.definitions ?? {}
+    capabilityAdapters.value = input.adapters ?? {}
+  }
+
+  function getAgentSnapshot() {
+    const nodes = [...nodeMap.values()].map(node => ({
+      uuid: node.wid,
+      type: node.type,
+      parentUuid: node.parent?.wid,
+    }))
+    return {
+      revision: revision.value,
+      nodes,
+    }
+  }
+
+  function getAgentEditor() {
+    return {
+      page: rootNode.value.parse(),
+      selected: selected.value,
+      revision: revision.value,
+    }
+  }
+
+  function resourceContext(context: Record<string, any> = {}): DslResourceContext {
+    if (context.resources && typeof context.resources === 'object')
+      return context.resources as DslResourceContext
+    if (context.initialization?.locations && typeof context.initialization.locations === 'object') {
+      return {
+        resources: Object.values(context.initialization.locations as Record<string, any>)
+          .flatMap(location => Object.values(location.resources ?? {}))
+          .flat() as DslResolvedResource[],
+      }
+    }
+    return { resources: [] }
+  }
+
+  function validateAgentDsl(dsl: unknown, context: Record<string, any> = {}) {
+    return validateEditorDsl(dsl, {
+      catalog: getAgentCapabilities(),
+      snapshot: getAgentSnapshot(),
+      resources: resourceContext(context),
+    })
+  }
+
+  function requireInitializationIr(context: Record<string, any> = {}) {
+    if (!context.initialization?.ir)
+      throw new Error('尚未生成 IR，禁止开始编辑。请先调用 prepare_initialization。')
+  }
+
+  function setPath(target: Record<string, any>, path: string, value: unknown) {
+    const parts = path.split('.')
+    let current = target
+    for (let index = 0; index < parts.length - 1; index++) {
+      const key = parts[index]
+      if (!current[key] || typeof current[key] !== 'object')
+        current[key] = {}
+      current = current[key]
+    }
+    current[parts.at(-1)!] = value
+  }
+
+  function applyNodeProps(node: Node, props: Record<string, unknown>) {
+    for (const [key, value] of Object.entries(props))
+      setPath(node.data, key, value)
+  }
+
+  function applyNodeStyle(node: Node, style: Record<string, unknown>) {
+    Object.assign(node.style, style)
+  }
+
+  async function applyNodeCapabilities(
+    node: Node,
+    custom: DslCustomOperation[] | undefined,
+    context: Record<string, any>,
+    ignoreUnsupported = false,
+  ) {
+    if (!Array.isArray(custom))
+      return
+
+    for (const operation of custom) {
+      const adapter = capabilityAdapters.value[node.widget.view]?.[operation.type]?.[operation.capability]
+      if (!adapter) {
+        if (ignoreUnsupported)
+          continue
+        throw new Error(`组件 ${node.type} 缺少能力适配器 ${operation.type}.${operation.capability}`)
+      }
+      const patch = await adapter({
+        node,
+        args: operation.args,
+        resources: resourceContext(context).resources,
+        context,
+      })
+      if (patch && typeof patch === 'object') {
+        applyNodeProps(node, patch as Record<string, unknown>)
+      }
+    }
+  }
+
+  async function addAgentNode(
+    input: unknown,
+    context: Record<string, any> = {},
+  ) {
+    const operation = input as Record<string, any>
+    const before = JSON.parse(JSON.stringify(getData()))
+    const beforeRevision = revision.value
+    const locationId = typeof operation.locationId === 'string' ? operation.locationId : ''
+    const location = context.initialization?.locations?.[locationId]
+
+    try {
+      requireInitializationIr(context)
+      if (!locationId)
+        throw new Error('初始化添加必须提供 IR locationId')
+      if (!location)
+        throw new Error(`Context 中不存在组件位置 ${locationId}`)
+
+      const definition = app.widgetMap.get(location.widget)
+      if (!definition)
+        throw new Error(`找不到组件 ${location.widget}`)
+
+      const node = new Node(definition as Widget, {
+        props: JSON.parse(JSON.stringify(definition.defaultData ?? {})),
+        style: JSON.parse(JSON.stringify(definition.defaultStyle ?? {})),
+      })
+      applyNodeProps(node, location.standardProps ?? {})
+      addNode(node, rootNode.value as Node, true)
+      node.widget.agent?.update?.(node, {
+        componentKey: location.componentKey,
+        locationId,
+      }, context)
+
+      undoStack.push({ data: before, revision: beforeRevision })
+      revision.value += 1
+      syncDocumentFingerprint()
+      return {
+        ok: true,
+        revision: revision.value,
+        node: {
+          id: node.wid,
+          type: node.type,
+          key: location.componentKey,
+          locationId,
+        },
+      }
+    }
+    catch (error) {
+      setData(before, false)
+      revision.value = beforeRevision
+      return {
+        ok: false,
+        revision: revision.value,
+        error: error instanceof Error ? error.message : String(error),
+      }
+    }
+  }
+
+  async function applyAgentDsl(
+    input: unknown,
+    context: Record<string, any> = {},
+  ) {
+    try {
+      requireInitializationIr(context)
+    }
+    catch (error) {
+      return {
+        ok: false,
+        revision: revision.value,
+        issues: [{
+          code: 'initialization_required',
+          path: 'context.initialization.ir',
+          message: error instanceof Error ? error.message : String(error),
+        }],
+      }
+    }
+    const validation = validateAgentDsl(input, context)
+    if (!validation.ok || !validation.normalized) {
+      return {
+        ok: false,
+        revision: revision.value,
+        issues: validation.issues,
+      }
+    }
+
+    const dsl = validation.normalized
+    const before = JSON.parse(JSON.stringify(getData()))
+    const beforeRevision = revision.value
+    const keyMap = new Map<string, Node>()
+    const affected: string[] = []
+
+    try {
+      for (const operation of dsl.operations) {
+        if (operation.op === 'add') {
+          const definition = app.widgetMap.get(operation.widget)
+          if (!definition)
+            throw new Error(`找不到组件 ${operation.widget}`)
+
+          const node = new Node(definition as Widget, {
+            props: JSON.parse(JSON.stringify(definition.defaultData ?? {})),
+            style: JSON.parse(JSON.stringify(definition.defaultStyle ?? {})),
+          })
+          applyNodeProps(node, operation.props ?? {})
+          applyNodeStyle(node, operation.style ?? {})
+          addNode(node, rootNode.value as Node, true)
+
+          const placement = operation.placement ?? {}
+          const referenceKey = placement.afterKey ?? placement.beforeKey
+          const reference = referenceKey ? keyMap.get(referenceKey) : undefined
+          if (reference) {
+            const currentIndex = rootNode.value.list.indexOf(node)
+            if (currentIndex >= 0)
+              rootNode.value.list.splice(currentIndex, 1)
+            const referenceIndex = rootNode.value.list.indexOf(reference)
+            const insertAt = placement.beforeKey
+              ? referenceIndex
+              : referenceIndex + 1
+            rootNode.value.list.splice(insertAt, 0, node)
+          }
+
+          await applyNodeCapabilities(node, operation.custom, context)
+          keyMap.set(operation.key, node)
+          affected.push(node.wid)
+          continue
+        }
+
+        const node = nodeMap.get(operation.uuid)
+        if (!node)
+          throw new Error(`找不到节点 ${operation.uuid}`)
+
+        if (operation.op === 'delete') {
+          delNode(node.wid)
+          affected.push(operation.uuid)
+          continue
+        }
+
+        applyNodeProps(node, operation.props ?? {})
+        applyNodeStyle(node, operation.style ?? {})
+        await applyNodeCapabilities(node, operation.custom, context)
+        affected.push(node.wid)
+      }
+
+      undoStack.push({ data: before, revision: beforeRevision })
+      revision.value += 1
+      syncDocumentFingerprint()
+      return {
+        ok: true,
+        revision: revision.value,
+        affected,
+        operationCount: dsl.operations.length,
+      }
+    }
+    catch (error) {
+      setData(before, false)
+      revision.value = beforeRevision
+      return {
+        ok: false,
+        revision: revision.value,
+        issues: [{
+          code: 'execution_failed',
+          path: 'operations',
+          message: error instanceof Error ? error.message : String(error),
+        }],
+      }
+    }
+  }
+
+  function undoAgentDsl(expectedRevision?: number) {
+    const previous = undoStack.at(-1)
+    if (!previous)
+      return { ok: false, error: '没有可撤销的 Agent 操作' }
+    if (expectedRevision !== undefined && expectedRevision !== revision.value) {
+      return {
+        ok: false,
+        error: `撤销基于 revision ${expectedRevision}，当前为 ${revision.value}`,
+      }
+    }
+
+    undoStack.pop()
+    const targetRevision = previous.revision
+    setData(previous.data, false)
+    revision.value = targetRevision
+    return { ok: true, revision: targetRevision }
+  }
+
   function createNodes(data: any[], parent = rootNode.value) {
     data.forEach((item) => {
       const widget = app.widgetMap.get(item._view) as Widget
@@ -324,7 +654,7 @@ export const useEditor = defineStore('editor', () => {
     nodeMap.set(node.wid, node)
   }
 
-  function setData(data: any) {
+  function setData(data: any, clearUndo = true) {
     const widget = app.widgetMap.get(data._view) as Widget || defaultPage
 
     const { _uuid, style, list = [], data: props } = data
@@ -337,6 +667,10 @@ export const useEditor = defineStore('editor', () => {
     setRoot(new Node(widget, info))
 
     createNodes(list)
+    if (clearUndo)
+      undoStack.length = 0
+    revision.value += 1
+    syncDocumentFingerprint()
   }
 
   function setSchema(schema: IWidget['schema']) {
@@ -366,6 +700,16 @@ export const useEditor = defineStore('editor', () => {
     showTopbar,
 
     getData,
+    getAgentCapabilities,
+    setCapabilityRegistry,
+    getAgentSnapshot,
+    getAgentEditor,
+    validateAgentDsl,
+    addAgentNode,
+    applyAgentDsl,
+    undoAgentDsl,
+    noteDocumentChange,
+    revision,
     setData,
     setSchema,
   }

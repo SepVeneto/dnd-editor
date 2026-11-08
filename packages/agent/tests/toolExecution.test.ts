@@ -20,7 +20,7 @@ describe('agent tool execution', () => {
       properties: {},
       additionalProperties: false,
     }
-    let itemsSeenByEditor: unknown
+    let dataSeenByEditor: unknown
 
     const checkScenario = tool({
       name: 'check_scenario',
@@ -29,29 +29,29 @@ describe('agent tool execution', () => {
       strict: false,
       async execute(_input, runContext) {
         await new Promise(resolve => setTimeout(resolve, 20))
-        runContext.context.pendingItems = [{ id: 7 }]
+        runContext.context.businessCache = [{ id: 7 }]
         return { ok: true }
       },
     })
-    const editorOperator = tool({
-      name: 'editor_operator',
-      description: '消费业务缓存',
+    const mutationTool = tool({
+      name: 'mutation_tool',
+      description: '读取业务缓存',
       parameters: emptyParameters,
       strict: false,
       async execute(_input, runContext) {
-        itemsSeenByEditor = (runContext.context as { pendingItems: unknown }).pendingItems
+        dataSeenByEditor = (runContext.context as { businessCache: unknown }).businessCache
         return { ok: true }
       },
     })
     const agent = new Agent({
       name: 'test-agent',
       model: 'test-model',
-      tools: [checkScenario, editorOperator],
+      tools: [checkScenario, mutationTool],
     })
     const model = new ScriptedModel([
       [
         functionCall('check_scenario', {}, { callId: 'check-1' }),
-        functionCall('editor_operator', {}, { callId: 'editor-1' }),
+        functionCall('mutation_tool', {}, { callId: 'mutation-1' }),
       ],
       [assistantMessage('done')],
     ])
@@ -61,9 +61,9 @@ describe('agent tool execution', () => {
     })
 
     await runner.run(agent, 'test', {
-      context: { pendingItems: [] },
+      context: { businessCache: [] },
     })
 
-    assert.deepEqual(itemsSeenByEditor, [{ id: 7 }])
+    assert.deepEqual(dataSeenByEditor, [{ id: 7 }])
   })
 })

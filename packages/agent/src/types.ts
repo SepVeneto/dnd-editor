@@ -1,7 +1,35 @@
+import type { IrResourceType } from '@sepveneto/dnde-core'
+
 export type ChatMode = 'data' | 'text'
 export type MessageRole = 'system' | 'user' | 'assistant'
 export type AgentApiMode = 'responses' | 'chat_completions'
 export type AgentFileKind = 'document' | 'image'
+
+export interface AgentPrepareInitializationInput {
+  intent: string
+  components: Array<{
+    key: string
+    type: string
+  }>
+  resources: Array<{
+    component: string
+    type: IrResourceType
+    required: boolean
+    query: string
+  }>
+}
+
+export type AgentDebugStartAt = 'prepare_initialization'
+
+/**
+ * Development-only startup configuration. When enabled, the runtime executes
+ * prepare_initialization with the supplied input before asking the model to
+ * continue. The model does not parse these arguments from the user message.
+ */
+export interface AgentDebugConfig {
+  startAt: AgentDebugStartAt
+  prepareInitialization: AgentPrepareInitializationInput
+}
 
 export interface AgentModelConfig {
   /** OpenAI-compatible endpoint exposed by the host or its BFF. */
@@ -27,16 +55,8 @@ export interface AgentEditorOperation {
   after?: string
 }
 
-/**
- * Mutable state scoped to one Agent Run.
- *
- * Business tools write complete editor data into `pendingItems`; the editor
- * tool consumes it after a successful operation. A fresh object is created for
- * every turn so concurrent runs and conversations never share business data.
- */
-export interface EditorAgentContext extends Record<string, unknown> {
-  pendingItems: unknown[]
-}
+/** Mutable state scoped to one Agent Run. */
+export type EditorAgentContext = Record<string, unknown>
 
 /**
  * APIs implemented by the host. The agent runtime only knows this contract, so
@@ -45,6 +65,25 @@ export interface EditorAgentContext extends Record<string, unknown> {
 export interface AgentEditorApi {
   getCurrentEditor: () => unknown | Promise<unknown>
   getWidgets: () => unknown | Promise<unknown>
+  /** Stable widget capability catalog used for IR and DSL validation. */
+  getCapabilities?: () => unknown | Promise<unknown>
+  getRevision?: () => number | Promise<number>
+  validateDsl: (
+    dsl: unknown,
+    context?: EditorAgentContext,
+  ) => unknown | Promise<unknown>
+  /** Direct add operation without DSL parameter validation. */
+  addNode?: (
+    operation: Record<string, unknown>,
+    context?: EditorAgentContext,
+  ) => unknown | Promise<unknown>
+  applyDsl: (
+    dsl: unknown,
+    context?: EditorAgentContext,
+  ) => unknown | Promise<unknown>
+  undo?: (
+    revision?: number,
+  ) => unknown | Promise<unknown>
   /** Context contains business data prepared by tools during the current Agent Run. */
   operateEditor: (
     operation: AgentEditorOperation,
@@ -55,6 +94,7 @@ export interface AgentEditorApi {
 export interface AgentHostApi {
   model?: AgentModelConfig
   editor?: Partial<AgentEditorApi>
+  debug?: AgentDebugConfig
 }
 
 export interface TextPart {

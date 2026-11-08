@@ -69,6 +69,7 @@ svg {
 .chat-meta {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
   margin-bottom: 12px;
   color: var(--text-subtle);
@@ -81,6 +82,19 @@ svg {
   align-items: center;
   gap: 7px;
   color: #3f3f3b;
+}
+
+.debug-badge {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #d97706;
+  border-radius: 999px;
+  padding: 2px 8px;
+  color: #92400e;
+  background: #fffbeb;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
 }
 
 .live-dot {

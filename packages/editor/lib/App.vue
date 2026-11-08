@@ -160,6 +160,12 @@ const agentApi = computed(() => {
     editor: {
       getCurrentEditor: snapshotEditor,
       getWidgets: listAgentWidgets,
+      getCapabilities: editor.getAgentCapabilities,
+      getRevision: () => editor.revision,
+      validateDsl: editor.validateAgentDsl,
+      addNode: editor.addAgentNode,
+      applyDsl: editor.applyAgentDsl,
+      undo: editor.undoAgentDsl,
       operateEditor,
       ...(hostApi.editor ?? {}),
     },
@@ -200,23 +206,12 @@ function snapshotEditor() {
   return {
     page: serializeAgentNode(editor.rootNode),
     selected: editor.selected,
+    revision: editor.revision,
   }
 }
 
 function listAgentWidgets() {
-  return app.widgetsFlat.map((item) => {
-    const schema = item._data.schema ?? {}
-    return {
-      typeId: item.view,
-      name: item.name,
-      description: item.agent?.description ?? item.agent?.layout?.description ?? '',
-      defaultData: item.defaultData,
-      defaultStyle: item.defaultStyle,
-      // 自定义配置项没有通用的数据结构，Agent 无法可靠地填写。
-      propsSchema: (schema.props ?? []).filter(item => item.type !== 'custom'),
-      styleSchema: schema.style ?? [],
-    }
-  })
+  return editor.getAgentCapabilities()
 }
 
 function requireAgentNode(id: string | undefined) {
@@ -230,6 +225,9 @@ function operateEditor(
   operation: Record<string, any>,
   context: Record<string, any> = {},
 ) {
+  if (!context.initialization?.ir)
+    throw new Error('尚未生成 IR，禁止开始编辑。请先调用 prepare_initialization。')
+
   if (operation.action === 'add') {
     const widget = app.widgetMap.get(operation.widget)
     if (!widget)
@@ -258,12 +256,13 @@ function operateEditor(
   const node = requireAgentNode(operation.target)
 
   if (operation.action === 'edit') {
-    if (operation.changes)
+    if (operation.changes) {
       node.widget.agent?.update?.(node, {
         widget: node.widget.view,
         items: [],
         changes: operation.changes,
       }, context)
+    }
     if (operation.style)
       Object.assign(node.style, operation.style)
     return { ok: true, node: serializeAgentNode(node) }

@@ -1,15 +1,16 @@
 import type {
-  FormItemProps,
   CheckboxProps,
-  InputProps,
-  InputNumberProps,
-  SelectProps,
-  RadioProps,
-  RadioButtonProps,
-  SwitchProps,
-  DatePickerProps,
   ColorPickerProps,
+  DatePickerProps,
+  FormItemProps,
+  InputNumberProps,
+  InputProps,
+  RadioButtonProps,
+  RadioProps,
+  SelectProps,
+  SwitchProps,
 } from 'element-plus'
+import type { FieldScope } from '@/capability'
 import type { Option, RadioButtonOption, RadioOption, SchemaItem, SchemaItemCustom } from '@/class'
 import { likeArray } from '@/utils'
 
@@ -18,6 +19,8 @@ interface BaseConfig {
   _role?: string
   label: SchemaItem['label']
   key: SchemaItem['key']
+  scope?: FieldScope
+  readOnly?: boolean
   tips?: string
   formItem?: Partial<FormItemProps>
   required?: boolean | string
@@ -30,6 +33,8 @@ export const schema = {
       _role: config._role,
       label: config.label,
       key: config.key,
+      scope: config.scope,
+      readOnly: config.readOnly,
       type,
       formItem: config.formItem,
       rules: normalizeRules(config),
@@ -90,7 +95,7 @@ export const schema = {
 
   topbar(config: BaseConfig & { attrs?: RadioProps, options?: RadioOption[], link?: Record<string, SchemaItem[]> }): SchemaItem {
     return this.radio({ ...config, _role: 'topbar' })
-  }
+  },
 }
 
 function normalizeRules(config: BaseConfig) {

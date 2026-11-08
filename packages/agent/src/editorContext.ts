@@ -6,32 +6,27 @@ import type {
 /**
  * Create isolated editor/business state for one Agent Run.
  *
- * Host context is copied in as read-only starting data. `pendingItems` is
- * always reset so data prepared by a previous turn cannot leak into this one.
+ * Host context is copied in as starting data for the current Run.
  */
 export function createEditorAgentContext(
   initial: Record<string, unknown> = {},
 ): EditorAgentContext {
-  return {
-    ...initial,
-    pendingItems: [],
-  }
+  return { ...initial }
 }
 
 export interface PreparedEditorOperation {
   operation: AgentEditorOperation
-  /** Items reserved for this add operation; cleared only after success. */
-  pendingItems?: unknown[]
   error?: string
 }
 
 /**
- * Remove any model-produced items and, for add operations, inject the data
- * prepared by a business tool for this run.
+ * Remove any model-produced items. Add operations never read or inject
+ * hidden context data; initialization data is resolved through locationId
+ * when the tool is invoked.
  */
 export function prepareEditorOperation(
   input: unknown,
-  context: EditorAgentContext,
+  _context: EditorAgentContext,
 ): PreparedEditorOperation {
   const raw = input && typeof input === 'object'
     ? input as Record<string, unknown>
@@ -49,25 +44,10 @@ export function prepareEditorOperation(
   if (prepared.action !== 'add')
     return { operation: prepared }
 
-  const pendingItems = context.pendingItems
-
-  // Add operations receive content only from host tools.
+  // Add operations are always flat under the page root.
   delete prepared.target
 
-  if (pendingItems.length === 0) {
-    return {
-      operation: prepared,
-      error: 'add 操作必须由业务工具先准备 pendingItems',
-    }
-  }
-
-  return {
-    operation: {
-      ...prepared,
-      items: pendingItems.slice(),
-    },
-    pendingItems,
-  }
+  return { operation: prepared }
 }
 
 export function editorOperationSucceeded(result: unknown): boolean {
@@ -81,15 +61,9 @@ export function editorOperationSucceeded(result: unknown): boolean {
   )
 }
 
-/**
- * Consume pending items only after the editor confirms success. A failed
- * operation keeps them available for a corrected retry in the same Run.
- */
+/** Compatibility hook. No Context data is consumed after an operation. */
 export function completeEditorOperation(
-  context: EditorAgentContext,
-  prepared: PreparedEditorOperation,
-  result: unknown,
-): void {
-  if (prepared.pendingItems && editorOperationSucceeded(result))
-    context.pendingItems = []
-}
+  _context: EditorAgentContext,
+  _prepared: PreparedEditorOperation,
+  _result: unknown,
+): void {}

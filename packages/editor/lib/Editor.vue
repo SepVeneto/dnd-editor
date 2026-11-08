@@ -11,7 +11,7 @@ import * as Vue from 'vue'
 import { onUnmounted, useHost, useTemplateRef } from 'vue'
 import App from './App.vue'
 import { bindEditorElement } from './element'
-import { isHmrEnabled, getSnapshot, saveSnapshot } from './hmr'
+import { getSnapshot, isHmrEnabled, saveSnapshot } from './hmr'
 import { editorProps } from './props'
 import { installShadowCssRuntime, registerShadowCssRoot } from './shadowCss'
 import { useApp, useEditor } from './store'
@@ -44,6 +44,7 @@ if (restored)
   updateModelValue()
 
 Vue.watch(() => editor.rootNode, () => {
+  editor.noteDocumentChange()
   // 快照同步保存：热更新随时可能发生，不能等防抖
   if (isHmrEnabled())
     saveSnapshot(props.name, editor.getData())
@@ -94,6 +95,24 @@ const api = {
   },
   setData(data: { _view: 'page', list: any[] }) {
     editor.setData(data)
+  },
+  getCapabilities() {
+    return editor.getAgentCapabilities()
+  },
+  getRevision() {
+    return editor.revision
+  },
+  validateDsl(dsl: unknown, context?: Record<string, any>) {
+    return editor.validateAgentDsl(dsl, context)
+  },
+  addNode(operation: Record<string, any>, context?: Record<string, any>) {
+    return editor.addAgentNode(operation, context)
+  },
+  applyDsl(dsl: unknown, context?: Record<string, any>) {
+    return editor.applyAgentDsl(dsl, context)
+  },
+  undo(revision?: number) {
+    return editor.undoAgentDsl(revision)
   },
 }
 

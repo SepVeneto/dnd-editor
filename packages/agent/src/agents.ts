@@ -1,7 +1,8 @@
 import type { FunctionTool, RunContext } from '@openai/agents'
 import type { AgentToolDefinition } from './tool'
-import type { AgentEditorOperation, AgentHostApi, EditorAgentContext } from './types'
+import type { AgentHostApi, EditorAgentContext } from './types'
 import { Agent, handoff, tool } from '@openai/agents'
+import { IR_RESOURCE_TYPES } from '@sepveneto/dnde-core'
 import { z } from 'zod'
 import {
   buildChecklistAgentInstructions,
@@ -11,19 +12,29 @@ import {
   CONFIG_CHECKLIST_RETURN_TOOL_NAME,
   MAIN_AGENT_NAME,
 } from './agentInstructions.ts'
-import {
-  completeEditorOperation,
-  prepareEditorOperation,
-} from './editorContext.ts'
+import { initializeEditorContext } from './initialization.ts'
 
 export const DEFAULT_AGENT_MODEL = 'qwen3.6-flash'
 export const DEFAULT_AGENT_BFF_URL = 'http://localhost:4000/v1'
+
+function requireInitializationIr(context?: EditorAgentContext) {
+  if (context?.initialization && typeof context.initialization === 'object') {
+    const initialization = context.initialization as Record<string, unknown>
+    if (initialization.ir && typeof initialization.ir === 'object')
+      return undefined
+  }
+  return {
+    ok: false,
+    error: '尚未生成 IR，禁止开始编辑。请先调用 prepare_initialization。',
+  }
+}
 
 export interface CreateAgentsOptions {
   model?: string
   api: AgentHostApi
   tools?: AgentToolDefinition[]
   getContext?: () => Record<string, unknown>
+  debugStartAt?: 'prepare_initialization'
 }
 
 async function resolveApproval(
@@ -117,7 +128,7 @@ function createEditorTools(api: AgentHostApi): FunctionTool<any, any, any>[] {
 
   const getWidgets = tool({
     name: 'get_widgets',
-    description: '获取当前页面可供添加的组件列表、功能描述、布局适配性和配置规则。确定组件类型并为组件规划内容前应先查询。',
+    description: '获取当前组件的稳定能力目录：标准 props、范围、custom type 和静态选项。规划 IR 和 DSL 前必须查询。',
     parameters: emptyParameters,
     strict: false,
     async execute(_input: unknown) {
@@ -127,80 +138,179 @@ function createEditorTools(api: AgentHostApi): FunctionTool<any, any, any>[] {
     },
   } as any)
 
-  const editorOperator = tool({
-    name: 'editor_operator',
+  const prepareInitialization = tool({
+    name: 'prepare_initialization',
     description: [
-      '通过节点 UUID 添加、编辑、删除或移动编辑器组件。',
-      'add 的 items 由业务工具写入本次 Run 的 Context 后自动注入，禁止在参数中生成 items。',
-      '模型不得提交 changes；名称、跳转类型、分类等静态配置也不能通过 changes 填充。',
+      '提交配置清单解析后的初始化 IR。工具会规范化 IR、绑定当前文档 revision，',
+      '并返回需调用的独立资源查询工具；本工具不执行业务资源查询。',
+      'components 数组顺序即组件顺序，不要提交 placement。',
+      '资源只提交所属组件、封闭枚举 type、required 和 query；H5 外接场景使用 app，卡券品牌使用 coupon。',
+      '门店提货存在时增加 shopPickup 组件并忽略具体内容。',
+      '不要提交位置 ID、资源 ID、classification、resolution 或查询结果；宿主会为每个组件位置生成唯一 locationId 并写入 Context。',
     ].join(''),
     parameters: {
       type: 'object',
       properties: {
-        action: {
+        intent: {
           type: 'string',
-          enum: ['add', 'edit', 'delete', 'move'],
-          description: '操作类型',
+          description: '对配置清单目标的简短描述',
         },
-        target: {
-          type: 'string',
-          description: '编辑、删除、移动使用的节点 UUID；add 不使用该字段，组件始终添加到页面根节点',
+        components: {
+          type: 'array',
+          description: '配置清单要求的组件及批内稳定 key',
+          items: {
+            type: 'object',
+            properties: {
+              key: { type: 'string' },
+              type: { type: 'string' },
+            },
+            required: ['key', 'type'],
+            additionalProperties: false,
+          },
         },
-        widget: {
-          type: 'string',
-          description: 'add 时使用的组件类型 ID；必须来自 get_widgets',
-        },
-        style: {
-          type: 'object',
-          description: 'edit 时合并到节点 style 的字段',
-          additionalProperties: true,
-        },
-        before: {
-          type: 'string',
-          description: 'move 时插入到该节点之前',
-        },
-        after: {
-          type: 'string',
-          description: 'move 时插入到该节点之后',
+        resources: {
+          type: 'array',
+          description: '配置清单中的 link/app/coupon 资源需求',
+          items: {
+            type: 'object',
+            properties: {
+              component: { type: 'string' },
+              type: { type: 'string', enum: [...IR_RESOURCE_TYPES] },
+              required: { type: 'boolean' },
+              query: { type: 'string' },
+            },
+            required: ['component', 'type', 'required', 'query'],
+            additionalProperties: false,
+          },
         },
       },
-      required: ['action'],
+      required: ['intent', 'components', 'resources'],
       additionalProperties: false,
     },
     strict: false,
-    async execute(
-      rawOperation: unknown,
-      runContext?: RunContext<EditorAgentContext>,
-    ) {
-      if (!api.editor?.operateEditor)
-        throw new Error('宿主未提供 operateEditor API')
-
+    async execute(rawIr: unknown, runContext?: RunContext<EditorAgentContext>) {
       const context = runContext?.context
       if (!context)
         throw new Error('缺少当前 Agent Run 的 Context')
 
-      const prepared = prepareEditorOperation(rawOperation, context)
-      if (prepared.error)
-        return { ok: false, error: prepared.error }
-
-      try {
-        const result = await api.editor.operateEditor(
-          prepared.operation as AgentEditorOperation,
-          context,
-        )
-        completeEditorOperation(context, prepared, result)
-        return result
-      }
-      catch (error) {
-        return {
-          ok: false,
-          error: error instanceof Error ? error.message : String(error),
-        }
-      }
+      return initializeEditorContext(rawIr, context, api)
     },
   } as any)
 
-  return [getCurrentEditor, getWidgets, editorOperator]
+  const addEditorNode = tool({
+    name: 'add_editor_node',
+    description: [
+      '调用编辑器 DSL 添加一个组件。',
+      '模型只传 resourceId；宿主从 Context 中读取该位置对应的 widget、标准属性和业务资源。',
+      '工具本身不校验顺序、资源状态或参数内容，只提交单条 add 操作。',
+    ].join(''),
+    parameters: {
+      type: 'object',
+      properties: {
+        resourceId: { type: 'string' },
+      },
+      required: ['resourceId'],
+      additionalProperties: false,
+    },
+    strict: false,
+    async execute(input: unknown, runContext?: RunContext<EditorAgentContext>) {
+      if (!api.editor?.addNode)
+        throw new Error('宿主未提供直接添加节点 API')
+      const missingIr = requireInitializationIr(runContext?.context)
+      if (missingIr)
+        return missingIr
+      return api.editor.addNode(
+        {
+          locationId: (input as { resourceId?: unknown })?.resourceId,
+        },
+        runContext?.context,
+      )
+    },
+  } as any)
+
+  const updateEditorNode = tool({
+    name: 'update_editor_node',
+    description: '通过编辑器 DSL 更新一个已有节点的标准 props、样式或 custom capability。',
+    parameters: {
+      type: 'object',
+      properties: {
+        uuid: { type: 'string' },
+        props: { type: 'object', additionalProperties: true },
+        style: { type: 'object', additionalProperties: true },
+        custom: {
+          type: 'array',
+          items: { type: 'object', additionalProperties: true },
+        },
+      },
+      required: ['uuid'],
+      additionalProperties: false,
+    },
+    strict: false,
+    async execute(input: unknown, runContext?: RunContext<EditorAgentContext>) {
+      if (!api.editor?.applyDsl || !api.editor.getCurrentEditor)
+        throw new Error('宿主未提供 DSL 执行 API')
+      const missingIr = requireInitializationIr(runContext?.context)
+      if (missingIr)
+        return missingIr
+      const operation = input as Record<string, any>
+      const currentEditor = await api.editor.getCurrentEditor() as Record<string, any>
+      return api.editor.applyDsl({
+        dslVersion: '1.1',
+        baseRevision: currentEditor?.revision ?? 0,
+        scope: { mode: 'any', targets: [] },
+        operations: [{
+          op: 'update',
+          uuid: operation.uuid,
+          props: operation.props ?? {},
+          style: operation.style ?? {},
+          custom: Array.isArray(operation.custom) ? operation.custom : [],
+        }],
+      }, runContext?.context)
+    },
+  } as any)
+
+  const deleteEditorNode = tool({
+    name: 'delete_editor_node',
+    description: '通过编辑器 DSL 删除一个节点；必须携带宿主生成的确认令牌。',
+    parameters: {
+      type: 'object',
+      properties: {
+        uuid: { type: 'string' },
+        confirmToken: { type: 'string' },
+      },
+      required: ['uuid', 'confirmToken'],
+      additionalProperties: false,
+    },
+    strict: false,
+    async execute(input: unknown, runContext?: RunContext<EditorAgentContext>) {
+      if (!api.editor?.applyDsl || !api.editor.getCurrentEditor)
+        throw new Error('宿主未提供 DSL 执行 API')
+      const missingIr = requireInitializationIr(runContext?.context)
+      if (missingIr)
+        return missingIr
+      const operation = input as Record<string, any>
+      const currentEditor = await api.editor.getCurrentEditor() as Record<string, any>
+      return api.editor.applyDsl({
+        dslVersion: '1.1',
+        baseRevision: currentEditor?.revision ?? 0,
+        scope: { mode: 'any', targets: [] },
+        operations: [{
+          op: 'delete',
+          uuid: operation.uuid,
+          confirmToken: operation.confirmToken,
+        }],
+      }, runContext?.context)
+    },
+  } as any)
+
+  return [
+    getCurrentEditor,
+    getWidgets,
+    prepareInitialization,
+    addEditorNode,
+    updateEditorNode,
+    deleteEditorNode,
+  ]
 }
 
 /**
@@ -221,13 +331,14 @@ export function createAgents(options: CreateAgentsOptions) {
       adaptHostTool(item, options.api, getContext),
     ),
   ]
-
   const checklistAgent = new Agent({
     name: CONFIG_CHECKLIST_AGENT_NAME,
     handoffDescription: '专门处理配置清单、需求文档、整页方案和多组件配置要求。',
     model,
     modelSettings,
-    instructions: buildChecklistAgentInstructions(),
+    instructions: buildChecklistAgentInstructions({
+      debugStartAt: options.debugStartAt,
+    }),
     tools,
   })
 

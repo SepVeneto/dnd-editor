@@ -4,8 +4,10 @@ import type {
   RunItemStreamEvent,
   RunStreamEvent,
 } from '@openai/agents'
+import type { DebugInitializationStart } from './debug'
 import type { AgentToolDefinition } from './tool'
 import type {
+  AgentDebugConfig,
   AgentHostApi,
   ChatMessage,
   ChatMode,
@@ -27,6 +29,10 @@ import {
   DEFAULT_AGENT_BFF_URL,
   DEFAULT_AGENT_MODEL,
 } from './agents'
+import {
+  buildDebugPrompt,
+  createDebugInitializationStart,
+} from './debug'
 import { createEditorAgentContext } from './editorContext'
 import {
   buildAgentUserContent,
@@ -40,6 +46,7 @@ export interface AgentRuntimeConfig {
   baseURL: string
   model: string
   apiMode: 'responses' | 'chat_completions'
+  debug?: AgentDebugConfig
 }
 
 export interface AgentRuntimeOptions extends Partial<AgentRuntimeConfig> {
@@ -244,16 +251,19 @@ function saveStoredAgent(key: string, agentName: string) {
 export function createAgentRuntime(
   options: AgentRuntimeOptions = {},
 ): AgentRuntime {
+  const debug = options.debug ?? options.api?.debug
   const config: AgentRuntimeConfig = {
     baseURL: normalizeBaseURL(options.baseURL),
     model: options.model?.trim() || DEFAULT_AGENT_MODEL,
     apiMode: normalizeApiMode(options.apiMode),
+    debug,
   }
-  const { agent, agents } = createAgents({
+  const { agent, checklistAgent, agents } = createAgents({
     model: config.model,
     api: options.api ?? {},
     tools: options.tools,
     getContext: options.getContext,
+    debugStartAt: debug?.startAt,
   })
   const agentRegistry = new Map<string, Agent<any, any>>(
     agents.map(item => [item.name, item]),
@@ -387,30 +397,79 @@ export function createAgentRuntime(
     signal,
     onUpdate,
   }: AgentRuntimeTurn) {
-    const runtime = await getRuntimeSession(runtimeSessionId, history)
+    const runtime = debug
+      ? {
+          activeAgentName: checklistAgent.name,
+          session: new MemorySession({
+            sessionId: [
+              runtimeSessionId,
+              'debug',
+              globalThis.crypto?.randomUUID?.() ?? Date.now(),
+            ].join(':'),
+          }),
+        }
+      : await getRuntimeSession(runtimeSessionId, history)
     if (signal.aborted)
       return
 
-    const activeAgent = agentRegistry.get(runtime.activeAgentName) ?? agent
     const runContext = createEditorAgentContext(options.getContext?.())
-    const hasImage = attachments.some(isAgentImageFilePart)
+    let debugStart: DebugInitializationStart | undefined
+    if (debug) {
+      debugStart = await createDebugInitializationStart(
+        debug,
+        runContext,
+        options.api,
+      )
+      appendPart(message, {
+        type: 'tool',
+        toolCallId: debugStart.callId,
+        toolName: 'prepare_initialization',
+        state: 'output-available',
+        input: debug.prepareInitialization,
+        output: debugStart.result,
+      })
+      onUpdate()
+
+      if (!debugStart.result.ok) {
+        throw new Error(
+          `调试模式 prepare_initialization 失败（${debugStart.result.stage}），请检查手动 mock 入参。`,
+        )
+      }
+    }
+
+    const activeAgent = debug
+      ? checklistAgent
+      : agentRegistry.get(runtime.activeAgentName) ?? agent
+    const hasImage = !debug && (
+      attachments.some(isAgentImageFilePart)
       || history.some(message => message.parts.some(
         part => part.type === 'file' && isAgentImageFilePart(part),
       ))
+    )
     // Aliyun's visual-understanding guide documents images through the
     // OpenAI-compatible Chat Completions endpoint. Text-only Qwen runs keep
     // the host's configured API mode.
     const runApiMode = hasImage && /^qwen/i.test(config.model)
       ? 'chat_completions'
       : config.apiMode
-    const imageDataUrls = await Promise.all(
-      attachments
-        .filter(isAgentImageFilePart)
-        .map(resolveImageData),
+    const imageDataUrls = debug
+      ? []
+      : await Promise.all(
+          attachments
+            .filter(isAgentImageFilePart)
+            .map(resolveImageData),
+        )
+    const turnContent = buildAgentUserContent(
+      debug ? buildDebugPrompt() : prompt,
+      imageDataUrls,
     )
+    const turnInput: AgentInputItem[] = [
+      ...(debugStart?.items ?? []),
+      user(turnContent),
+    ]
     const stream = await getRunner(runApiMode).run(
       activeAgent,
-      [user(buildAgentUserContent(prompt, imageDataUrls))],
+      turnInput,
       {
         stream: true,
         session: runtime.session,
@@ -457,7 +516,8 @@ export function createAgentRuntime(
       }
 
       runtime.activeAgentName = event.agent.name
-      saveActiveAgent(runtimeSessionId, runtime.activeAgentName)
+      if (!debug)
+        saveActiveAgent(runtimeSessionId, runtime.activeAgentName)
       if (mode === 'data') {
         appendPart(message, {
           type: 'data',
@@ -470,7 +530,8 @@ export function createAgentRuntime(
 
     await stream.completed
     runtime.activeAgentName = stream.currentAgent?.name ?? runtime.activeAgentName
-    saveActiveAgent(runtimeSessionId, runtime.activeAgentName)
+    if (!debug)
+      saveActiveAgent(runtimeSessionId, runtime.activeAgentName)
   }
 
   return {

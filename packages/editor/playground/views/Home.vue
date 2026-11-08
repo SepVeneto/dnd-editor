@@ -22,7 +22,7 @@
 </template>
 
 <script setup lang="ts">
-import type { AgentToolDefinition } from '@sepveneto/dnde-agent'
+import type { AgentHostApi, AgentToolDefinition } from '@sepveneto/dnde-agent'
 import type { IWidget } from '@sepveneto/dnde-core'
 import type { EditorInstance } from '@/main'
 import { defineAgentTool } from '@sepveneto/dnde-agent'
@@ -89,12 +89,29 @@ const agentTools: AgentToolDefinition<any, any>[] = [
   checkScenario,
   enableScenario,
 ]
-const agentApi = {
+const debugPrepareInitialization = {
+  intent: '调试：跳过清单解析，从 prepare_initialization 开始创建金刚区',
+  components: [{
+    key: 'debug-jgq',
+    type: 'jgq',
+  }],
+  resources: [],
+}
+
+const agentApi: AgentHostApi = {
   model: {
     baseURL: 'http://localhost:4000/v1',
     model: 'qwen3.6-plus',
     apiMode: 'responses' as const,
   },
+  ...(new URLSearchParams(location.search).has('debug')
+    ? {
+        debug: {
+          startAt: 'prepare_initialization' as const,
+          prepareInitialization: debugPrepareInitialization,
+        },
+      }
+    : {}),
 }
 
 const config = ref({})
