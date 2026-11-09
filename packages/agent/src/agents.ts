@@ -5,12 +5,9 @@ import { Agent, handoff, tool } from '@openai/agents'
 import { IR_RESOURCE_TYPES } from '@sepveneto/dnde-core'
 import { z } from 'zod'
 import {
-  buildChecklistAgentInstructions,
   buildMainAgentInstructions,
-  CONFIG_CHECKLIST_AGENT_NAME,
-  CONFIG_CHECKLIST_HANDOFF_TOOL_NAME,
-  CONFIG_CHECKLIST_RETURN_TOOL_NAME,
   MAIN_AGENT_NAME,
+  RETURN_TO_MAIN_AGENT_TOOL_NAME,
 } from './agentInstructions.ts'
 import { initializeEditorContext } from './initialization.ts'
 import { isAgentSdkTool } from './tool.ts'
@@ -34,8 +31,24 @@ export interface CreateAgentsOptions {
   model?: string
   api: AgentHostApi
   tools?: AgentHostTool[]
+  subAgents?: AgentSubAgentDefinition[]
   getContext?: () => Record<string, unknown>
-  debugStartAt?: 'prepare_initialization'
+}
+
+/**
+ * Host-owned specialist agent. The editor creates the SDK Agent and supplies
+ * editor tools, but the host owns its role, instructions and business tools.
+ */
+export interface AgentSubAgentDefinition {
+  name: string
+  instructions: string
+  handoffDescription: string
+  tools?: AgentHostTool[]
+  handoffToolName?: string
+  handoffToolDescription?: string
+  returnToMain?: boolean
+  returnToolName?: string
+  returnToolDescription?: string
 }
 
 async function resolveApproval(
@@ -145,9 +158,9 @@ function createEditorTools(api: AgentHostApi): FunctionTool<any, any, any>[] {
       '提交配置清单解析后的初始化 IR。工具会规范化 IR、绑定当前文档 revision，',
       '并返回需调用的独立资源查询工具；本工具不执行业务资源查询。',
       'components 数组顺序即组件顺序，不要提交 placement。',
-      '资源只提交所属组件、封闭枚举 type、required 和 query；H5 外接场景使用 app，卡券品牌使用 coupon。',
-      '门店提货存在时增加 shopPickup 组件并忽略具体内容。',
+      '资源只提交所属组件、封闭枚举 type、required 和 query；',
       '不要提交位置 ID、资源 ID、classification、resolution 或查询结果；宿主会为每个组件位置生成唯一 locationId 并写入 Context。',
+      '如果没有查询过资源详情，需要调用相应的工具查询资源详情',
     ].join(''),
     parameters: {
       type: 'object',
@@ -178,7 +191,7 @@ function createEditorTools(api: AgentHostApi): FunctionTool<any, any, any>[] {
               component: { type: 'string' },
               type: { type: 'string', enum: [...IR_RESOURCE_TYPES] },
               required: { type: 'boolean' },
-              query: { type: 'string' },
+              query: { type: 'array', items: { type: 'string' } },
             },
             required: ['component', 'type', 'required', 'query'],
             additionalProperties: false,
@@ -326,24 +339,23 @@ export function createAgents(options: CreateAgentsOptions) {
     reasoning: { effort: 'none' as const },
     text: { verbosity: 'low' as const },
   }
+  const editorTools = createEditorTools(options.api)
+  const adaptTools = (definitions: AgentHostTool[]) => definitions.map(item =>
+    isAgentSdkTool(item)
+      ? item
+      : adaptHostTool(item, options.api, getContext),
+  )
   const tools = [
-    ...createEditorTools(options.api),
-    ...hostTools.map(item =>
-      isAgentSdkTool(item)
-        ? item
-        : adaptHostTool(item, options.api, getContext),
-    ),
+    ...editorTools,
+    ...adaptTools(hostTools),
   ]
-  const checklistAgent = new Agent({
-    name: CONFIG_CHECKLIST_AGENT_NAME,
-    handoffDescription: '专门处理配置清单、需求文档、整页方案和多组件配置要求。',
-    model,
-    modelSettings,
-    instructions: buildChecklistAgentInstructions({
-      debugStartAt: options.debugStartAt,
-    }),
-    tools,
-  })
+  const subAgentDefinitions = options.subAgents ?? []
+  const duplicateName = new Set<string>()
+  for (const definition of subAgentDefinitions) {
+    if (definition.name === MAIN_AGENT_NAME || duplicateName.has(definition.name))
+      throw new Error(`子 Agent 名称重复或与主 Agent 冲突：${definition.name}`)
+    duplicateName.add(definition.name)
+  }
 
   const agent = new Agent({
     name: MAIN_AGENT_NAME,
@@ -352,24 +364,46 @@ export function createAgents(options: CreateAgentsOptions) {
     modelSettings,
     instructions: buildMainAgentInstructions(),
     tools,
-    handoffs: [
-      handoff(checklistAgent, {
-        toolNameOverride: CONFIG_CHECKLIST_HANDOFF_TOOL_NAME,
-        toolDescriptionOverride: '用户提供配置清单、需求文档、整页方案或多组件配置要求时，移交配置清单子 Agent。',
-      }),
-    ],
   })
 
-  checklistAgent.handoffs = [
-    handoff(agent, {
-      toolNameOverride: CONFIG_CHECKLIST_RETURN_TOOL_NAME,
-      toolDescriptionOverride: '配置清单处理完成、被取消，或用户切换到简单命令时，将控制权交还主 Agent。',
+  const subAgents = subAgentDefinitions.map((definition) => {
+    const subAgentTools = [
+      ...editorTools,
+      ...adaptTools(hostTools),
+      ...adaptTools(definition.tools ?? []),
+    ]
+    const subAgent = new Agent({
+      name: definition.name,
+      handoffDescription: definition.handoffDescription,
+      model,
+      modelSettings,
+      instructions: definition.instructions,
+      tools: subAgentTools,
+    })
+    if (definition.returnToMain !== false) {
+      subAgent.handoffs = [
+        handoff(agent, {
+          toolNameOverride: definition.returnToolName
+            ?? RETURN_TO_MAIN_AGENT_TOOL_NAME,
+          toolDescriptionOverride: definition.returnToolDescription
+            ?? `专业任务完成、取消，或用户切换到简单命令时，将控制权交还 ${MAIN_AGENT_NAME}。`,
+        }),
+      ]
+    }
+    return subAgent
+  })
+
+  agent.handoffs = subAgentDefinitions.map((definition, index) =>
+    handoff(subAgents[index], {
+      toolNameOverride: definition.handoffToolName,
+      toolDescriptionOverride: definition.handoffToolDescription
+        ?? definition.handoffDescription,
     }),
-  ]
+  )
 
   return {
     agent,
-    checklistAgent,
-    agents: [agent, checklistAgent],
+    subAgents,
+    agents: [agent, ...subAgents],
   }
 }

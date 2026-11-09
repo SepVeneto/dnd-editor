@@ -53,6 +53,19 @@ const queryAppResources = defineAgentTool({
 宿主将 `query_app_resources`、`query_coupon_resources`、`query_link_resources`
 这三个工具通过 `agentTools` 注入编辑器 Agent。`prepare_initialization` 规范化 IR、为每个组件位置生成唯一 `locationId`，但不执行业务查询。
 
+配置清单子 Agent 也由宿主提供，编辑器只提供主 Agent。宿主通过 `subAgents` 或
+`agent-sub-agents` 注册子 Agent 的规则和业务工具，编辑器会自动补充编辑器工具并建立
+主 Agent 与子 Agent 之间的 handoff：
+
+```ts
+const configurationChecklistAgent = {
+  name: 'Configuration Checklist Agent',
+  handoffDescription: '处理配置清单、需求文档和多组件配置请求。',
+  handoffToolName: 'handle_configuration_checklist',
+  instructions: `你负责把配置清单转换为 IR，并按宿主查询结果调用编辑器 DSL。完成后调用 return_to_main_agent。`,
+}
+```
+
 解析器必须返回：
 
 ```ts
@@ -89,7 +102,7 @@ context.initialization.locations[locationId].resources[type] = Resource[]
 
 ## Agent 工具顺序
 
-配置清单 Agent 必须按以下顺序调用：
+宿主提供的配置清单 Agent 必须按以下顺序调用：
 
 1. `get_current_editor`
 2. `get_widgets`

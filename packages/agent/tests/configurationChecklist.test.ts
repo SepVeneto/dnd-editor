@@ -55,6 +55,12 @@ const catalog = {
   }],
 }
 
+const checklistSubAgent = {
+  name: 'Configuration Checklist Agent',
+  instructions: '宿主提供的配置清单子 Agent，按 IR 和资源查询结果执行页面配置。',
+  handoffDescription: '处理配置清单、需求文档和多组件配置请求。',
+}
+
 describe('configuration checklist agent flow', () => {
   it('passes normalized IR to the host and hides raw resolved objects from the model', async () => {
     const appliedNodes: any[] = []
@@ -109,7 +115,7 @@ describe('configuration checklist agent flow', () => {
           }
         },
       })
-    const { checklistAgent } = createAgents({
+    const { subAgents } = createAgents({
       tools: [
         createQueryTool('app', '叮咚买菜', {
           secretBusinessObject: 'do-not-leak',
@@ -134,7 +140,9 @@ describe('configuration checklist agent flow', () => {
           operateEditor: () => ({ ok: true }),
         },
       },
+      subAgents: [checklistSubAgent],
     })
+    const [checklistAgent] = subAgents
 
     const model = new ScriptedModel([
       [functionCall('get_current_editor', {}, { callId: 'current-1' })],

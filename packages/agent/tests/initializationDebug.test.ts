@@ -7,7 +7,6 @@ import {
   functionCall,
   ScriptedModel,
 } from '@openai/agents/testing'
-import { buildChecklistAgentInstructions } from '../src/agentInstructions.ts'
 import { createAgents } from '../src/agents.ts'
 import {
   buildDebugPrompt,
@@ -134,10 +133,15 @@ describe('initialization debug mode', () => {
     assert.equal(start.result.ok, true)
 
     const locationId = (context as any).initialization.ir.components[0].locationId
-    const { checklistAgent } = createAgents({
+    const { subAgents } = createAgents({
       api,
-      debugStartAt: 'prepare_initialization',
+      subAgents: [{
+        name: 'Configuration Checklist Agent',
+        instructions: '宿主提供的调试子 Agent，从已生成的 IR 继续执行。',
+        handoffDescription: '处理配置清单初始化。',
+      }],
     })
+    const [checklistAgent] = subAgents
     const model = new ScriptedModel([
       [functionCall('add_editor_node', {
         resourceId: locationId,
@@ -158,18 +162,7 @@ describe('initialization debug mode', () => {
     assert.deepEqual(addedLocations, [locationId])
   })
 
-  it('tells the checklist agent to continue after the mocked preparation', () => {
-    const instructions = buildChecklistAgentInstructions({
-      debugStartAt: 'prepare_initialization',
-    })
-
-    assert.match(instructions, /宿主已使用手动 mock 入参完成 prepare_initialization/)
-    assert.match(instructions, /不要再次调用 get_current_editor、get_widgets 或 prepare_initialization/)
-    assert.match(instructions, /手动 mock 入参不来自用户消息/)
-    assert.doesNotMatch(
-      buildChecklistAgentInstructions(),
-      /宿主已使用手动 mock 入参完成 prepare_initialization/,
-    )
+  it('uses editor-owned debug entry instructions without a built-in sub-agent', () => {
     assert.match(buildDebugPrompt(), /不要解析用户消息/)
     assert.match(buildDebugPrompt(), /按 IR components 顺序执行组件操作/)
   })

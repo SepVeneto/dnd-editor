@@ -130,6 +130,7 @@
 </template>
 
 <script setup lang="ts">
+import type { AgentSubAgentDefinition } from '../agents'
 import type { AgentHostTool } from '../tool'
 import type { AgentHostApi } from '../types'
 import {
@@ -147,6 +148,7 @@ import { createAgentRuntime } from '../runtime'
 const props = withDefaults(defineProps<{
   api?: AgentHostApi
   tools?: AgentHostTool[]
+  subAgents?: AgentSubAgentDefinition[]
   context?: () => Record<string, unknown>
   sessionId?: string
   storageKey?: string
@@ -156,6 +158,7 @@ const props = withDefaults(defineProps<{
 }>(), {
   api: () => ({}),
   tools: () => [],
+  subAgents: () => [],
   sessionId: '',
   storageKey: 'dnd-agent-chat',
   title: '装修助手',
@@ -179,6 +182,7 @@ const runtime = computed(() => createAgentRuntime({
   apiMode: props.api.model?.apiMode,
   api: props.api,
   tools: props.tools,
+  subAgents: props.subAgents,
   getContext: props.context,
 }))
 

@@ -12,7 +12,14 @@ export function createAgentElement(): VueElementConstructor {
   return defineCustomElement(MpdAgent)
 }
 
-export type { CreateAgentsOptions } from './agents'
+export {
+  MAIN_AGENT_NAME,
+  RETURN_TO_MAIN_AGENT_TOOL_NAME,
+} from './agentInstructions'
+export type {
+  AgentSubAgentDefinition,
+  CreateAgentsOptions,
+} from './agents'
 
 export {
   createAgents,
@@ -44,10 +51,10 @@ export type { AgentUploadedFile } from './services'
 export { resolveAgentServiceURL } from './services'
 
 export type {
+  AgentHostTool,
   AgentToolApprovalOptions,
   AgentToolContext,
   AgentToolDefinition,
-  AgentHostTool,
 } from './tool'
 
 export {

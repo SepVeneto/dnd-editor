@@ -34,7 +34,7 @@ import { register } from '@/main'
 
 /**
  * 业务侧（playground）：
- * 宿主只提供编辑器 API 配置与业务工具，Agent Runtime 由 <dnd-agent> 自带。
+ * 宿主提供编辑器 API、业务工具和可选的业务子 Agent；主 Agent Runtime 由 <dnd-agent> 提供。
  */
 
 /** 查询指定场景的业务数据，供编辑流程补全组件内容。 */

@@ -102,6 +102,7 @@
       v-if="agentReady"
       :api="agentApi"
       :tools="agentTools"
+      :sub-agents="agentSubAgents"
       :context="runtimeContext"
     />
   </ElConfigProvider>
@@ -149,6 +150,7 @@ provide(EditorKey, {
 // 其 Element Plus 配置在 main.ts 安装插件时与默认配置一次性写入，避免重复 provide。
 
 const agentTools = computed(() => props.agentTools ?? [])
+const agentSubAgents = computed(() => props.agentSubAgents ?? [])
 
 const agentApi = computed(() => {
   const hostApi = props.agentApi ?? {}

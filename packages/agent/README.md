@@ -12,6 +12,7 @@
 <dnd-agent
   :api="agentApi"
   :tools="businessTools"
+  :sub-agents="specialistAgents"
   :context="getContext"
 ></dnd-agent>
 ```
@@ -89,22 +90,36 @@ const agentApi: AgentHostApi = {
 该模式复用正常工具的规范化、能力目录校验和 `locationId` 生成逻辑。mock 入参不合法时
 不会启动模型，聊天面板会展示 `prepare_initialization` 的失败结果。
 
-### 主 Agent 与配置清单子 Agent
+### 主 Agent 与宿主子 Agent
 
-主 Agent 负责分诊请求，并直接处理简单、局部的页面编辑命令。用户提供装修清单、
-需求文档、编号或分项列表、整页方案，或要求一次实现多个组件及内容配置时，主 Agent
-会通过 `handle_configuration_checklist` 移交给配置清单子 Agent：
+编辑器运行时只提供主 Agent。主 Agent 负责分诊请求，并直接处理简单、局部的页面
+编辑命令。专业子 Agent 由宿主按业务场景提供，编辑器不再内置配置清单或其它业务角色。
 
-- **简单命令**：新增单个组件，或编辑、删除、移动一个目标明确的节点、局部配置或样式，
-  由主 Agent 直接完成；
-- **配置清单**：解析清单中的页面结构、多个组件和内容要求，由子 Agent 统一规划、查询
-  业务数据并通过 DSL 工具完成配置。
+```ts
+import type { AgentSubAgentDefinition } from '@sepveneto/dnde-agent'
 
-页面已有内容、但请求又像是一份完整清单时，Agent 会先向用户确认是否覆盖，
-不会自行清空页面。用户明确要求保留现有内容时，子 Agent 会按清单逐项增量配置。
-清单完成、取消或用户切换回简单命令时，子 Agent 会通过
-`finish_configuration_checklist` 交还控制权。两种路径共用 IR、DSL 工具和
-location/resource 上下文，不会形成隐藏写入通道。
+const specialistAgents: AgentSubAgentDefinition[] = [{
+  name: 'Configuration Checklist Agent',
+  handoffDescription: '处理配置清单、需求文档、整页方案和多组件配置请求。',
+  handoffToolName: 'handle_configuration_checklist',
+  instructions: [
+    '你负责解析配置清单并生成初始化 IR。',
+    '先读取当前文档和组件目录，再调用 prepare_initialization。',
+    '按宿主资源查询结果和 IR 顺序调用 add_editor_node。',
+    '完成后调用 return_to_main_agent 交还控制权。',
+  ].join('\n'),
+  tools: [queryAppResources, queryCouponResources, queryLinkResources],
+}]
+```
+
+宿主定义子 Agent 的角色、instructions 和专业工具；编辑器为每个子 Agent 注入同一套
+编辑器查询、IR 和 DSL 工具，并自动建立主 Agent 到子 Agent及子 Agent 返回主 Agent的
+handoff。通过 `<dnd-agent :sub-agents="specialistAgents">` 或
+`<mpd-editor :agent-sub-agents="specialistAgents">` 注入。
+
+未注入子 Agent 时，主 Agent 独立处理可用工具范围内的请求，不会假设存在未注册的专业
+能力。子 Agent 完成、取消或用户切换回简单命令时，通过默认的
+`return_to_main_agent` 交还控制权；宿主也可用 `returnToolName` 自定义工具名。
 
 ### 图片参考
 

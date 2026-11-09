@@ -4,6 +4,7 @@ import type {
   RunItemStreamEvent,
   RunStreamEvent,
 } from '@openai/agents'
+import type { AgentSubAgentDefinition } from './agents'
 import type { DebugInitializationStart } from './debug'
 import type { AgentHostTool } from './tool'
 import type {
@@ -52,6 +53,7 @@ export interface AgentRuntimeConfig {
 export interface AgentRuntimeOptions extends Partial<AgentRuntimeConfig> {
   api?: AgentHostApi
   tools?: AgentHostTool[]
+  subAgents?: AgentSubAgentDefinition[]
   getContext?: () => Record<string, unknown>
 }
 
@@ -258,12 +260,12 @@ export function createAgentRuntime(
     apiMode: normalizeApiMode(options.apiMode),
     debug,
   }
-  const { agent, checklistAgent, agents } = createAgents({
+  const { agent, agents } = createAgents({
     model: config.model,
     api: options.api ?? {},
     tools: options.tools,
+    subAgents: options.subAgents,
     getContext: options.getContext,
-    debugStartAt: debug?.startAt,
   })
   const agentRegistry = new Map<string, Agent<any, any>>(
     agents.map(item => [item.name, item]),
@@ -399,7 +401,7 @@ export function createAgentRuntime(
   }: AgentRuntimeTurn) {
     const runtime = debug
       ? {
-          activeAgentName: checklistAgent.name,
+          activeAgentName: agent.name,
           session: new MemorySession({
             sessionId: [
               runtimeSessionId,
@@ -438,7 +440,7 @@ export function createAgentRuntime(
     }
 
     const activeAgent = debug
-      ? checklistAgent
+      ? agent
       : agentRegistry.get(runtime.activeAgentName) ?? agent
     const hasImage = !debug && (
       attachments.some(isAgentImageFilePart)

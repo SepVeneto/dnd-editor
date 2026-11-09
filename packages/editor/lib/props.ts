@@ -23,4 +23,8 @@ export const editorProps = {
     type: Array as PropType<any[]>,
     default: () => ([]),
   },
+  agentSubAgents: {
+    type: Array as PropType<any[]>,
+    default: () => ([]),
+  },
 } as const
