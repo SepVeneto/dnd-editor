@@ -36,9 +36,6 @@ export {
   editorOperationSucceeded,
   prepareEditorOperation,
 } from './editorContext'
-export type { PrepareInitializationResult } from './initialization'
-export { initializeEditorContext } from './initialization'
-
 export type {
   AgentRuntime,
   AgentRuntimeConfig,
@@ -63,14 +60,11 @@ export {
 } from './tool'
 export type {
   AgentApiMode,
-  AgentDebugConfig,
-  AgentDebugStartAt,
   AgentEditorApi,
   AgentEditorOperation,
   AgentFileKind,
   AgentHostApi,
   AgentModelConfig,
-  AgentPrepareInitializationInput,
   ChatMessage,
   ChatMode,
   DataPart,

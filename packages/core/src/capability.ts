@@ -30,8 +30,6 @@ export interface WidgetFieldCapability {
 export interface WidgetCustomCapability {
   name: string
   inputSchema?: Record<string, unknown>
-  resourceTypes: string[]
-  maxItems?: number
   semantics: 'append' | 'replace' | 'remove' | 'command'
   idempotent: boolean
   destructive: boolean
@@ -158,10 +156,7 @@ function registeredCustomTypes(
 ): WidgetCustomTypeCapability[] {
   return (registration?.customTypes ?? []).map(type => ({
     type: type.type,
-    capabilities: type.capabilities.map(capability => ({
-      ...capability,
-      resourceTypes: [...capability.resourceTypes],
-    })),
+    capabilities: type.capabilities.map(capability => ({ ...capability })),
   }))
 }
 
@@ -172,9 +167,9 @@ function schemaCustomTypes(widget: IWidget): string[] {
 }
 
 /**
- * Convert live widget declarations into the stable catalog consumed by
- * initialization and DSL validation. Custom schema entries are advertised from
- * the schema itself; executable capabilities must be registered by the host.
+ * Convert live widget declarations into the stable catalog consumed by DSL
+ * validation. Custom schema entries are advertised from the schema itself;
+ * executable capabilities must be registered by the host.
  */
 export function createCapabilityCatalog(
   widgets: IWidget[],

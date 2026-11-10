@@ -46,6 +46,28 @@ describe('Widget', () => {
     expect(w.name).toBe('卡片')
   })
 
+  it('保留 widget.agent 配置和 update 回调', () => {
+    const update = () => {}
+    const w = new Widget({
+      _name: '卡片',
+      _view: 'card',
+      agent: {
+        description: '卡片组件',
+        layout: {
+          description: '单列布局',
+          estimatedSize: 'full',
+          priority: 'large',
+        },
+        update,
+      },
+    })
+
+    expect(w.agent?.description).toBe('卡片组件')
+    expect(w.agent?.layout?.description).toBe('单列布局')
+    expect(w.agent?.update).toBe(update)
+    expect(w.clone().agent?.update).toBe(update)
+  })
+
   it('draggable / visible 默认值', () => {
     expect(new Widget({ _name: 'a', _view: 'a' }).draggable).toBe(true)
     expect(new Widget({ _name: 'a', _view: 'a' }).visible).toBe(true)

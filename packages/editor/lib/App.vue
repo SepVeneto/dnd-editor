@@ -227,9 +227,6 @@ function operateEditor(
   operation: Record<string, any>,
   context: Record<string, any> = {},
 ) {
-  if (!context.initialization?.ir)
-    throw new Error('尚未生成 IR，禁止开始编辑。请先调用 prepare_initialization。')
-
   if (operation.action === 'add') {
     const widget = app.widgetMap.get(operation.widget)
     if (!widget)

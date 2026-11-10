@@ -1,8 +1,6 @@
 import type {
   CapabilityCatalog,
   DslCustomOperation,
-  DslResourceContext,
-  DslResolvedResource,
   IWidget,
   WidgetCapabilityAdapter,
   WidgetCapabilityRegistry,
@@ -22,6 +20,7 @@ import { defineStore } from 'pinia'
 import { computed, customRef, ref, shallowRef, watchEffect } from 'vue'
 import { createDebug, removePopper } from '@/utils'
 import { useApp } from './app'
+import { applyWidgetAgentUpdate } from './widgetAgent'
 
 const debug = createDebug('store/editor')
 
@@ -366,30 +365,11 @@ export const useEditor = defineStore('editor', () => {
     }
   }
 
-  function resourceContext(context: Record<string, any> = {}): DslResourceContext {
-    if (context.resources && typeof context.resources === 'object')
-      return context.resources as DslResourceContext
-    if (context.initialization?.locations && typeof context.initialization.locations === 'object') {
-      return {
-        resources: Object.values(context.initialization.locations as Record<string, any>)
-          .flatMap(location => Object.values(location.resources ?? {}))
-          .flat() as DslResolvedResource[],
-      }
-    }
-    return { resources: [] }
-  }
-
   function validateAgentDsl(dsl: unknown, context: Record<string, any> = {}) {
     return validateEditorDsl(dsl, {
       catalog: getAgentCapabilities(),
       snapshot: getAgentSnapshot(),
-      resources: resourceContext(context),
     })
-  }
-
-  function requireInitializationIr(context: Record<string, any> = {}) {
-    if (!context.initialization?.ir)
-      throw new Error('尚未生成 IR，禁止开始编辑。请先调用 prepare_initialization。')
   }
 
   function setPath(target: Record<string, any>, path: string, value: unknown) {
@@ -432,7 +412,6 @@ export const useEditor = defineStore('editor', () => {
       const patch = await adapter({
         node,
         args: operation.args,
-        resources: resourceContext(context).resources,
         context,
       })
       if (patch && typeof patch === 'object') {
@@ -448,30 +427,24 @@ export const useEditor = defineStore('editor', () => {
     const operation = input as Record<string, any>
     const before = JSON.parse(JSON.stringify(getData()))
     const beforeRevision = revision.value
-    const locationId = typeof operation.locationId === 'string' ? operation.locationId : ''
-    const location = context.initialization?.locations?.[locationId]
+    const widgetType = typeof operation.widget === 'string' ? operation.widget : ''
 
     try {
-      requireInitializationIr(context)
-      if (!locationId)
-        throw new Error('初始化添加必须提供 IR locationId')
-      if (!location)
-        throw new Error(`Context 中不存在组件位置 ${locationId}`)
-
-      const definition = app.widgetMap.get(location.widget)
+      if (!widgetType)
+        throw new Error('添加组件必须提供 widget')
+      const definition = app.widgetMap.get(widgetType)
       if (!definition)
-        throw new Error(`找不到组件 ${location.widget}`)
+        throw new Error(`找不到组件 ${widgetType}`)
 
       const node = new Node(definition as Widget, {
         props: JSON.parse(JSON.stringify(definition.defaultData ?? {})),
         style: JSON.parse(JSON.stringify(definition.defaultStyle ?? {})),
       })
-      applyNodeProps(node, location.standardProps ?? {})
+      applyNodeProps(node, operation.props ?? {})
+      applyNodeStyle(node, operation.style ?? {})
       addNode(node, rootNode.value as Node, true)
-      node.widget.agent?.update?.(node, {
-        componentKey: location.componentKey,
-        locationId,
-      }, context)
+      await applyNodeCapabilities(node, operation.custom, context)
+      await applyWidgetAgentUpdate(node, operation.props ?? {}, context)
 
       undoStack.push({ data: before, revision: beforeRevision })
       revision.value += 1
@@ -482,8 +455,6 @@ export const useEditor = defineStore('editor', () => {
         node: {
           id: node.wid,
           type: node.type,
-          key: location.componentKey,
-          locationId,
         },
       }
     }
@@ -502,20 +473,6 @@ export const useEditor = defineStore('editor', () => {
     input: unknown,
     context: Record<string, any> = {},
   ) {
-    try {
-      requireInitializationIr(context)
-    }
-    catch (error) {
-      return {
-        ok: false,
-        revision: revision.value,
-        issues: [{
-          code: 'initialization_required',
-          path: 'context.initialization.ir',
-          message: error instanceof Error ? error.message : String(error),
-        }],
-      }
-    }
     const validation = validateAgentDsl(input, context)
     if (!validation.ok || !validation.normalized) {
       return {
@@ -561,6 +518,7 @@ export const useEditor = defineStore('editor', () => {
           }
 
           await applyNodeCapabilities(node, operation.custom, context)
+          await applyWidgetAgentUpdate(node, operation.props ?? {}, context)
           keyMap.set(operation.key, node)
           affected.push(node.wid)
           continue
@@ -579,6 +537,7 @@ export const useEditor = defineStore('editor', () => {
         applyNodeProps(node, operation.props ?? {})
         applyNodeStyle(node, operation.style ?? {})
         await applyNodeCapabilities(node, operation.custom, context)
+        await applyWidgetAgentUpdate(node, operation.props ?? {}, context)
         affected.push(node.wid)
       }
 

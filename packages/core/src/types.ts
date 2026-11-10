@@ -15,15 +15,12 @@ export interface WidgetLayoutItem {
   widget?: string
   items?: Array<{ category: string, id: any }>
   componentKey?: string
-  /** Host-generated IR location identity for initialization adds. */
-  locationId?: string
   changes?: Record<string, any>
 }
 
 export interface WidgetCapabilityExecutionContext {
   node: Node
   args: Record<string, unknown>
-  resources: unknown
   context: Record<string, unknown>
 }
 

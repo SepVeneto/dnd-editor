@@ -13,13 +13,6 @@
           {{ runtimeConfig.model }} · Agent runtime
         </span>
         <span
-          v-if="runtimeConfig.debug"
-          class="debug-badge"
-          title="已跳过模型解析，使用手动 mock 参数执行 prepare_initialization"
-        >
-          DEBUG · prepare_initialization
-        </span>
-        <span
           class="meta-divider"
           aria-hidden="true"
         />
@@ -219,11 +212,7 @@
               <textarea
                 id="dnd-agent-message"
                 v-model="draft"
-                :placeholder="
-                  runtimeConfig.debug
-                    ? '输入任意消息，从预置 IR 开始执行'
-                    : placeholder
-                "
+                :placeholder="placeholder"
                 rows="1"
                 :disabled="isBusy"
                 @keydown="handleComposerKeydown"

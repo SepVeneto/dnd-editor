@@ -5,10 +5,8 @@ import type {
   RunStreamEvent,
 } from '@openai/agents'
 import type { AgentSubAgentDefinition } from './agents'
-import type { DebugInitializationStart } from './debug'
 import type { AgentHostTool } from './tool'
 import type {
-  AgentDebugConfig,
   AgentHostApi,
   ChatMessage,
   ChatMode,
@@ -30,10 +28,6 @@ import {
   DEFAULT_AGENT_BFF_URL,
   DEFAULT_AGENT_MODEL,
 } from './agents'
-import {
-  buildDebugPrompt,
-  createDebugInitializationStart,
-} from './debug'
 import { createEditorAgentContext } from './editorContext'
 import {
   buildAgentUserContent,
@@ -47,7 +41,6 @@ export interface AgentRuntimeConfig {
   baseURL: string
   model: string
   apiMode: 'responses' | 'chat_completions'
-  debug?: AgentDebugConfig
 }
 
 export interface AgentRuntimeOptions extends Partial<AgentRuntimeConfig> {
@@ -253,19 +246,16 @@ function saveStoredAgent(key: string, agentName: string) {
 export function createAgentRuntime(
   options: AgentRuntimeOptions = {},
 ): AgentRuntime {
-  const debug = options.debug ?? options.api?.debug
   const config: AgentRuntimeConfig = {
     baseURL: normalizeBaseURL(options.baseURL),
     model: options.model?.trim() || DEFAULT_AGENT_MODEL,
     apiMode: normalizeApiMode(options.apiMode),
-    debug,
   }
   const { agent, agents } = createAgents({
     model: config.model,
     api: options.api ?? {},
     tools: options.tools,
     subAgents: options.subAgents,
-    getContext: options.getContext,
   })
   const agentRegistry = new Map<string, Agent<any, any>>(
     agents.map(item => [item.name, item]),
@@ -399,50 +389,13 @@ export function createAgentRuntime(
     signal,
     onUpdate,
   }: AgentRuntimeTurn) {
-    const runtime = debug
-      ? {
-          activeAgentName: agent.name,
-          session: new MemorySession({
-            sessionId: [
-              runtimeSessionId,
-              'debug',
-              globalThis.crypto?.randomUUID?.() ?? Date.now(),
-            ].join(':'),
-          }),
-        }
-      : await getRuntimeSession(runtimeSessionId, history)
+    const runtime = await getRuntimeSession(runtimeSessionId, history)
     if (signal.aborted)
       return
 
     const runContext = createEditorAgentContext(options.getContext?.())
-    let debugStart: DebugInitializationStart | undefined
-    if (debug) {
-      debugStart = await createDebugInitializationStart(
-        debug,
-        runContext,
-        options.api,
-      )
-      appendPart(message, {
-        type: 'tool',
-        toolCallId: debugStart.callId,
-        toolName: 'prepare_initialization',
-        state: 'output-available',
-        input: debug.prepareInitialization,
-        output: debugStart.result,
-      })
-      onUpdate()
-
-      if (!debugStart.result.ok) {
-        throw new Error(
-          `调试模式 prepare_initialization 失败（${debugStart.result.stage}），请检查手动 mock 入参。`,
-        )
-      }
-    }
-
-    const activeAgent = debug
-      ? agent
-      : agentRegistry.get(runtime.activeAgentName) ?? agent
-    const hasImage = !debug && (
+    const activeAgent = agentRegistry.get(runtime.activeAgentName) ?? agent
+    const hasImage = (
       attachments.some(isAgentImageFilePart)
       || history.some(message => message.parts.some(
         part => part.type === 'file' && isAgentImageFilePart(part),
@@ -454,21 +407,13 @@ export function createAgentRuntime(
     const runApiMode = hasImage && /^qwen/i.test(config.model)
       ? 'chat_completions'
       : config.apiMode
-    const imageDataUrls = debug
-      ? []
-      : await Promise.all(
-          attachments
-            .filter(isAgentImageFilePart)
-            .map(resolveImageData),
-        )
-    const turnContent = buildAgentUserContent(
-      debug ? buildDebugPrompt() : prompt,
-      imageDataUrls,
+    const imageDataUrls = await Promise.all(
+      attachments
+        .filter(isAgentImageFilePart)
+        .map(resolveImageData),
     )
-    const turnInput: AgentInputItem[] = [
-      ...(debugStart?.items ?? []),
-      user(turnContent),
-    ]
+    const turnContent = buildAgentUserContent(prompt, imageDataUrls)
+    const turnInput: AgentInputItem[] = [user(turnContent)]
     const stream = await getRunner(runApiMode).run(
       activeAgent,
       turnInput,
@@ -518,8 +463,7 @@ export function createAgentRuntime(
       }
 
       runtime.activeAgentName = event.agent.name
-      if (!debug)
-        saveActiveAgent(runtimeSessionId, runtime.activeAgentName)
+      saveActiveAgent(runtimeSessionId, runtime.activeAgentName)
       if (mode === 'data') {
         appendPart(message, {
           type: 'data',
@@ -532,8 +476,7 @@ export function createAgentRuntime(
 
     await stream.completed
     runtime.activeAgentName = stream.currentAgent?.name ?? runtime.activeAgentName
-    if (!debug)
-      saveActiveAgent(runtimeSessionId, runtime.activeAgentName)
+    saveActiveAgent(runtimeSessionId, runtime.activeAgentName)
   }
 
   return {

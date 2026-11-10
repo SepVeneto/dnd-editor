@@ -89,14 +89,6 @@ const agentTools: AgentToolDefinition<any, any>[] = [
   checkScenario,
   enableScenario,
 ]
-const debugPrepareInitialization = {
-  intent: '调试：跳过清单解析，从 prepare_initialization 开始创建金刚区',
-  components: [{
-    key: 'debug-jgq',
-    type: 'jgq',
-  }],
-  resources: [],
-}
 
 const agentApi: AgentHostApi = {
   model: {
@@ -104,14 +96,6 @@ const agentApi: AgentHostApi = {
     model: 'qwen3.6-plus',
     apiMode: 'responses' as const,
   },
-  ...(new URLSearchParams(location.search).has('debug')
-    ? {
-        debug: {
-          startAt: 'prepare_initialization' as const,
-          prepareInitialization: debugPrepareInitialization,
-        },
-      }
-    : {}),
 }
 
 const config = ref({})

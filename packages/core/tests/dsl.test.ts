@@ -23,8 +23,6 @@ const catalog = {
       type: 'jgq',
       capabilities: [{
         name: 'entry.items.append',
-        resourceTypes: ['app', 'coupon', 'link'],
-        maxItems: 8,
         semantics: 'append' as const,
         idempotent: false,
         destructive: false,
@@ -38,16 +36,6 @@ const catalog = {
 const snapshot = {
   revision: 3,
   nodes: [{ uuid: 'root', type: 'page' }],
-}
-
-const resources = {
-  resources: [{
-    status: 'resolved' as const,
-    type: 'link',
-    query: '扫码提货',
-    value: { name: '扫码提货', pagePath: '/pages/shopPickUp/index' },
-    sourceTool: 'static-routes',
-  }],
 }
 
 function validDsl() {
@@ -64,7 +52,7 @@ function validDsl() {
         type: 'jgq',
         capability: 'entry.items.append',
         args: {
-          queries: [{ type: 'link', query: '扫码提货' }],
+          value: 1,
         },
       }],
     }],
@@ -72,8 +60,8 @@ function validDsl() {
 }
 
 describe('editor DSL validation', () => {
-  it('accepts registered props, capabilities and resolved references', () => {
-    const result = validateEditorDsl(validDsl(), { catalog, snapshot, resources })
+  it('accepts registered props and custom capabilities', () => {
+    const result = validateEditorDsl(validDsl(), { catalog, snapshot })
 
     expect(result.ok).toBe(true)
     expect(result.normalized?.operations[0]).toMatchObject({
@@ -83,22 +71,21 @@ describe('editor DSL validation', () => {
     })
   })
 
-  it('rejects unknown props and forged resource queries', () => {
+  it('rejects unknown props', () => {
     const dsl = validDsl()
     dsl.operations[0].props = { title: '伪造字段' }
-    dsl.operations[0].custom[0].args.queries = [{ type: 'link', query: '不存在' }]
-    const result = validateEditorDsl(dsl, { catalog, snapshot, resources })
+    const result = validateEditorDsl(dsl, { catalog, snapshot })
 
     expect(result.ok).toBe(false)
     expect(result.issues.map(issue => issue.code)).toEqual(
-      expect.arrayContaining(['unknown_prop', 'unresolved_resource_query']),
+      expect.arrayContaining(['unknown_prop']),
     )
   })
 
   it('rejects content writes under style-only scope', () => {
     const dsl = validDsl()
     dsl.scope.mode = 'style_only'
-    const result = validateEditorDsl(dsl, { catalog, snapshot, resources })
+    const result = validateEditorDsl(dsl, { catalog, snapshot })
 
     expect(result.issues.map(issue => issue.code)).toEqual(
       expect.arrayContaining(['scope_violation', 'scope_violation']),
@@ -108,7 +95,7 @@ describe('editor DSL validation', () => {
   it('rejects stale revisions before execution', () => {
     const dsl = validDsl()
     dsl.baseRevision = 2
-    const result = validateEditorDsl(dsl, { catalog, snapshot, resources })
+    const result = validateEditorDsl(dsl, { catalog, snapshot })
 
     expect(result.issues.map(issue => issue.code)).toContain('stale_revision')
   })
@@ -119,7 +106,7 @@ describe('editor DSL validation', () => {
       baseRevision: 3,
       scope: { mode: 'any', targets: [] },
       operations: [{ op: 'delete', uuid: 'root' }],
-    }, { catalog, snapshot, resources })
+    }, { catalog, snapshot })
 
     expect(result.issues.map(issue => issue.code)).toContain('delete_confirmation_required')
   })

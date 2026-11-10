@@ -1,35 +1,7 @@
-import type { IrResourceType } from '@sepveneto/dnde-core'
-
 export type ChatMode = 'data' | 'text'
 export type MessageRole = 'system' | 'user' | 'assistant'
 export type AgentApiMode = 'responses' | 'chat_completions'
 export type AgentFileKind = 'document' | 'image'
-
-export interface AgentPrepareInitializationInput {
-  intent: string
-  components: Array<{
-    key: string
-    type: string
-  }>
-  resources: Array<{
-    component: string
-    type: IrResourceType
-    required: boolean
-    query: string
-  }>
-}
-
-export type AgentDebugStartAt = 'prepare_initialization'
-
-/**
- * Development-only startup configuration. When enabled, the runtime executes
- * prepare_initialization with the supplied input before asking the model to
- * continue. The model does not parse these arguments from the user message.
- */
-export interface AgentDebugConfig {
-  startAt: AgentDebugStartAt
-  prepareInitialization: AgentPrepareInitializationInput
-}
 
 export interface AgentModelConfig {
   /** OpenAI-compatible endpoint exposed by the host or its BFF. */
@@ -45,7 +17,7 @@ export interface AgentEditorOperation {
   /** Widget type id used by `add`. */
   widget?: string
   /**
-   * Editor data assembled by a business tool and injected by the host.
+   * Editor data assembled by a host tool and injected by the host.
    * This field is intentionally absent from the model-facing tool schema.
    */
   items?: unknown[]
@@ -65,7 +37,7 @@ export type EditorAgentContext = Record<string, unknown>
 export interface AgentEditorApi {
   getCurrentEditor: () => unknown | Promise<unknown>
   getWidgets: () => unknown | Promise<unknown>
-  /** Stable widget capability catalog used for IR and DSL validation. */
+  /** Stable widget capability catalog used for component and DSL validation. */
   getCapabilities?: () => unknown | Promise<unknown>
   getRevision?: () => number | Promise<number>
   validateDsl: (
@@ -94,7 +66,6 @@ export interface AgentEditorApi {
 export interface AgentHostApi {
   model?: AgentModelConfig
   editor?: Partial<AgentEditorApi>
-  debug?: AgentDebugConfig
 }
 
 export interface TextPart {

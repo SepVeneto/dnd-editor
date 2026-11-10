@@ -17,14 +17,9 @@ describe('agent instructions', () => {
     assert.match(instructions, /handoffDescription/)
     assert.match(instructions, /不得假设存在宿主未注入的子 Agent/)
     assert.match(instructions, /简单命令/)
-    assert.doesNotMatch(instructions, /Configuration Checklist Agent/)
-    assert.doesNotMatch(instructions, /handle_configuration_checklist/)
-    assert.doesNotMatch(instructions, /配置清单请求/)
     assert.match(instructions, /移交后不要继续规划页面/)
-    assert.match(instructions, /任何 add\/edit\/delete\/move 前都必须先调用 prepare_initialization 生成 IR/)
     assert.match(instructions, /添加组件只能调用 add_editor_node/)
-    assert.match(instructions, /只传 IR 中该位置的 resourceId/)
-    assert.match(instructions, /不得传 widget、items 或 changes/)
+    assert.match(instructions, /get_widgets 返回的 widget 类型/)
   })
 })
 
@@ -44,43 +39,46 @@ describe('agent topology', () => {
     const { agent, subAgents, agents } = createAgents({
       api: {},
       subAgents: [{
-        name: 'Configuration Checklist Agent',
-        instructions: '按宿主提供的配置清单规则执行。',
-        handoffDescription: '处理配置清单、需求文档和多组件配置请求。',
-        handoffToolName: 'handle_configuration_checklist',
+        name: 'Layout Agent',
+        instructions: '按宿主提供的布局规则执行。',
+        handoffDescription: '处理复杂布局和多组件组织请求。',
+        handoffToolName: 'handle_layout',
       }],
     } as any)
 
-    const [checklistAgent] = subAgents
-    assert.equal(checklistAgent.name, 'Configuration Checklist Agent')
+    const [layoutAgent] = subAgents
+    assert.equal(layoutAgent.name, 'Layout Agent')
     assert.deepEqual(agents.map(item => item.name), [
       agent.name,
-      checklistAgent.name,
+      layoutAgent.name,
     ])
     assert.equal(
       (agent.handoffs[0] as any).toolName,
-      'handle_configuration_checklist',
+      'handle_layout',
     )
     assert.equal(
-      (checklistAgent.handoffs[0] as any).toolName,
+      (layoutAgent.handoffs[0] as any).toolName,
       RETURN_TO_MAIN_AGENT_TOOL_NAME,
     )
     assert.equal(
-      checklistAgent.tools.some(item => (item as any).name === 'add_editor_node'),
+      layoutAgent.tools.some(item => (item as any).name === 'add_editor_node'),
       true,
     )
-    const addTool = checklistAgent.tools.find(
+    const addTool = layoutAgent.tools.find(
       item => (item as any).name === 'add_editor_node',
     ) as any
-    assert.deepEqual(Object.keys(addTool.parameters.properties), ['resourceId'])
-    assert.deepEqual(addTool.parameters.required, ['resourceId'])
+    assert.deepEqual(
+      Object.keys(addTool.parameters.properties),
+      ['widget', 'props', 'style', 'custom'],
+    )
+    assert.deepEqual(addTool.parameters.required, ['widget'])
     assert.equal(addTool.parameters.additionalProperties, false)
   })
 
   it('保留 SDK Agent 工具和宿主业务工具的原始能力', () => {
     const nativeTool = tool({
-      name: 'classify_resources',
-      description: '分类资源',
+      name: 'classify_items',
+      description: '分类条目',
       parameters: {
         type: 'object',
         properties: {
@@ -96,8 +94,8 @@ describe('agent topology', () => {
     })
     const hostDefinition = {
       kind: 'agent-tool' as const,
-      name: 'query_resources',
-      description: '查询资源',
+      name: 'query_items',
+      description: '查询条目',
       async execute() {
         return { ok: true }
       },
@@ -114,12 +112,12 @@ describe('agent topology', () => {
 
     assert.equal(agent.tools.includes(nativeTool), true)
     assert.equal(
-      agent.tools.some(item => (item as any).name === 'query_resources'),
+      agent.tools.some(item => (item as any).name === 'query_items'),
       true,
     )
     assert.equal(subAgents[0].tools.includes(nativeTool), true)
     assert.equal(
-      subAgents[0].tools.some(item => (item as any).name === 'query_resources'),
+      subAgents[0].tools.some(item => (item as any).name === 'query_items'),
       true,
     )
   })

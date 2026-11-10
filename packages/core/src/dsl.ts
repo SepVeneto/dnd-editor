@@ -28,15 +28,7 @@ export interface DslPlacement {
 export interface DslCustomOperation {
   type: string
   capability: string
-  args: {
-    queries?: DslResourceQuery[]
-    [key: string]: unknown
-  }
-}
-
-export interface DslResourceQuery {
-  type: string
-  query: string
+  args: Record<string, unknown>
 }
 
 export interface DslAddOperation {
@@ -72,19 +64,6 @@ export interface EditorDsl {
   operations: DslOperation[]
 }
 
-export interface DslResolvedResource {
-  status: 'resolved' | 'not_found' | 'ambiguous' | 'unavailable'
-  type: string
-  query: string
-  value?: unknown
-  sourceTool?: string
-  underlyingId?: string
-}
-
-export interface DslResourceContext {
-  resources: DslResolvedResource[]
-}
-
 export interface DslNodeSummary {
   uuid: string
   type: string
@@ -113,17 +92,12 @@ export interface DslValidationResult {
 export interface DslValidationOptions {
   catalog: CapabilityCatalog
   snapshot: DslDocumentSnapshot
-  resources?: DslResourceContext
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value)
     ? value as Record<string, unknown>
     : {}
-}
-
-function normalizeResourceQuery(value: string) {
-  return value.trim().replace(/\s+/g, '').toLocaleLowerCase()
 }
 
 function isScope(value: unknown): value is FieldScope {
@@ -269,7 +243,6 @@ function validateCustom(
   widget: WidgetCapability,
   custom: unknown,
   scopeMode: DslScopeMode,
-  resources: DslResourceContext,
   path: string,
   issues: DslIssue[],
 ) {
@@ -306,58 +279,6 @@ function validateCustom(
       })
     }
 
-    const args = asRecord(operation.args)
-    const queries = Array.isArray(args.queries)
-      ? args.queries.filter((query): query is DslResourceQuery => {
-          const item = asRecord(query)
-          return typeof item.type === 'string' && typeof item.query === 'string'
-        })
-      : []
-
-    if (Array.isArray(args.queries) && queries.length !== args.queries.length) {
-      issues.push({
-        code: 'invalid_resource_query',
-        path: `${path}[${index}].args.queries`,
-        message: '资源引用必须包含 type 和 query',
-      })
-    }
-    if (capability.maxItems !== undefined && queries.length > capability.maxItems) {
-      issues.push({
-        code: 'resource_limit_exceeded',
-        path: `${path}[${index}].args.queries`,
-        message: `${name} 最多接受 ${capability.maxItems} 个资源`,
-      })
-    }
-
-    queries.forEach((query, queryIndex) => {
-      const resource = resources.resources.find(item =>
-        item.type === query.type
-        && normalizeResourceQuery(item.query) === normalizeResourceQuery(query.query),
-      )
-      if (!resource) {
-        issues.push({
-          code: 'unresolved_resource_query',
-          path: `${path}[${index}].args.queries[${queryIndex}]`,
-          message: `资源 ${query.type}:${query.query} 未在本轮解析`,
-        })
-        return
-      }
-      if (resource.status !== 'resolved') {
-        issues.push({
-          code: 'resource_not_resolved',
-          path: `${path}[${index}].args.queries[${queryIndex}]`,
-          message: `资源 ${query.type}:${query.query} 状态为 ${resource.status}`,
-        })
-        return
-      }
-      if (capability.resourceTypes.length && !capability.resourceTypes.includes(resource.type)) {
-        issues.push({
-          code: 'resource_type_mismatch',
-          path: `${path}[${index}].args.queries[${queryIndex}]`,
-          message: `${name} 不接受 ${resource.type} 资源`,
-        })
-      }
-    })
   })
 }
 
@@ -488,7 +409,7 @@ export function validateEditorDsl(
         const customOperations = operation.custom === undefined ? [] : operation.custom
         validateProps(widget, operation.props, 'props', scopeMode as DslScopeMode, `${path}.props`, issues)
         validateProps(widget, operation.style, 'style', scopeMode as DslScopeMode, `${path}.style`, issues)
-        validateCustom(widget, customOperations, scopeMode as DslScopeMode, options.resources ?? { resources: [] }, `${path}.custom`, issues)
+        validateCustom(widget, customOperations, scopeMode as DslScopeMode, `${path}.custom`, issues)
       }
 
       if (key)
@@ -545,7 +466,7 @@ export function validateEditorDsl(
     if (node && widget) {
       validateProps(widget, operation.props, 'props', scopeMode as DslScopeMode, `${path}.props`, issues)
       validateProps(widget, operation.style, 'style', scopeMode as DslScopeMode, `${path}.style`, issues)
-      validateCustom(widget, operation.custom, scopeMode as DslScopeMode, options.resources ?? { resources: [] }, `${path}.custom`, issues)
+      validateCustom(widget, operation.custom, scopeMode as DslScopeMode, `${path}.custom`, issues)
     }
     normalizedOperations.push({
       op,

@@ -40,8 +40,6 @@ const registry = {
         capabilities: [
           {
             name: 'entry.items.append',
-            resourceTypes: ['app', 'coupon', 'link'],
-            maxItems: 8,
             semantics: 'append' as const,
             idempotent: false,
             destructive: false,
@@ -69,7 +67,6 @@ describe('capability catalog', () => {
       scope: 'style',
     })
     expect(findFieldCapability(capability, 'data')).toBeUndefined()
-    expect('resourceSlots' in capability).toBe(false)
   })
 
   it('registers custom capabilities only when the host declares them', () => {

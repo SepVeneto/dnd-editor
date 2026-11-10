@@ -9,7 +9,7 @@ import {
 } from '../src/editorContext.ts'
 
 describe('editor context', () => {
-  it('每次 Run 创建独立 Context', () => {
+  it('每次 Run 创建独立 Context，并透传宿主初始数据', () => {
     const first = createEditorAgentContext({ businessId: 'a' })
     const second = createEditorAgentContext({ businessId: 'b' })
 

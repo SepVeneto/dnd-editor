@@ -2,37 +2,22 @@ import type { FunctionTool, RunContext } from '@openai/agents'
 import type { AgentHostTool, AgentToolDefinition } from './tool'
 import type { AgentHostApi, EditorAgentContext } from './types'
 import { Agent, handoff, tool } from '@openai/agents'
-import { IR_RESOURCE_TYPES } from '@sepveneto/dnde-core'
 import { z } from 'zod'
 import {
   buildMainAgentInstructions,
   MAIN_AGENT_NAME,
   RETURN_TO_MAIN_AGENT_TOOL_NAME,
 } from './agentInstructions.ts'
-import { initializeEditorContext } from './initialization.ts'
 import { isAgentSdkTool } from './tool.ts'
 
 export const DEFAULT_AGENT_MODEL = 'qwen3.6-flash'
 export const DEFAULT_AGENT_BFF_URL = 'http://localhost:4000/v1'
-
-function requireInitializationIr(context?: EditorAgentContext) {
-  if (context?.initialization && typeof context.initialization === 'object') {
-    const initialization = context.initialization as Record<string, unknown>
-    if (initialization.ir && typeof initialization.ir === 'object')
-      return undefined
-  }
-  return {
-    ok: false,
-    error: '尚未生成 IR，禁止开始编辑。请先调用 prepare_initialization。',
-  }
-}
 
 export interface CreateAgentsOptions {
   model?: string
   api: AgentHostApi
   tools?: AgentHostTool[]
   subAgents?: AgentSubAgentDefinition[]
-  getContext?: () => Record<string, unknown>
 }
 
 /**
@@ -75,7 +60,6 @@ async function resolveApproval(
 function adaptHostTool(
   definition: AgentToolDefinition,
   api: AgentHostApi,
-  getContext: () => Record<string, unknown>,
 ): FunctionTool<any, any, any> {
   const zodParameters = definition.parameters
     ?? definition.inputSchema
@@ -96,6 +80,10 @@ function adaptHostTool(
       input: unknown,
       runContext?: RunContext<EditorAgentContext>,
     ) {
+      const context = runContext?.context
+      if (!context)
+        throw new Error('缺少当前 Agent Run 的 Context')
+
       if (!await resolveApproval(definition, input)) {
         return {
           ok: false,
@@ -107,8 +95,7 @@ function adaptHostTool(
       try {
         return await definition.execute(input, {
           api,
-          getContext,
-          context: runContext?.context ?? getContext() as EditorAgentContext,
+          context,
         })
       }
       catch (error) {
@@ -142,7 +129,7 @@ function createEditorTools(api: AgentHostApi): FunctionTool<any, any, any>[] {
 
   const getWidgets = tool({
     name: 'get_widgets',
-    description: '获取当前组件的稳定能力目录：标准 props、范围、custom type 和静态选项。规划 IR 和 DSL 前必须查询。',
+    description: '获取当前组件的稳定能力目录：标准 props、范围、custom type 和静态选项。规划组件和 DSL 前必须查询。',
     parameters: emptyParameters,
     strict: false,
     async execute(_input: unknown) {
@@ -152,93 +139,32 @@ function createEditorTools(api: AgentHostApi): FunctionTool<any, any, any>[] {
     },
   } as any)
 
-  const prepareInitialization = tool({
-    name: 'prepare_initialization',
-    description: [
-      '提交配置清单解析后的初始化 IR。工具会规范化 IR、绑定当前文档 revision，',
-      '并返回需调用的独立资源查询工具；本工具不执行业务资源查询。',
-      'components 数组顺序即组件顺序，不要提交 placement。',
-      '资源只提交所属组件、封闭枚举 type、required 和 query；',
-      '不要提交位置 ID、资源 ID、classification、resolution 或查询结果；宿主会为每个组件位置生成唯一 locationId 并写入 Context。',
-      '如果没有查询过资源详情，需要调用相应的工具查询资源详情',
-    ].join(''),
-    parameters: {
-      type: 'object',
-      properties: {
-        intent: {
-          type: 'string',
-          description: '对配置清单目标的简短描述',
-        },
-        components: {
-          type: 'array',
-          description: '配置清单要求的组件及批内稳定 key',
-          items: {
-            type: 'object',
-            properties: {
-              key: { type: 'string' },
-              type: { type: 'string' },
-            },
-            required: ['key', 'type'],
-            additionalProperties: false,
-          },
-        },
-        resources: {
-          type: 'array',
-          description: '配置清单中的 link/app/coupon 资源需求',
-          items: {
-            type: 'object',
-            properties: {
-              component: { type: 'string' },
-              type: { type: 'string', enum: [...IR_RESOURCE_TYPES] },
-              required: { type: 'boolean' },
-              query: { type: 'array', items: { type: 'string' } },
-            },
-            required: ['component', 'type', 'required', 'query'],
-            additionalProperties: false,
-          },
-        },
-      },
-      required: ['intent', 'components', 'resources'],
-      additionalProperties: false,
-    },
-    strict: false,
-    async execute(rawIr: unknown, runContext?: RunContext<EditorAgentContext>) {
-      const context = runContext?.context
-      if (!context)
-        throw new Error('缺少当前 Agent Run 的 Context')
-
-      return initializeEditorContext(rawIr, context, api)
-    },
-  } as any)
-
   const addEditorNode = tool({
     name: 'add_editor_node',
     description: [
       '调用编辑器 DSL 添加一个组件。',
-      '模型只传 resourceId；宿主从 Context 中读取该位置对应的 widget、标准属性和业务资源。',
-      '工具本身不校验顺序、资源状态或参数内容，只提交单条 add 操作。',
+      'widget 必须来自 get_widgets 返回的组件目录；props、style 和 custom 必须符合该组件声明的标准字段与能力。',
+      '工具只提交单条 add 操作，不解释或拼装业务数据。',
     ].join(''),
     parameters: {
       type: 'object',
       properties: {
-        resourceId: { type: 'string' },
+        widget: { type: 'string' },
+        props: { type: 'object', additionalProperties: true },
+        style: { type: 'object', additionalProperties: true },
+        custom: {
+          type: 'array',
+          items: { type: 'object', additionalProperties: true },
+        },
       },
-      required: ['resourceId'],
+      required: ['widget'],
       additionalProperties: false,
     },
     strict: false,
     async execute(input: unknown, runContext?: RunContext<EditorAgentContext>) {
       if (!api.editor?.addNode)
         throw new Error('宿主未提供直接添加节点 API')
-      const missingIr = requireInitializationIr(runContext?.context)
-      if (missingIr)
-        return missingIr
-      return api.editor.addNode(
-        {
-          locationId: (input as { resourceId?: unknown })?.resourceId,
-        },
-        runContext?.context,
-      )
+      return api.editor.addNode(input as Record<string, unknown>, runContext?.context)
     },
   } as any)
 
@@ -263,9 +189,6 @@ function createEditorTools(api: AgentHostApi): FunctionTool<any, any, any>[] {
     async execute(input: unknown, runContext?: RunContext<EditorAgentContext>) {
       if (!api.editor?.applyDsl || !api.editor.getCurrentEditor)
         throw new Error('宿主未提供 DSL 执行 API')
-      const missingIr = requireInitializationIr(runContext?.context)
-      if (missingIr)
-        return missingIr
       const operation = input as Record<string, any>
       const currentEditor = await api.editor.getCurrentEditor() as Record<string, any>
       return api.editor.applyDsl({
@@ -299,9 +222,6 @@ function createEditorTools(api: AgentHostApi): FunctionTool<any, any, any>[] {
     async execute(input: unknown, runContext?: RunContext<EditorAgentContext>) {
       if (!api.editor?.applyDsl || !api.editor.getCurrentEditor)
         throw new Error('宿主未提供 DSL 执行 API')
-      const missingIr = requireInitializationIr(runContext?.context)
-      if (missingIr)
-        return missingIr
       const operation = input as Record<string, any>
       const currentEditor = await api.editor.getCurrentEditor() as Record<string, any>
       return api.editor.applyDsl({
@@ -320,7 +240,6 @@ function createEditorTools(api: AgentHostApi): FunctionTool<any, any, any>[] {
   return [
     getCurrentEditor,
     getWidgets,
-    prepareInitialization,
     addEditorNode,
     updateEditorNode,
     deleteEditorNode,
@@ -332,7 +251,6 @@ function createEditorTools(api: AgentHostApi): FunctionTool<any, any, any>[] {
  * 编辑器能力通过 options.api 注入，Agent 本身不持有宿主状态。
  */
 export function createAgents(options: CreateAgentsOptions) {
-  const getContext = options.getContext ?? (() => ({}))
   const hostTools = options.tools ?? []
   const model = options.model || DEFAULT_AGENT_MODEL
   const modelSettings = {
@@ -343,7 +261,7 @@ export function createAgents(options: CreateAgentsOptions) {
   const adaptTools = (definitions: AgentHostTool[]) => definitions.map(item =>
     isAgentSdkTool(item)
       ? item
-      : adaptHostTool(item, options.api, getContext),
+      : adaptHostTool(item, options.api),
   )
   const tools = [
     ...editorTools,

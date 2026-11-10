@@ -6,7 +6,8 @@ import type {
 /**
  * Create isolated editor/business state for one Agent Run.
  *
- * Host context is copied in as starting data for the current Run.
+ * The host-provided context is copied into the Run Context and is only consumed
+ * by tools through the SDK's normal passthrough.
  */
 export function createEditorAgentContext(
   initial: Record<string, unknown> = {},
@@ -20,9 +21,8 @@ export interface PreparedEditorOperation {
 }
 
 /**
- * Remove any model-produced items. Add operations never read or inject
- * hidden context data; initialization data is resolved through locationId
- * when the tool is invoked.
+ * Remove any model-produced items. Add operations never read or inject hidden
+ * context data; the host resolves the submitted operation when the tool runs.
  */
 export function prepareEditorOperation(
   input: unknown,
