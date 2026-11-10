@@ -2,17 +2,17 @@
   <div class="playground">
     <Copilot
       :api="api"
-      :tools="tools"
+      :sub-agents="subAgents"
       :context="context"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import type { AgentHostApi, AgentToolDefinition } from '@/index'
+import type { AgentHostApi, AgentSubAgentDefinition, AgentToolDefinition } from '@/index'
+import { z } from 'zod'
 import Copilot from '@/agent/Copilot.vue'
 import { defineAgentTool } from '@/index'
-import { z } from 'zod'
 
 const tools: AgentToolDefinition<any, any>[] = [
   defineAgentTool({
@@ -27,6 +27,18 @@ const tools: AgentToolDefinition<any, any>[] = [
   }),
 ]
 
+const subAgents: AgentSubAgentDefinition[] = [{
+  name: 'Page Agent',
+  handoffDescription: '处理页面编辑和业务查询请求。',
+  handoffToolName: 'handle_page',
+  instructions: [
+    '先读取当前编辑器与组件能力目录。',
+    '只能通过 apply_editor_dsl 提交完整、版本化的编辑器 DSL。',
+    '完成后调用 return_to_main_agent 交还控制权。',
+  ].join('\n'),
+  tools,
+}]
+
 const api: AgentHostApi = {
   model: {
     baseURL: 'http://localhost:4000/v1',
@@ -36,7 +48,8 @@ const api: AgentHostApi = {
   editor: {
     getCurrentEditor: () => ({ page: { id: 'root', children: [] } }),
     getWidgets: () => [{ typeId: 'page', name: '页面' }],
-    operateEditor: operation => ({ ok: true, operation }),
+    validateDsl: () => ({ ok: true, issues: [] }),
+    applyDsl: dsl => ({ ok: true, dsl }),
   },
 }
 

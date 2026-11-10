@@ -16,7 +16,9 @@ export {
   MAIN_AGENT_NAME,
   RETURN_TO_MAIN_AGENT_TOOL_NAME,
 } from './agentInstructions'
+export type { MainAgentHandoff } from './agentInstructions'
 export type {
+  AgentSubAgent,
   AgentSubAgentDefinition,
   CreateAgentsOptions,
 } from './agents'
@@ -27,15 +29,17 @@ export {
   DEFAULT_AGENT_MODEL,
 } from './agents'
 export type {
-  PreparedEditorOperation,
-} from './editorContext'
-
+  CreateEditorDslToolsOptions,
+} from './editorDsl'
 export {
-  completeEditorOperation,
-  createEditorAgentContext,
-  editorOperationSucceeded,
-  prepareEditorOperation,
-} from './editorContext'
+  APPLY_EDITOR_DSL_TOOL_NAME,
+  createEditorDslTools,
+  createEditorTools,
+  GET_CURRENT_EDITOR_TOOL_NAME,
+  GET_WIDGETS_TOOL_NAME,
+  UNDO_EDITOR_DSL_TOOL_NAME,
+  VALIDATE_EDITOR_DSL_TOOL_NAME,
+} from './editorDsl'
 export type {
   AgentRuntime,
   AgentRuntimeConfig,
@@ -61,7 +65,8 @@ export {
 export type {
   AgentApiMode,
   AgentEditorApi,
-  AgentEditorOperation,
+  AgentEditorDsl,
+  AgentEditorDslValidation,
   AgentFileKind,
   AgentHostApi,
   AgentModelConfig,
@@ -84,3 +89,19 @@ export {
   Runner,
   tool,
 } from '@openai/agents'
+
+export type {
+  DslAddOperation,
+  DslCustomOperation,
+  DslDeleteOperation,
+  DslDocumentSnapshot,
+  DslIssue,
+  DslOperation,
+  DslPlacement,
+  DslScope,
+  DslScopeMode,
+  DslUpdateOperation,
+  DslValidationOptions,
+  DslValidationResult,
+  EditorDsl,
+} from '@sepveneto/dnde-core'

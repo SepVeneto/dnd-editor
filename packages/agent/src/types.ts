@@ -1,3 +1,8 @@
+import type {
+  DslValidationResult,
+  EditorDsl,
+} from '@sepveneto/dnde-core'
+
 export type ChatMode = 'data' | 'text'
 export type MessageRole = 'system' | 'user' | 'assistant'
 export type AgentApiMode = 'responses' | 'chat_completions'
@@ -10,22 +15,9 @@ export interface AgentModelConfig {
   apiMode?: AgentApiMode
 }
 
-export interface AgentEditorOperation {
-  action: 'add' | 'edit' | 'delete' | 'move'
-  /** Existing node UUID used by edit, delete, and move operations. */
-  target?: string
-  /** Widget type id used by `add`. */
-  widget?: string
-  /**
-   * Editor data assembled by a host tool and injected by the host.
-   * This field is intentionally absent from the model-facing tool schema.
-   */
-  items?: unknown[]
-  changes?: Record<string, unknown>
-  style?: Record<string, unknown>
-  before?: string
-  after?: string
-}
+/** The public, versioned DSL used by host sub-agents to edit the document. */
+export type AgentEditorDsl = EditorDsl
+export type AgentEditorDslValidation = DslValidationResult
 
 /** Mutable state scoped to one Agent Run. */
 export type EditorAgentContext = Record<string, unknown>
@@ -41,25 +33,15 @@ export interface AgentEditorApi {
   getCapabilities?: () => unknown | Promise<unknown>
   getRevision?: () => number | Promise<number>
   validateDsl: (
-    dsl: unknown,
+    dsl: AgentEditorDsl,
     context?: EditorAgentContext,
-  ) => unknown | Promise<unknown>
-  /** Direct add operation without DSL parameter validation. */
-  addNode?: (
-    operation: Record<string, unknown>,
-    context?: EditorAgentContext,
-  ) => unknown | Promise<unknown>
+  ) => AgentEditorDslValidation | Promise<AgentEditorDslValidation>
   applyDsl: (
-    dsl: unknown,
+    dsl: AgentEditorDsl,
     context?: EditorAgentContext,
   ) => unknown | Promise<unknown>
   undo?: (
     revision?: number,
-  ) => unknown | Promise<unknown>
-  /** Context contains business data prepared by tools during the current Agent Run. */
-  operateEditor: (
-    operation: AgentEditorOperation,
-    context?: EditorAgentContext,
   ) => unknown | Promise<unknown>
 }
 

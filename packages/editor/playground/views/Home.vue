@@ -14,7 +14,7 @@
     :widgets="widgets"
     agent
     :agent-api="agentApi"
-    :agent-tools="agentTools"
+    :agent-sub-agents="agentSubAgents"
     :extra="{ obj: 'test' }"
     @change="onUpdate"
   />
@@ -22,7 +22,11 @@
 </template>
 
 <script setup lang="ts">
-import type { AgentHostApi, AgentToolDefinition } from '@sepveneto/dnde-agent'
+import type {
+  AgentHostApi,
+  AgentSubAgentDefinition,
+  AgentToolDefinition,
+} from '@sepveneto/dnde-agent'
 import type { IWidget } from '@sepveneto/dnde-core'
 import type { EditorInstance } from '@/main'
 import { defineAgentTool } from '@sepveneto/dnde-agent'
@@ -89,6 +93,18 @@ const agentTools: AgentToolDefinition<any, any>[] = [
   checkScenario,
   enableScenario,
 ]
+
+const agentSubAgents: AgentSubAgentDefinition[] = [{
+  name: 'Page Agent',
+  handoffDescription: '处理页面编辑、布局和业务数据查询请求。',
+  handoffToolName: 'handle_page_editing',
+  instructions: [
+    '先读取当前编辑器与组件能力目录，再规划修改。',
+    '所有页面修改都通过 apply_editor_dsl 提交完整、版本化的 DSL。',
+    '业务数据只能来自宿主业务工具；完成后调用 return_to_main_agent。',
+  ].join('\n'),
+  tools: agentTools,
+}]
 
 const agentApi: AgentHostApi = {
   model: {

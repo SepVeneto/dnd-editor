@@ -4,8 +4,7 @@ import type {
   RunItemStreamEvent,
   RunStreamEvent,
 } from '@openai/agents'
-import type { AgentSubAgentDefinition } from './agents'
-import type { AgentHostTool } from './tool'
+import type { AgentSubAgent } from './agents'
 import type {
   AgentHostApi,
   ChatMessage,
@@ -28,7 +27,6 @@ import {
   DEFAULT_AGENT_BFF_URL,
   DEFAULT_AGENT_MODEL,
 } from './agents'
-import { createEditorAgentContext } from './editorContext'
 import {
   buildAgentUserContent,
   formatAgentDocumentContext,
@@ -45,8 +43,7 @@ export interface AgentRuntimeConfig {
 
 export interface AgentRuntimeOptions extends Partial<AgentRuntimeConfig> {
   api?: AgentHostApi
-  tools?: AgentHostTool[]
-  subAgents?: AgentSubAgentDefinition[]
+  subAgents?: AgentSubAgent[]
   getContext?: () => Record<string, unknown>
 }
 
@@ -254,7 +251,6 @@ export function createAgentRuntime(
   const { agent, agents } = createAgents({
     model: config.model,
     api: options.api ?? {},
-    tools: options.tools,
     subAgents: options.subAgents,
   })
   const agentRegistry = new Map<string, Agent<any, any>>(
@@ -393,7 +389,7 @@ export function createAgentRuntime(
     if (signal.aborted)
       return
 
-    const runContext = createEditorAgentContext(options.getContext?.())
+    const runContext = { ...(options.getContext?.() ?? {}) }
     const activeAgent = agentRegistry.get(runtime.activeAgentName) ?? agent
     const hasImage = (
       attachments.some(isAgentImageFilePart)

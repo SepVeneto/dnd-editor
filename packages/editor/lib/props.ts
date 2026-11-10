@@ -19,10 +19,6 @@ export const editorProps = {
     type: Object as PropType<Record<string, any>>,
     default: () => ({}),
   },
-  agentTools: {
-    type: Array as PropType<any[]>,
-    default: () => ([]),
-  },
   agentSubAgents: {
     type: Array as PropType<any[]>,
     default: () => ([]),
