@@ -143,6 +143,40 @@ function contextValue(runContext?: RunContext<EditorAgentContext>) {
   return runContext?.context
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function withoutWidgetImplementation(widget: unknown): unknown {
+  if (!isRecord(widget))
+    return widget
+
+  const {
+    defaultStyle: _defaultStyle,
+    defaultData: _defaultData,
+    attributes: _attributes,
+    fields: _fields,
+    customTypes: _customTypes,
+    staticOptions: _staticOptions,
+    ...capability
+  } = widget
+  return capability
+}
+
+function widgetCandidates(result: unknown): unknown {
+  const candidates = (items: unknown[]) => items
+    .filter(item => !isRecord(item) || item.type !== 'page')
+    .map(withoutWidgetImplementation)
+
+  if (Array.isArray(result))
+    return candidates(result)
+
+  if (isRecord(result) && Array.isArray(result.widgets))
+    return { ...result, widgets: candidates(result.widgets) }
+
+  return result
+}
+
 /**
  * Build the complete model-facing editor contract. These tools are intended
  * for host-owned sub-agents; the main dispatcher never receives them.
@@ -170,13 +204,13 @@ export function createEditorDslTools(
   if (options.widgets !== false) {
     tools.push(tool({
       name: GET_WIDGETS_TOOL_NAME,
-      description: '读取组件能力目录，包括标准字段、作用域、custom capability 和静态选项。',
+      description: '读取可作为页面子组件的组件列表，不包括 page、实现字段或组件初始化数据。',
       parameters: emptyParameters,
       strict: false,
       async execute() {
         if (!api.editor?.getWidgets)
           throw new Error('宿主未提供 getWidgets API')
-        return api.editor.getWidgets()
+        return widgetCandidates(await api.editor.getWidgets())
       },
     } as any))
   }

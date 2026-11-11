@@ -14,12 +14,10 @@ export function createAgentElement(): VueElementConstructor {
 
 export {
   MAIN_AGENT_NAME,
-  RETURN_TO_MAIN_AGENT_TOOL_NAME,
 } from './agentInstructions'
-export type { MainAgentHandoff } from './agentInstructions'
+export type { MainAgentInfo } from './agentInstructions'
 export type {
   AgentSubAgent,
-  AgentSubAgentDefinition,
   CreateAgentsOptions,
 } from './agents'
 
@@ -51,17 +49,6 @@ export { createAgentRuntime } from './runtime'
 export type { AgentUploadedFile } from './services'
 export { resolveAgentServiceURL } from './services'
 
-export type {
-  AgentHostTool,
-  AgentToolApprovalOptions,
-  AgentToolContext,
-  AgentToolDefinition,
-} from './tool'
-
-export {
-  defineAgentTool,
-  defineCapability,
-} from './tool'
 export type {
   AgentApiMode,
   AgentEditorApi,

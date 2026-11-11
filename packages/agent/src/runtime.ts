@@ -6,7 +6,6 @@ import type {
 } from '@openai/agents'
 import type { AgentSubAgent } from './agents'
 import type {
-  AgentHostApi,
   ChatMessage,
   ChatMode,
   FilePart,
@@ -42,7 +41,6 @@ export interface AgentRuntimeConfig {
 }
 
 export interface AgentRuntimeOptions extends Partial<AgentRuntimeConfig> {
-  api?: AgentHostApi
   subAgents?: AgentSubAgent[]
   getContext?: () => Record<string, unknown>
 }
@@ -250,7 +248,6 @@ export function createAgentRuntime(
   }
   const { agent, agents } = createAgents({
     model: config.model,
-    api: options.api ?? {},
     subAgents: options.subAgents,
   })
   const agentRegistry = new Map<string, Agent<any, any>>(

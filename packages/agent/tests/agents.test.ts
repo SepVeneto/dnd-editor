@@ -2,12 +2,13 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { Agent, tool } from '@openai/agents'
+import { z } from 'zod'
 import {
   buildMainAgentInstructions,
   MAIN_AGENT_NAME,
-  RETURN_TO_MAIN_AGENT_TOOL_NAME,
 } from '../src/agentInstructions.ts'
 import { createAgents } from '../src/agents.ts'
+import { createEditorDslTools } from '../src/editorDsl.ts'
 
 describe('agent instructions', () => {
   it('主 Agent 只调度宿主提供的子 Agent，不持有编辑能力', () => {
@@ -39,52 +40,8 @@ describe('agent topology', () => {
     assert.deepEqual(agents, [agent])
   })
 
-  it('主 Agent 不持有宿主工具，只有宿主子 Agent 获得工具和 DSL', () => {
-    const { agent, subAgents } = createAgents({
-      subAgents: [{
-        name: 'Layout Agent',
-        instructions: '按宿主提供的布局规则执行。',
-        handoffDescription: '处理复杂布局和多组件组织请求。',
-        handoffToolName: 'handle_layout',
-      }],
-    })
-
-    const [layoutAgent] = subAgents
-    assert.equal(layoutAgent.name, 'Layout Agent')
-    assert.deepEqual(agent.tools, [])
-    assert.equal((agent.handoffs[0] as any).toolName, 'handle_layout')
-    assert.equal(
-      (layoutAgent.handoffs[0] as any).toolName,
-      RETURN_TO_MAIN_AGENT_TOOL_NAME,
-    )
-    assert.deepEqual(
-      layoutAgent.tools.map(item => item.name),
-      [
-        'get_current_editor',
-        'get_widgets',
-        'validate_editor_dsl',
-        'apply_editor_dsl',
-        'undo_editor_dsl',
-      ],
-    )
-  })
-
-  it('只读子 Agent 可以关闭自动注入的编辑器 DSL', () => {
-    const { agent, subAgents } = createAgents({
-      subAgents: [{
-        name: 'Research Agent',
-        instructions: '只做分析。',
-        handoffDescription: '分析请求。',
-        editorDsl: false,
-      }],
-    })
-
-    assert.deepEqual(agent.tools, [])
-    assert.deepEqual(subAgents[0].tools, [])
-  })
-
-  it('保留宿主直接提供的 SDK Agent，包括其工具和 handoff', () => {
-    const nativeTool = tool({
+  it('直接使用宿主创建的 Agent 及其工具', () => {
+    const queryTool = tool({
       name: 'query_items',
       description: '查询条目',
       parameters: {
@@ -97,31 +54,84 @@ describe('agent topology', () => {
         return '{}'
       },
     })
-    const hostAgent = new Agent({
-      name: 'Host Agent',
-      handoffDescription: '处理宿主业务。',
-      instructions: '处理宿主业务。',
+    const layoutAgent = new Agent({
+      name: 'Layout Agent',
+      handoffDescription: '处理复杂布局和多组件组织请求。',
       model: 'test-model',
-      tools: [nativeTool],
+      instructions: '按宿主提供的布局规则执行。',
+      tools: [
+        ...createEditorDslTools({}),
+        queryTool,
+      ],
     })
     const { agent, subAgents } = createAgents({
-      subAgents: [hostAgent],
+      subAgents: [layoutAgent],
     })
 
     assert.deepEqual(agent.tools, [])
-    assert.deepEqual(subAgents, [hostAgent])
-    assert.deepEqual(hostAgent.tools, [nativeTool])
-    assert.equal((agent.handoffs[0] as any).agent, hostAgent)
+    assert.equal(subAgents[0], layoutAgent)
+    assert.equal(agent.handoffs[0], layoutAgent)
+    assert.deepEqual(layoutAgent.handoffs, [])
+    assert.deepEqual(
+      layoutAgent.tools.map(item => item.name),
+      [
+        'get_current_editor',
+        'get_widgets',
+        'validate_editor_dsl',
+        'apply_editor_dsl',
+        'undo_editor_dsl',
+        'query_items',
+      ],
+    )
+  })
+
+  it('宿主 Agent 的 outputType 和已有 handoff 原样保留', () => {
+    const outputType = z.object({
+      summary: z.string(),
+      nodeIds: z.array(z.string()),
+    })
+    const helperAgent = new Agent({
+      name: 'Helper Agent',
+      handoffDescription: '辅助分析。',
+      model: 'test-model',
+      instructions: '辅助分析。',
+    })
+    const researchAgent = new Agent({
+      name: 'Research Agent',
+      handoffDescription: '分析页面结构。',
+      model: 'test-model',
+      instructions: '返回结构化的分析结果。',
+      outputType,
+      handoffs: [helperAgent],
+    })
+    const { subAgents } = createAgents({
+      subAgents: [researchAgent],
+    })
+
+    assert.equal(subAgents[0].outputType, outputType)
+    assert.equal(researchAgent.handoffs[0], helperAgent)
+    assert.equal(researchAgent.handoffs.length, 1)
   })
 
   it('拒绝与主 Agent 冲突或彼此重复的子 Agent 名称', () => {
+    const createAgent = (name: string) => new Agent({
+      name,
+      handoffDescription: name,
+      model: 'test-model',
+      instructions: name,
+    })
     assert.throws(
       () => createAgents({
-        subAgents: [{
-          name: MAIN_AGENT_NAME,
-          instructions: '冲突',
-          handoffDescription: '冲突',
-        }],
+        subAgents: [createAgent(MAIN_AGENT_NAME)],
+      }),
+      /子 Agent 名称重复或与主 Agent 冲突/,
+    )
+    assert.throws(
+      () => createAgents({
+        subAgents: [
+          createAgent('Layout Agent'),
+          createAgent('Layout Agent'),
+        ],
       }),
       /子 Agent 名称重复或与主 Agent 冲突/,
     )

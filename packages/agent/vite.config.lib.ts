@@ -7,7 +7,7 @@ import { agentDefine, agentExternals } from './vite.externals'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
 /**
- * 库构建：暴露 agent 能力给业务侧调用（defineCapability / defineWorkflow / configureModel / ...）。
+ * 库构建：暴露 Agent Runtime、编辑器 DSL 工具和 SDK 基础能力给业务侧调用。
  *
  * - 不注册 `<dnd-agent>`，导入本入口不会产生副作用；
  * - `vue` / `openai` / `@openai/agents` / `zod` 全部打进 `dist`（见 `vite.externals.ts`），

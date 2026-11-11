@@ -177,7 +177,6 @@ const runtime = computed(() => createAgentRuntime({
   baseURL: props.api.model?.baseURL,
   model: props.api.model?.model,
   apiMode: props.api.model?.apiMode,
-  api: props.api,
   subAgents: props.subAgents,
   getContext: props.context,
 }))

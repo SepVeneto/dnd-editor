@@ -9,35 +9,13 @@
 </template>
 
 <script setup lang="ts">
-import type { AgentHostApi, AgentSubAgentDefinition, AgentToolDefinition } from '@/index'
-import { z } from 'zod'
+import type { AgentHostApi, AgentSubAgent } from '@/index'
 import Copilot from '@/agent/Copilot.vue'
-import { defineAgentTool } from '@/index'
-
-const tools: AgentToolDefinition<any, any>[] = [
-  defineAgentTool({
-    name: 'check_scenario',
-    description: '检查指定场景是否已经开通',
-    parameters: z.object({
-      scenarios: z.array(z.object({ name: z.string() })),
-    }),
-    async execute(input: { scenarios: Array<{ name: string }> }) {
-      return input.scenarios.map(scene => ({ name: scene.name, opened: true }))
-    },
-  }),
-]
-
-const subAgents: AgentSubAgentDefinition[] = [{
-  name: 'Page Agent',
-  handoffDescription: '处理页面编辑和业务查询请求。',
-  handoffToolName: 'handle_page',
-  instructions: [
-    '先读取当前编辑器与组件能力目录。',
-    '只能通过 apply_editor_dsl 提交完整、版本化的编辑器 DSL。',
-    '完成后调用 return_to_main_agent 交还控制权。',
-  ].join('\n'),
-  tools,
-}]
+import {
+  Agent,
+  createEditorDslTools,
+  tool,
+} from '@/index'
 
 const api: AgentHostApi = {
   model: {
@@ -52,6 +30,53 @@ const api: AgentHostApi = {
     applyDsl: dsl => ({ ok: true, dsl }),
   },
 }
+
+const checkScenario = tool({
+  name: 'check_scenario',
+  description: '检查指定场景是否已经开通',
+  parameters: {
+    type: 'object',
+    properties: {
+      scenarios: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            name: { type: 'string' },
+          },
+          required: ['name'],
+          additionalProperties: false,
+        },
+      },
+    },
+    required: ['scenarios'],
+    additionalProperties: false,
+  },
+  strict: false,
+  async execute(input) {
+    const { scenarios } = input as { scenarios: Array<{ name: string }> }
+    return scenarios.map(scene => ({ name: scene.name, opened: true }))
+  },
+})
+
+const editorTools = createEditorDslTools(api)
+
+const pageAgent = new Agent({
+  name: 'Page Agent',
+  handoffDescription: '处理页面编辑和业务查询请求。',
+  model: 'qwen3.6-plus',
+  instructions: [
+    '先读取当前编辑器与组件能力目录。',
+    '只能通过 apply_editor_dsl 提交完整、版本化的编辑器 DSL。',
+    '完成后直接结束并返回处理结果。',
+  ].join('\n'),
+  tools: [
+    ...editorTools,
+    checkScenario,
+  ],
+})
+
+const subAgents: AgentSubAgent[] = [pageAgent]
 
 const context = () => ({ widgets: [] })
 </script>

@@ -48,7 +48,8 @@ register({
 
 ## 宿主 API
 
-编辑器只向子 Agent 暴露查询、校验和应用 DSL 所需的能力：
+编辑器向 Runtime 提供查询、校验和应用 DSL 所需的能力；宿主需要将导出的 DSL 工具
+显式加入具体子 Agent 的 `tools`：
 
 ```ts
 import type { AgentHostApi } from '@sepveneto/dnde-agent'
@@ -73,43 +74,42 @@ const agentApi: AgentHostApi = {
 
 ## 宿主子 Agent
 
-最简单的方式是提供子 Agent 定义。`editorDsl` 默认开启，运行时会把公开的编辑器 DSL
-工具注入该子 Agent：
+宿主直接使用 OpenAI Agents SDK 创建子 Agent，并将 `Agent[]` 传给编辑器：
 
 ```ts
-import type { AgentSubAgentDefinition } from '@sepveneto/dnde-agent'
+import {
+  Agent,
+  createEditorDslTools,
+  type AgentSubAgent,
+} from '@sepveneto/dnde-agent'
 
-const subAgents: AgentSubAgentDefinition[] = [{
-  name: 'Page Agent',
-  handoffDescription: '处理页面布局、组件编辑和业务数据查询。',
-  handoffToolName: 'handle_page',
-  instructions: [
-    '先调用 get_current_editor 和 get_widgets。',
-    '页面修改必须通过 apply_editor_dsl 提交完整、版本化的 DSL。',
-    '完成后调用 return_to_main_agent 交还控制权。',
-  ].join('\n'),
-  tools: [queryProduct, queryCoupon],
-}]
-```
-
-只读子 Agent 可以设置 `editorDsl: false`，避免获得文档修改能力。
-
-宿主也可以直接注入 SDK `Agent`，此时运行时不会改写该 Agent 的工具或 handoff：
-
-```ts
-import { Agent, createEditorDslTools } from '@sepveneto/dnde-agent'
+const editorTools = createEditorDslTools(agentApi)
 
 const pageAgent = new Agent({
   name: 'Page Agent',
-  handoffDescription: '处理页面编辑。',
-  instructions: '通过 apply_editor_dsl 修改页面。',
+  handoffDescription: '处理页面布局、组件编辑和业务数据查询。',
   model: 'qwen3.6-plus',
+  instructions: [
+    '先调用 get_current_editor 和 get_widgets。',
+    '页面修改必须通过 apply_editor_dsl 提交完整、版本化的 DSL。',
+    '完成后直接结束并返回处理结果。',
+  ].join('\n'),
   tools: [
-    ...createEditorDslTools(agentApi),
+    ...editorTools,
     queryProduct,
+    queryCoupon,
   ],
 })
+
+const subAgents: AgentSubAgent[] = [pageAgent]
 ```
+
+`Agent` 会原样成为主 Agent 的 handoff 值，模型、工具、结构化输出等配置都由宿主
+决定。运行时不会重复创建 Agent、包装 handoff 或适配普通工具定义，也不会修改子
+Agent 的 `handoffs`。
+
+只读子 Agent 不添加 `editorTools` 即可，不会自动获得文档修改能力。结构化输出等其它
+SDK 能力直接在创建 Agent 时配置 `outputType`。
 
 ## 编辑器 DSL
 
@@ -160,7 +160,8 @@ interface EditorDsl {
 
 ### 公开 DSL 工具
 
-`createEditorDslTools(api)` 返回以下工具：
+`createEditorDslTools(api)` 是可选导出，不会由 Runtime 自动注册。将返回值展开到某个
+子 Agent 自己的 `tools` 中后，该子 Agent 才会获得以下工具：
 
 | 工具 | 作用 |
 | --- | --- |
@@ -170,8 +171,8 @@ interface EditorDsl {
 | `apply_editor_dsl` | 校验后一次性应用 DSL |
 | `undo_editor_dsl` | 按 revision 撤销最近一次 DSL 操作 |
 
-也可以通过 `CreateEditorDslToolsOptions` 只注册需要的工具。例如只读场景可关闭
-`validate`、`undo` 之外的入口，或直接使用 `editorDsl: false`。
+也可以通过 `CreateEditorDslToolsOptions` 只注册需要的工具。不需要编辑器能力时，
+直接省略 `createEditorDslTools(api)`。
 
 所有 DSL 类型，包括 `EditorDsl`、`DslOperation`、`DslValidationResult`，均从
 `@sepveneto/dnde-agent` 导出。
@@ -182,16 +183,24 @@ interface EditorDsl {
 当前 Run 的 Context：
 
 ```ts
-import { defineAgentTool } from '@sepveneto/dnde-agent'
-import { z } from 'zod'
+import { tool } from '@sepveneto/dnde-agent'
 
-const queryProduct = defineAgentTool({
+const queryProduct = tool({
   name: 'query_product',
   description: '查询商品并准备添加到编辑器。',
-  parameters: z.object({ keyword: z.string() }),
-  async execute({ keyword }, toolContext) {
+  parameters: {
+    type: 'object',
+    properties: {
+      keyword: { type: 'string' },
+    },
+    required: ['keyword'],
+    additionalProperties: false,
+  },
+  strict: false,
+  async execute(input, runContext) {
+    const { keyword } = input as { keyword: string }
     const product = await api.product.search(keyword)
-    toolContext.context.product = product
+    runContext.context.product = product
     return { id: product.id, name: product.name }
   },
 })

@@ -81,7 +81,7 @@ class WidgetPlugin {
 export const CONFIG_PANEL_SHOW_KEY = 'isShow'
 
 export interface ConfigPluginContext {
-  addNode: (node: Node, pNode?: Node, manual?: boolean) => void
+  addNode: (node: Node, pNode?: Node, manual?: boolean) => Node
   rootNode: () => Node
 }
 export interface ConfigPanelOptions {
@@ -274,6 +274,7 @@ export const useEditor = defineStore('editor', () => {
     nodeMap.set(node.wid, node)
     node.parent = pNode
     manual && pNode.list.push(node)
+    return node
   }
   /** 递归注销节点及其子树，避免被删除的节点残留在 nodeMap 中造成泄漏 */
   function unregister(node: Node) {
@@ -452,10 +453,9 @@ export const useEditor = defineStore('editor', () => {
       return {
         ok: true,
         revision: revision.value,
-        node: {
-          id: node.wid,
-          type: node.type,
-        },
+        node,
+        nodeId: node.wid,
+        nodeType: node.type,
       }
     }
     catch (error) {

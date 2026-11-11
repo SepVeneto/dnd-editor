@@ -5,6 +5,7 @@ import { RunContext } from '@openai/agents'
 import {
   APPLY_EDITOR_DSL_TOOL_NAME,
   createEditorDslTools,
+  GET_WIDGETS_TOOL_NAME,
   VALIDATE_EDITOR_DSL_TOOL_NAME,
 } from '../src/editorDsl.ts'
 
@@ -36,6 +37,54 @@ describe('editor DSL tools', () => {
       'apply_editor_dsl',
       'undo_editor_dsl',
     ])
+  })
+
+  it('组件目录排除 page 和组件实现字段', async () => {
+    const tools = createEditorDslTools({
+      editor: {
+        getCurrentEditor: () => ({ revision: 3 }),
+        getWidgets: () => ({
+          catalogVersion: '1.0',
+          widgets: [
+            {
+              type: 'page',
+              name: '页面',
+              defaultData: { title: '首页' },
+              defaultStyle: { height: 667 },
+              attributes: [],
+            },
+            {
+              type: 'card',
+              name: '卡片',
+              description: '卡片组件',
+              defaultData: { title: '默认标题' },
+              defaultStyle: { width: 375 },
+              attributes: [{ key: 'title' }],
+              fields: [{ key: 'title' }],
+              customTypes: [{ type: 'card', capabilities: [] }],
+              staticOptions: [{ id: 'one', name: '选项一', aliases: [], value: 1, types: ['enum'] }],
+            },
+          ],
+        }),
+        validateDsl: () => ({ ok: true, issues: [] }),
+        applyDsl: () => ({ ok: true }),
+      },
+    })
+    const widgetsTool = tools.find(item => item.name === GET_WIDGETS_TOOL_NAME)!
+
+    const result = await widgetsTool.invoke(
+      new RunContext({}),
+      JSON.stringify({}),
+    )
+
+    assert.deepEqual(result, {
+      catalogVersion: '1.0',
+      widgets: [{
+        type: 'card',
+        name: '卡片',
+        description: '卡片组件',
+      }],
+    })
   })
 
   it('校验工具透传当前 Run Context 且不修改文档', async () => {
