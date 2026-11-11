@@ -20,6 +20,7 @@ import { defineStore } from 'pinia'
 import { computed, customRef, ref, shallowRef, watchEffect } from 'vue'
 import { createDebug, removePopper } from '@/utils'
 import { useApp } from './app'
+import { toReactiveNode } from './reactiveNode'
 import { applyWidgetAgentUpdate } from './widgetAgent'
 
 const debug = createDebug('store/editor')
@@ -140,10 +141,10 @@ class ConfigPlugin {
       style: JSON.parse(JSON.stringify(instance.defaultStyle ?? {})),
     })
     // 注册进 nodeMap 以便通过 wid 定位/选中，但不进入页面拖拽列表（manual = false）
-    this.ctx.addNode(node, root, false)
+    const registeredNode = this.ctx.addNode(node, root, false)
 
-    this.list.push(node)
-    return node
+    this.list.push(registeredNode)
+    return registeredNode
   }
 
   async validate() {
@@ -270,11 +271,14 @@ export const useEditor = defineStore('editor', () => {
   }
 
   function addNode(node: Node, pNode: Node = rootNode.value as Node, manual = false) {
-    node.level = pNode.level + 1
-    nodeMap.set(node.wid, node)
-    node.parent = pNode
-    manual && pNode.list.push(node)
-    return node
+    // addNode 的返回值会被业务侧直接修改（例如 Agent 创建金刚区后写 node.data），
+    // 必须返回和文档树同一份响应式代理；返回原始 Node 会绕过 Vue 的依赖追踪。
+    const registeredNode = toReactiveNode(node)
+    registeredNode.level = pNode.level + 1
+    registeredNode.parent = pNode
+    manual && pNode.list.push(registeredNode)
+    nodeMap.set(registeredNode.wid, registeredNode)
+    return registeredNode
   }
   /** 递归注销节点及其子树，避免被删除的节点残留在 nodeMap 中造成泄漏 */
   function unregister(node: Node) {
@@ -437,13 +441,13 @@ export const useEditor = defineStore('editor', () => {
       if (!definition)
         throw new Error(`找不到组件 ${widgetType}`)
 
-      const node = new Node(definition as Widget, {
+      let node = new Node(definition as Widget, {
         props: JSON.parse(JSON.stringify(definition.defaultData ?? {})),
         style: JSON.parse(JSON.stringify(definition.defaultStyle ?? {})),
       })
       applyNodeProps(node, operation.props ?? {})
       applyNodeStyle(node, operation.style ?? {})
-      addNode(node, rootNode.value as Node, true)
+      node = addNode(node, rootNode.value as Node, true)
       await applyNodeCapabilities(node, operation.custom, context)
       await applyWidgetAgentUpdate(node, operation.props ?? {}, context)
 
@@ -495,13 +499,13 @@ export const useEditor = defineStore('editor', () => {
           if (!definition)
             throw new Error(`找不到组件 ${operation.widget}`)
 
-          const node = new Node(definition as Widget, {
+          let node = new Node(definition as Widget, {
             props: JSON.parse(JSON.stringify(definition.defaultData ?? {})),
             style: JSON.parse(JSON.stringify(definition.defaultStyle ?? {})),
           })
           applyNodeProps(node, operation.props ?? {})
           applyNodeStyle(node, operation.style ?? {})
-          addNode(node, rootNode.value as Node, true)
+          node = addNode(node, rootNode.value as Node, true)
 
           const placement = operation.placement ?? {}
           const referenceKey = placement.afterKey ?? placement.beforeKey
@@ -597,8 +601,7 @@ export const useEditor = defineStore('editor', () => {
         style,
         list: [],
       }
-      const node = new Node(widget, info)
-      addNode(node, parent, true)
+      const node = addNode(new Node(widget, info), parent, true)
       if (list && list.length > 0) {
         createNodes(list, node)
       }
@@ -610,7 +613,9 @@ export const useEditor = defineStore('editor', () => {
     rootNode.value = node
     selected.value = node.wid
     activeConfigPane.value = 'props'
-    nodeMap.set(node.wid, node)
+    // ref 会把新根节点转换为响应式代理；nodeMap 也必须保存同一代理，
+    // 否则 selectedNode / 配置面板读取不到后续变更。
+    nodeMap.set(node.wid, rootNode.value as Node)
   }
 
   function setData(data: any, clearUndo = true) {
