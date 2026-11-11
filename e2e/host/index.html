@@ -300,6 +300,11 @@
           el.shadowRoot.querySelector('.mpd-editor').dispatchEvent(new MouseEvent('click', { bubbles: true }))
           await sleep(300)
 
+          // 扩展面板注册后，宿主仍可能重新下发文档。setData 会替换根节点，
+          // 已注册的面板必须重新绑定到新根节点的数据，而不是继续编辑旧对象。
+          el.setData(JSON.parse(JSON.stringify(el.getData())))
+          await sleep(300)
+
           const tabs = [...el.shadowRoot.querySelectorAll('.mpd-tabs__item')]
           const tab = tabs.find(t => t.textContent.trim() === 'E2E 浮窗')
           info.hasTab = !!tab

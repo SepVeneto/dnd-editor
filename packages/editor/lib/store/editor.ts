@@ -94,6 +94,18 @@ export interface ConfigPanel {
   /** 可选的固定组件节点 */
   node?: Node
 }
+
+/** 确认根节点上存在该面板的数据对象，并合并组件默认数据。 */
+function ensurePanelData(root: Node, widget: Widget) {
+  const key = widget.view
+  const current = root.data[key]
+  if (!current || typeof current !== 'object' || Array.isArray(current))
+    root.data[key] = {}
+
+  Object.assign(root.data[key], widget.defaultData ?? {})
+  return root.data[key]
+}
+
 /**
  * 根节点（页面级）配置的补充入口（config pane 提供的额外标签）。
  *
@@ -116,16 +128,12 @@ class ConfigPlugin {
   addPanel(options: IWidget): Node {
     const instance = new Widget(options)
     const root = this.ctx.rootNode()
-    const key = instance.view
-    if (!root.data[key])
-      root.data[key] = {}
-
-    Object.assign(root.data[key], instance.defaultData ?? {})
+    const data = ensurePanelData(root, instance)
 
     instance._data.meta = { ...instance._data.meta, draggable: false }
     // 组件默认数据并入同一份配置对象，响应式与 getData() 都能覆盖到
     const node = new Node(instance, {
-      props: root.data[key],
+      props: data,
       style: JSON.parse(JSON.stringify(instance.defaultStyle ?? {})),
     })
     // 注册进 nodeMap 以便通过 wid 定位/选中，但不进入页面拖拽列表（manual = false）
@@ -133,6 +141,17 @@ class ConfigPlugin {
 
     this.list.push(node)
     return node
+  }
+
+  /**
+   * 根节点被 `setData` 等操作替换后，把已注册面板重新绑定到新文档。
+   * 否则配置表单会继续修改旧根节点的数据，而 `getData()` 读取的是新根节点。
+   */
+  bindRoot(root: Node) {
+    for (const panel of this.list) {
+      panel.data = ensurePanelData(root, panel.widget as Widget)
+      this.ctx.addNode(panel, root, false)
+    }
   }
 
   async validate() {
@@ -319,6 +338,7 @@ export const useEditor = defineStore('editor', () => {
   function setRoot(node: Node) {
     unregister(rootNode.value)
     rootNode.value = node
+    plugins.config.bindRoot(rootNode.value as Node)
     selected.value = node.wid
     activeConfigPane.value = 'props'
     nodeMap.set(node.wid, node)
