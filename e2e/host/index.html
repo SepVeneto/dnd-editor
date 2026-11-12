@@ -93,7 +93,10 @@
           throw new Error('setData 未暴露在自定义元素上')
         setData.call(el, {
           _view: 'page',
-          data: {},
+          data: {
+            // addPanel 在 setData 之后注册时，已回显的数据必须优先于默认值。
+            dialog: { isShow: 1 },
+          },
           style: {},
           list: [{
             _uuid: 'grid-1',
@@ -302,7 +305,14 @@
 
           // 扩展面板注册后，宿主仍可能重新下发文档。setData 会替换根节点，
           // 已注册的面板必须重新绑定到新根节点的数据，而不是继续编辑旧对象。
-          el.setData(JSON.parse(JSON.stringify(el.getData())))
+          const presetData = el.getData()
+          state.presetPanel = {
+            data: presetData?.data?.dialog?.isShow,
+            preview: !!el.shadowRoot.querySelector('.mpd-node.preview[data-name="E2E 浮窗"]'),
+          }
+          const reset = JSON.parse(JSON.stringify(presetData))
+          reset.data.dialog.isShow = 0
+          await el.setData(reset)
           await sleep(300)
 
           const tabs = [...el.shadowRoot.querySelectorAll('.mpd-tabs__item')]
@@ -362,6 +372,19 @@
           info.inGetData = data?.data?.dialog ? data.data.dialog.isShow : null
           info.inList = (data?.list || []).some(n => n._view === 'dialog')
           info.plainInGetData = !!data?.data?.extraConfig
+
+          // 宿主再次回显已经开启浮窗的文档：配置表单、预览与 getData() 必须同步为开启。
+          const echoed = JSON.parse(JSON.stringify(data))
+          echoed.data.dialog.isShow = 1
+          await el.setData(echoed)
+          await sleep(400)
+          const echoedTab = [...el.shadowRoot.querySelectorAll('.mpd-tabs__item')]
+            .find(t => t.textContent.trim() === 'E2E 浮窗')
+          echoedTab?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+          await sleep(300)
+          info.echoSwitchActive = !!el.shadowRoot.querySelector('.mpd-switch.is-checked')
+          info.echoPreview = !!el.shadowRoot.querySelector('.mpd-node.preview[data-name="E2E 浮窗"]')
+          info.echoGetData = el.getData()?.data?.dialog?.isShow
           state.configPanel = info
         })()
 

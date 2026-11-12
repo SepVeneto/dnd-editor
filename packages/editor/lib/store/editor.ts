@@ -107,6 +107,15 @@ export interface ConfigPanel {
   node?: Node
 }
 
+/** 为面板数据补齐默认值；已回显的数据优先，不能被默认值覆盖。 */
+function mergePanelDefaults(data: Record<string, any>, widget: Widget) {
+  for (const [defaultKey, defaultValue] of Object.entries(widget.defaultData ?? {})) {
+    if (!(defaultKey in data))
+      data[defaultKey] = defaultValue
+  }
+  return data
+}
+
 /** 确认根节点上存在该面板的数据对象，并合并组件默认数据。 */
 function ensurePanelData(root: Node, widget: Widget) {
   const key = widget.view
@@ -114,7 +123,7 @@ function ensurePanelData(root: Node, widget: Widget) {
   if (!current || typeof current !== 'object' || Array.isArray(current))
     root.data[key] = {}
 
-  Object.assign(root.data[key], widget.defaultData ?? {})
+  mergePanelDefaults(root.data[key], widget)
   return root.data[key]
 }
 
@@ -161,7 +170,25 @@ class ConfigPlugin {
    */
   bindRoot(root: Node) {
     for (const panel of this.list) {
-      panel.data = ensurePanelData(root, panel.widget as Widget)
+      const key = panel.type
+      const stored = root.data[key]
+      const incoming = stored && typeof stored === 'object' && !Array.isArray(stored)
+        ? stored
+        : {}
+
+      // 配置表单在 setData 前已经持有 panel.data 的引用。复用原对象并同步内容，
+      // 可以同时保持表单响应式、预览可见性和 getData() 指向同一份数据。
+      const data = panel.data && typeof panel.data === 'object' && !Array.isArray(panel.data)
+        ? panel.data
+        : {}
+      for (const existingKey of Object.keys(data)) {
+        if (!(existingKey in incoming))
+          delete data[existingKey]
+      }
+      mergePanelDefaults(data, panel.widget as Widget)
+      Object.assign(data, incoming)
+      root.data[key] = data
+      panel.data = data
       this.ctx.addNode(panel, root, false)
     }
   }

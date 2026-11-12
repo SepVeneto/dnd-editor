@@ -323,6 +323,16 @@ try {
     cp.inGetData === 1 && cp.inList === false,
     JSON.stringify(cp),
   )
+  check(
+    '再次 setData 回显开启状态后，浮窗开关、预览与 getData() 同步更新',
+    cp.echoSwitchActive === true && cp.echoPreview === true && cp.echoGetData === 1,
+    JSON.stringify(cp),
+  )
+  check(
+    'setData 先于 addPanel 时，面板默认值不会覆盖已回显数据',
+    state.presetPanel?.data === 1 && state.presetPanel?.preview === true,
+    JSON.stringify(state.presetPanel),
+  )
 
   // 生产者不再注入冗余的 el- 主题；shadow 里应当是编辑器自己的 mpd 主题
   check(
