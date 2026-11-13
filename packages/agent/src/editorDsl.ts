@@ -106,7 +106,6 @@ const editorDslParameters = {
             properties: {
               op: { const: 'delete' },
               uuid: { type: 'string' },
-              confirmToken: { type: 'string' },
             },
             required: ['op', 'uuid'],
             additionalProperties: false,

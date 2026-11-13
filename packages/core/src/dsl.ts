@@ -52,7 +52,6 @@ export interface DslUpdateOperation {
 export interface DslDeleteOperation {
   op: 'delete'
   uuid: string
-  confirmToken?: string
 }
 
 export type DslOperation = DslAddOperation | DslUpdateOperation | DslDeleteOperation
@@ -73,8 +72,6 @@ export interface DslNodeSummary {
 export interface DslDocumentSnapshot {
   revision: number
   nodes: DslNodeSummary[]
-  /** Tokens issued by the host after previewing destructive operations. */
-  confirmTokens?: string[]
 }
 
 export interface DslIssue {
@@ -444,21 +441,7 @@ export function validateEditorDsl(
     }
 
     if (op === 'delete') {
-      if (!operation.confirmToken) {
-        issues.push({
-          code: 'delete_confirmation_required',
-          path: `${path}.confirmToken`,
-          message: '删除操作必须携带一次性确认令牌',
-        })
-      }
-      else if (!options.snapshot.confirmTokens?.includes(String(operation.confirmToken))) {
-        issues.push({
-          code: 'invalid_confirm_token',
-          path: `${path}.confirmToken`,
-          message: '删除确认令牌无效或已过期',
-        })
-      }
-      normalizedOperations.push({ op, uuid, confirmToken: String(operation.confirmToken ?? '') })
+      normalizedOperations.push({ op, uuid })
       return
     }
 

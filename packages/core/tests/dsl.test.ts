@@ -100,7 +100,7 @@ describe('editor DSL validation', () => {
     expect(result.issues.map(issue => issue.code)).toContain('stale_revision')
   })
 
-  it('requires confirmation tokens for deletion', () => {
+  it('accepts deletion without confirmation tokens', () => {
     const result = validateEditorDsl({
       dslVersion: '1.1',
       baseRevision: 3,
@@ -108,6 +108,7 @@ describe('editor DSL validation', () => {
       operations: [{ op: 'delete', uuid: 'root' }],
     }, { catalog, snapshot })
 
-    expect(result.issues.map(issue => issue.code)).toContain('delete_confirmation_required')
+    expect(result.ok).toBe(true)
+    expect(result.normalized?.operations).toEqual([{ op: 'delete', uuid: 'root' }])
   })
 })

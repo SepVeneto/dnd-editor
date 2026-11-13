@@ -149,14 +149,13 @@ interface EditorDsl {
     | {
         op: 'delete'
         uuid: string
-        confirmToken?: string
       }
   >
 }
 ```
 
 `baseRevision` 必须来自 `get_current_editor`。宿主在应用前校验 revision、组件能力、
-字段作用域和删除确认令牌；整批操作由编辑器原子执行。
+字段作用域；整批操作由编辑器原子执行。
 
 ### 公开 DSL 工具
 
