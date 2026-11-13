@@ -21,7 +21,8 @@
         <RemoteRender
           scope="widgets"
           :type="`${element.type}.view`"
-          :config="element.data"
+          :config="element"
+          :data="element.data"
           :style="element.style"
         />
       </NodeWrap>
@@ -50,7 +51,6 @@ const drag = useNodeListDrag({
   },
   setList: list => props.node.setList(list),
 })
-
 </script>
 
 <style scoped lang="scss">
