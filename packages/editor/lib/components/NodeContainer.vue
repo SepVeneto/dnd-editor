@@ -1,12 +1,14 @@
 <template>
   <VueDraggable
-    class="node-container "
+    class="node-container"
+    :class="{ 'is-empty': !node.hasList }"
+    :data-id="node.wid"
     :model-value="node.list"
     :group="{ name: 'editor', pull: true, put: true }"
     style=""
     :component-data="{ type: 'transition-group', name: 'flip-list' }"
     :animation="200"
-    handle=".node-wrap.draggable"
+    handle=".mpd-node.draggable"
     ghost-class="dragging-ghost"
     item-key="wid"
     @update:model-value="drag.onInput"
@@ -60,7 +62,7 @@ const drag = useNodeListDrag({
   height: 100%;
   background: #ddd;
   position: relative;
-  &::before {
+  &.is-empty::before {
     content: '拖曳组件到这里';
     position: absolute;
     left: 0;
@@ -73,6 +75,7 @@ const drag = useNodeListDrag({
     align-items: center;
     width: 100%;
     height: 100%;
+    pointer-events: none;
   }
 }
 </style>

@@ -18,8 +18,7 @@
       @click.stop="handleSelect"
     >
       <NodeContainer
-        v-if="node.type === 'containerGrid'"
-        :data-id="node.wid"
+        v-if="node.isContainer"
         :node="node"
       />
       <slot v-else>

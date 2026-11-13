@@ -235,7 +235,8 @@ export const useEditor = defineStore('editor', () => {
           draggingNode.dragging = true
         }
         else {
-          draggingNode!.dragging = false
+          if (draggingNode)
+            draggingNode.dragging = false
           draggingNode = null
         }
         trigger()
@@ -320,11 +321,16 @@ export const useEditor = defineStore('editor', () => {
     // addNode 的返回值会被业务侧直接修改（例如 Agent 创建金刚区后写 node.data），
     // 必须返回和文档树同一份响应式代理；返回原始 Node 会绕过 Vue 的依赖追踪。
     const registeredNode = toReactiveNode(node)
-    registeredNode.level = pNode.level + 1
     registeredNode.parent = pNode
+    setNodeLevel(registeredNode, pNode.level + 1)
     manual && pNode.list.push(registeredNode)
     nodeMap.set(registeredNode.wid, registeredNode)
     return registeredNode
+  }
+  /** 容器跨层移动时，同步整棵子树的父级层级，避免大纲缩进和数据快照不一致。 */
+  function setNodeLevel(node: Node, level: number) {
+    node.level = level
+    node.list.forEach(child => setNodeLevel(child, level + 1))
   }
   /** 递归注销节点及其子树，避免被删除的节点残留在 nodeMap 中造成泄漏 */
   function unregister(node: Node) {
