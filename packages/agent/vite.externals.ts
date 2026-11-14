@@ -4,8 +4,8 @@
  * 为空表示 `vue` / `zod` / `openai` / `@openai/agents` 全部打进 `dist`：宿主不再需要为
  * agent 的运行时依赖买单，安装时也不会把这一大堆包写进业务侧的 lock，从而把污染降到最低。
  *
- * `/element` 入口也是自包含构建，不把本包或其他包保留为 external；但两者不能再同时 import，
- * 否则会各自加载一份内联运行时。Web Component 使用方只需要导入 `/element`。
+ * `index` 与 `/element` 必须在同一个 Rollup 构建中产出，让两个入口共享内联运行时。
+ * 如果分别构建，浏览器同时加载两者会得到两份 `@openai/agents` 模块实例。
  */
 export const agentExternals: RegExp[] = []
 
