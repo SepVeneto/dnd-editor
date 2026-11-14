@@ -42,6 +42,7 @@ register({
 - 主 Agent 的 `tools` 始终为空，只负责分诊和 handoff。
 - 子 Agent 由宿主定义，或直接注入已经构造好的 Agents SDK `Agent`。
 - 子 Agent 负责实际分析、业务查询和页面编辑。
+- 子 Agent 完成任务后通过 `transfer_back_to_main` 将控制权交还主 Agent。
 - 未提供匹配子 Agent 时，主 Agent 会说明当前能力不足，不会自行读取或修改页面。
 
 这种边界可确保业务权限、工具实现和具体编辑策略不进入 Agent Runtime。
@@ -92,7 +93,8 @@ const pageAgent = new Agent({
   instructions: [
     '先调用 get_current_editor 和 get_widgets。',
     '页面修改必须通过 apply_editor_dsl 提交完整、版本化的 DSL。',
-    '完成后直接结束并返回处理结果。',
+    '任务全部完成后调用 transfer_back_to_main 交还控制权。',
+    '需要用户补充信息时不要交还，等待用户回复后继续当前任务。',
   ].join('\n'),
   tools: [
     ...editorTools,
@@ -104,9 +106,9 @@ const pageAgent = new Agent({
 const subAgents: AgentSubAgent[] = [pageAgent]
 ```
 
-`Agent` 会原样成为主 Agent 的 handoff 值，模型、工具、结构化输出等配置都由宿主
-决定。运行时不会重复创建 Agent、包装 handoff 或适配普通工具定义，也不会修改子
-Agent 的 `handoffs`。
+运行时会创建子 Agent 的轻量副本，并追加 `transfer_back_to_main` handoff；模型、工具、
+结构化输出和宿主原有的 `handoffs` 保持不变。子 Agent 完成任务后交还控制权，由主 Agent
+统一回复用户。
 
 只读子 Agent 不添加 `editorTools` 即可，不会自动获得文档修改能力。结构化输出等其它
 SDK 能力直接在创建 Agent 时配置 `outputType`。

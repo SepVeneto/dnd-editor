@@ -1,8 +1,9 @@
-import { Agent } from '@openai/agents'
+import { Agent, handoff } from '@openai/agents'
 import { buildMainAgentInstructions, MAIN_AGENT_NAME } from './agentInstructions.ts'
 
 export const DEFAULT_AGENT_MODEL = 'qwen3.6-flash'
 export const DEFAULT_AGENT_BFF_URL = 'http://localhost:4000/v1'
+const RETURN_TO_MAIN_TOOL_NAME = 'transfer_back_to_main'
 
 /** A host-created OpenAI Agents SDK Agent. */
 export type AgentSubAgent = Agent<any, any>
@@ -57,11 +58,21 @@ export function createAgents(options: CreateAgentsOptions) {
     tools: [],
   })
 
-  agent.handoffs = subAgents
+  const runnableSubAgents = subAgents.map(subAgent => subAgent.clone({
+    handoffs: [
+      ...subAgent.handoffs,
+      handoff(agent, {
+        toolNameOverride: RETURN_TO_MAIN_TOOL_NAME,
+        toolDescriptionOverride: '当前子 Agent 已完成全部任务且无需用户补充信息时调用，将控制权交还主 Agent，由主 Agent 统一回复。',
+      }),
+    ],
+  }))
+
+  agent.handoffs = runnableSubAgents
 
   return {
     agent,
-    subAgents,
-    agents: [agent, ...subAgents],
+    subAgents: runnableSubAgents,
+    agents: [agent, ...runnableSubAgents],
   }
 }
