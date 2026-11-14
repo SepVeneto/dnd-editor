@@ -46,8 +46,9 @@ describe('Widget', () => {
     expect(w.name).toBe('卡片')
   })
 
-  it('保留 widget.agent 配置和 update 回调', () => {
+  it('保留 widget.agent 配置及其回调', () => {
     const update = () => {}
+    const nodeIR = () => ({ type: 'custom' })
     const w = new Widget({
       _name: '卡片',
       _view: 'card',
@@ -59,13 +60,16 @@ describe('Widget', () => {
           priority: 'large',
         },
         update,
+        nodeIR,
       },
     })
 
     expect(w.agent?.description).toBe('卡片组件')
     expect(w.agent?.layout?.description).toBe('单列布局')
     expect(w.agent?.update).toBe(update)
+    expect(w.agent?.nodeIR).toBe(nodeIR)
     expect(w.clone().agent?.update).toBe(update)
+    expect(w.clone().agent?.nodeIR).toBe(nodeIR)
   })
 
   it('draggable / visible 默认值', () => {

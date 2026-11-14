@@ -124,6 +124,7 @@ import TreePanel from './layout/treePanel.vue'
 import WidgetsMenu from './layout/widgetsMenu.vue'
 import { editorProps } from './props'
 import { useEditor } from './store'
+import { serializeWidgetAgentNode } from './store/widgetAgent'
 import { EditorKey, loadFromRemote, normalizeStyle } from './utils'
 
 const props = defineProps(editorProps)
@@ -188,20 +189,9 @@ function runtimeContext() {
   }
 }
 
-function serializeAgentNode(node: any): Record<string, any> {
-  return {
-    id: node.wid,
-    type: node.type,
-    name: node.name,
-    data: node.data,
-    style: node.style,
-    children: node.list?.map(serializeAgentNode) ?? [],
-  }
-}
-
 function snapshotEditor() {
   return {
-    page: serializeAgentNode(editor.rootNode),
+    page: serializeWidgetAgentNode(editor.rootNode),
     selected: editor.selected,
     revision: editor.revision,
   }

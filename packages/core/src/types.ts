@@ -51,6 +51,11 @@ export interface WidgetAgent {
     priority: 'large' | 'medium' | 'small' | 'tiny'
   }
   /**
+   * 自定义 Agent 在执行 get editor 时返回的节点 IR。
+   * 未设置时返回编辑器默认的节点状态。
+   */
+  nodeIR?: (node: Node) => unknown
+  /**
    * 布局子 Agent 结束、组件创建完成后，由业务侧决定数据如何更新到组件里。
    *
    * @param node 已创建的组件节点
