@@ -17,6 +17,7 @@
   >
     <div
       class="node-wrap"
+      @contextmenu="handleContextMenu"
       @mouseenter.stop="editor.hovering = node.wid"
       @mouseleave.stop="editor.hovering = undefined"
       @click.stop="handleSelect"
@@ -29,6 +30,10 @@
         <div>拖曳组件</div>
       </slot>
     </div>
+    <NodeContextMenu
+      ref="contextMenu"
+      :node="node"
+    />
     <NodeOperate
       v-if="isActive && !preview"
       :node="node"
@@ -50,10 +55,11 @@
 import type { Node } from '@sepveneto/dnde-core/class'
 import { Hide as IconHide } from '@element-plus/icons-vue'
 import { ElIcon, ElMessage } from 'element-plus'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useEditor } from '@/store'
 import { normalizeStyle } from '@/utils'
 import NodeContainer from './NodeContainer.vue'
+import NodeContextMenu from './NodeContextMenu.vue'
 import NodeOperate from './NodeOperate.vue'
 
 const props = defineProps<{
@@ -82,6 +88,7 @@ const isHover = computed(() => {
   return props.node.wid === editor.hovering
 })
 const isDraggable = computed(() => props.node.widget?.draggable)
+const contextMenu = ref<{ open: (event: MouseEvent) => void }>()
 
 let pointerStart: { x: number, y: number } | undefined
 
@@ -107,11 +114,22 @@ function resetPointerAttempt() {
   pointerStart = undefined
 }
 
-function handleSelect() {
+function handleContextMenu(event: MouseEvent) {
+  event.preventDefault()
+  event.stopPropagation()
+  selectNode()
+  contextMenu.value?.open(event)
+}
+
+function selectNode() {
   if (props.select)
     props.select(props.node)
   else
     editor.selectNode(props.node.wid)
+}
+
+function handleSelect() {
+  selectNode()
 }
 </script>
 
