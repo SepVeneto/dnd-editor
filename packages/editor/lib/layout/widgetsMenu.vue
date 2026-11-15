@@ -63,7 +63,7 @@ export default {
         'clone': handleClone,
         'sort': false,
         'itemKey': 'name',
-        'class': 'mpd-grid mpd-gap-4',
+        'class': 'mpd-grid mpd-gap-[10px]',
         'style': 'grid-template-columns: repeat(3, 90px);',
         'onUpdate:modelValue': (val: Widget[]) => app.widgets = val,
         'onEnd': handleEnd,
@@ -100,7 +100,7 @@ export default {
             'clone': handleClone,
             'sort': false,
             'itemKey': 'name',
-            'class': 'mpd-grid mpd-gap-4',
+            'class': 'mpd-grid mpd-gap-[10px]',
             'style': 'grid-template-columns: repeat(3, 90px);',
             'onUpdate:modelValue': (val: Widget[]) => item.list = val,
             'onEnd': handleEnd,
@@ -153,7 +153,7 @@ export default {
     return h(
       'aside',
       {
-        class: 'mpd-w-80',
+        class: 'mpd-w-[320px]',
         style: { padding: '1rem', border: '1px solid var(--mpd-border-color)' },
       },
       this.tabRenderer(),
