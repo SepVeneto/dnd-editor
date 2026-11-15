@@ -207,10 +207,11 @@ describe('handleNodeAdd（fixed 拦截）', () => {
     const target = { list: [node('a'), h, node('b')], parent: node('root'), setList: () => {} }
     const { host, added } = makeHost()
 
-    handleNodeAdd(target, crossListEvent(1, 0, undefined, 'new'), host)
+    const error = handleNodeAdd(target, crossListEvent(1, 0, undefined, 'new'), host)
 
     assert.deepEqual(wids(target.list), ['a', 'b'])
     assert.equal(added.length, 0)
+    assert.match(error ?? '', /fixed: header/)
   })
 
   it('fixed 节点落在对应分区时允许登记', () => {
@@ -265,10 +266,11 @@ describe('handleNodeInput（fixed 边界保留）', () => {
     const target = { list: original, parent: node('root'), setList: (l: Node[]) => calls.push(l) }
     const val = [node('a'), node('h', 'header'), node('f', 'footer')]
 
-    handleNodeInput(target, val, fn => fn())
+    const error = handleNodeInput(target, val, fn => fn())
 
     assert.equal(calls.length, 1)
     assert.equal(calls[0], original)
+    assert.match(error ?? '', /fixed/)
   })
 
   it('长度增加但没有重复时直接替换', () => {

@@ -10,6 +10,10 @@
       isHover && 'hover',
       preview && 'preview',
     ]"
+    @pointerdown="handlePointerDown"
+    @pointermove="handlePointerMove"
+    @pointerup="resetPointerAttempt"
+    @pointercancel="resetPointerAttempt"
   >
     <div
       class="node-wrap"
@@ -45,7 +49,7 @@
 <script lang="ts" setup>
 import type { Node } from '@sepveneto/dnde-core/class'
 import { Hide as IconHide } from '@element-plus/icons-vue'
-import { ElIcon } from 'element-plus'
+import { ElIcon, ElMessage } from 'element-plus'
 import { computed } from 'vue'
 import { useEditor } from '@/store'
 import { normalizeStyle } from '@/utils'
@@ -78,6 +82,30 @@ const isHover = computed(() => {
   return props.node.wid === editor.hovering
 })
 const isDraggable = computed(() => props.node.widget?.draggable)
+
+let pointerStart: { x: number, y: number } | undefined
+
+function handlePointerDown(event: PointerEvent) {
+  const target = event.target as Element | null
+  if (event.button !== 0 || isDraggable.value || target?.closest('.mpd-node') !== event.currentTarget)
+    return
+
+  pointerStart = { x: event.clientX, y: event.clientY }
+}
+
+function handlePointerMove(event: PointerEvent) {
+  if (!pointerStart)
+    return
+
+  if (Math.hypot(event.clientX - pointerStart.x, event.clientY - pointerStart.y) >= 4) {
+    ElMessage.warning(`组件「${props.node.name}」无法拖拽。`)
+    pointerStart = undefined
+  }
+}
+
+function resetPointerAttempt() {
+  pointerStart = undefined
+}
 
 function handleSelect() {
   if (props.select)

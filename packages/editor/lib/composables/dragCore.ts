@@ -53,6 +53,19 @@ function isFixedOrderValid(list: Node[]): boolean {
   return true
 }
 
+function fixedOrderError(list: Node[], index?: number): string | undefined {
+  if (isFixedOrderValid(list))
+    return
+
+  const node = index === undefined ? undefined : list[index]
+  if (node?.widget.isFixed === 'header')
+    return `组件「${node.name || node.wid}」只能放在顶部（fixed: header）。`
+  if (node?.widget.isFixed === 'footer')
+    return `组件「${node.name || node.wid}」只能放在底部（fixed: footer）。`
+
+  return '非预期的操作失败。'
+}
+
 /**
  * 找出列表中第一处重复出现的 wid。
  *
@@ -114,9 +127,10 @@ export function resolveDuplicateRemovalIndex(
  * - 跨容器拖动被撤销时，把节点还原回原容器；
  * - 否则把节点登记到目标父节点下。
  */
-export function handleNodeAdd(target: DragTarget, evt: DragAddEvent, host: DragHost): void {
+export function handleNodeAdd(target: DragTarget, evt: DragAddEvent, host: DragHost): string | undefined {
   const list = target.list
   if (!isFixedOrderValid(list)) {
+    const error = fixedOrderError(list, evt.newIndex)
     const [removed] = list.splice(evt.newIndex, 1)
     const containerId = evt.from.dataset.id
 
@@ -125,7 +139,7 @@ export function handleNodeAdd(target: DragTarget, evt: DragAddEvent, host: DragH
     if (evt.to !== evt.from && containerId && removed)
       host.restoreToContainer(containerId, evt.oldIndex, removed)
 
-    return
+    return error
   }
 
   const node = list[evt.newDraggableIndex]
@@ -141,10 +155,11 @@ export function handleNodeAdd(target: DragTarget, evt: DragAddEvent, host: DragH
  *
  * `defer` 用于把清理后的写入推迟到下一个 tick（与 vuedraggable 的更新时机对齐）。
  */
-export function handleNodeInput(target: DragTarget, val: Node[], defer: (fn: () => void) => void): void {
+export function handleNodeInput(target: DragTarget, val: Node[], defer: (fn: () => void) => void): string | undefined {
   if (target.list.length >= val.length) {
-    target.setList(isFixedOrderValid(val) ? val : target.list)
-    return
+    const error = fixedOrderError(val)
+    target.setList(error ? target.list : val)
+    return error
   }
 
   const wid = findDuplicatedWid(val)
