@@ -93,7 +93,7 @@
             ref="configPanelRef"
             @click.stop
           />
-          <TreePanel v-show="editor.dragging" />
+          <NodeTree v-show="editor.dragging" />
         </ElScrollbar>
       </aside>
     </div>
@@ -120,7 +120,7 @@ import LeftArrow from './assets/leftArrow.vue'
 import NodeWrap from './components/NodeWrap.vue'
 import { useNodeListDrag } from './composables/useNodeListDrag'
 import ConfigPanel from './layout/configPanel.vue'
-import TreePanel from './layout/treePanel.vue'
+import NodeTree from './layout/nodeTree.vue'
 import WidgetsMenu from './layout/widgetsMenu.vue'
 import { editorProps } from './props'
 import { useEditor } from './store'

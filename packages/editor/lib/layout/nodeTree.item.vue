@@ -2,7 +2,11 @@
   <li
     v-if="!node.hasList && !node.isContainer"
     class="mpd-list-none tree-item"
-    :class="[node.dragging && 'dragging']"
+    :class="[
+      node.dragging && 'dragging',
+      editor.selected === node.wid && 'selected',
+    ]"
+    @click.stop="editor.selectNode(node.wid)"
   >
     <span
       :style="`margin-left: ${node.level * 20}px`"
@@ -15,7 +19,11 @@
   <div
     v-else
     class="tree-wrap"
-    :class="[node.dragging && 'dragging']"
+    :class="[
+      node.dragging && 'dragging',
+      editor.selected === node.wid && 'selected',
+    ]"
+    @click.stop="editor.selectNode(node.wid)"
   >
     <ul
       :style="`margin-left: ${node.level * 20}px`"
@@ -42,11 +50,11 @@
         @end="editor.dragging = null"
       >
         <template #item="{ element }">
-          <TreePanelItem
+          <NodeTreeItem
             :node="element"
           >
             {{ element.name }}
-          </TreePanelItem>
+          </NodeTreeItem>
         </template>
       </Vuedraggable>
     </ul>
@@ -60,8 +68,7 @@ import IconContainer from '@/assets/container.vue'
 import IconItem from '@/assets/puzzle.vue'
 import { useNodeListDrag } from '@/composables/useNodeListDrag'
 import { useEditor } from '@/store'
-// eslint-disable-next-line import/no-self-import
-import TreePanelItem from './treePanel.item.vue'
+import NodeTreeItem from './nodeTree.item.vue'
 
 const props = defineProps<{ node: Node }>()
 
@@ -88,9 +95,15 @@ const drag = useNodeListDrag({
   padding: 6px 12px;
   border-radius: 4px;
   margin-bottom: 4px;
+  cursor: pointer;
+  transition: color 0.2s ease, background-color 0.2s ease;
 
   &:hover {
-    background-color: #e4e7ed;
+    background-color: #ecf5ff;
+
+    .tree-node-content {
+      color: #409eff;
+    }
   }
 }
 
@@ -139,14 +152,31 @@ const drag = useNodeListDrag({
   margin-bottom: 2px;
   transition: all 0.2s ease;
   background-color: #ffffff;
+  cursor: pointer;
 
   &:hover {
     color: #409eff;
+    background-color: #ecf5ff;
+
+    .tree-node-content {
+      color: #409eff;
+    }
   }
 
   .tree-node-content {
     color: #606266;
   }
+}
+
+.tree-item.selected,
+.tree-wrap.selected > .tree-node-list > .tree-node-header {
+  color: #409eff;
+  background-color: #ecf5ff;
+}
+
+.tree-item.selected .tree-node-content,
+.tree-wrap.selected > .tree-node-list > .tree-node-header .tree-node-content {
+  color: #409eff;
 }
 
 .tree-wrap.dragging .placeholder::after {

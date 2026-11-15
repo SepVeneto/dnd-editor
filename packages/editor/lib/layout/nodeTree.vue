@@ -13,7 +13,7 @@
     @update:model-value="drag.onInput"
   >
     <template #item="{ element }">
-      <TreePanelItem :node="element" />
+      <NodeTreeItem :node="element" />
     </template>
   </Vuedraggable>
 </template>
@@ -23,7 +23,7 @@ import type { Node } from '@sepveneto/dnde-core/class'
 import Vuedraggable from 'vuedraggable'
 import { useNodeListDrag } from '@/composables/useNodeListDrag'
 import { useEditor } from '@/store'
-import TreePanelItem from './treePanel.item.vue'
+import NodeTreeItem from './nodeTree.item.vue'
 
 const editor = useEditor()
 const drag = useNodeListDrag({

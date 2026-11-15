@@ -59,9 +59,9 @@ function fixedOrderError(list: Node[], index?: number): string | undefined {
 
   const node = index === undefined ? undefined : list[index]
   if (node?.widget.isFixed === 'header')
-    return `组件「${node.name || node.wid}」只能放在顶部（fixed: header）。`
+    return `组件「${node.name || node.wid}」只能放在顶部。`
   if (node?.widget.isFixed === 'footer')
-    return `组件「${node.name || node.wid}」只能放在底部（fixed: footer）。`
+    return `组件「${node.name || node.wid}」只能放在底部。`
 
   return '非预期的操作失败。'
 }

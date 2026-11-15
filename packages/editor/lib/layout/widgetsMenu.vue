@@ -8,6 +8,7 @@ import IconWidget from '@/assets/widget.vue'
 import { useEditor } from '@/store'
 import { useApp } from '@/store/app'
 import { loadFromRemote } from '@/utils'
+import NodeTree from './nodeTree.vue'
 
 export default {
   setup() {
@@ -120,6 +121,15 @@ export default {
             () => hasGroup(app.widgets) ? groupRenderer() : singleRenderer(true),
           ),
         ),
+        h(
+          ElTabPane,
+          { label: '节点' },
+          () => h(
+            ElScrollbar,
+            { wrapStyle: 'height: 700px;', noresize: true },
+            () => h(NodeTree),
+          ),
+        ),
         editor.plugins.widget.list.map(item => h(
           ElTabPane,
           { label: item.label },
@@ -143,6 +153,7 @@ export default {
     return h(
       'aside',
       {
+        class: 'mpd-w-80',
         style: { padding: '1rem', border: '1px solid var(--mpd-border-color)' },
       },
       this.tabRenderer(),
