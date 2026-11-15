@@ -358,10 +358,6 @@ const baseWidgets: IWidget[] = [
         label: '背景色',
         key: 'backgroundColor',
       }),
-      schema.styleNumber({
-        label: '1',
-        key: 'width',
-      }),
     ],
   }),
   widget.columnContainer({
