@@ -23,6 +23,9 @@
   position: relative;
   overflow: hidden;
   background: crimson;
+  & > * {
+    display: none !important;
+  }
   &::before {
     display: none;
   }
