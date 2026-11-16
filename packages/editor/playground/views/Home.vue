@@ -43,6 +43,10 @@ import { register } from '@/main'
  * 宿主提供编辑器 API、业务工具和可选的业务子 Agent；主 Agent Runtime 由 <dnd-agent> 提供。
  */
 
+const agentRequestHeaders = {
+  'Agent-User-Id': 'playground-user',
+}
+
 /** 查询指定场景的业务数据，供编辑流程补全组件内容。 */
 const queryScenario = tool({
   name: 'query_scenario',
@@ -58,7 +62,9 @@ const queryScenario = tool({
   strict: false,
   async execute(input) {
     const { name } = input as { name: string }
-    const res = await fetch('/v1/business/scenes')
+    const res = await fetch('/v1/business/scenes', {
+      headers: agentRequestHeaders,
+    })
     const resJson = await res.json()
     return resJson.data.find((each: any) => each.name === name) ?? null
   },
@@ -89,7 +95,9 @@ const checkScenario = tool({
   strict: false,
   async execute(input) {
     const { scenarios } = input as { scenarios: Array<{ name: string }> }
-    const res = await fetch('/v1/business/scenes')
+    const res = await fetch('/v1/business/scenes', {
+      headers: agentRequestHeaders,
+    })
     const resJson = await res.json()
     return scenarios.map((item) => {
       const target = resJson.data.find((each: any) => each.name === item.name)
@@ -120,7 +128,10 @@ const enableScenario = tool({
     if (!window.confirm(`场景「${name}」未开通，是否需要开通？`))
       return { rejected: true }
 
-    const res = await fetch('/v1/business/scene', { method: 'post' })
+    const res = await fetch('/v1/business/scene', {
+      method: 'post',
+      headers: agentRequestHeaders,
+    })
     const resJson = await res.json()
     if (resJson.code !== 0)
       throw new Error(resJson.message ?? `场景 ${name} 开通失败`)
@@ -177,6 +188,9 @@ const agentApi: AgentHostApi = {
     baseURL: new URL('/v1', window.location.origin).toString(),
     model: 'deepseek-v4.1-flash-1017',
     apiMode: 'responses' as const,
+  },
+  history: {
+    userId: 'playground-user',
   },
 }
 

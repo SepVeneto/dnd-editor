@@ -11,12 +11,11 @@ import multer from 'multer'
 import { Pool } from 'pg'
 import TurndownService from 'turndown'
 import turndownPluginGfm from 'turndown-plugin-gfm'
+import { requireAgentUser } from './agentUser.js'
 import {
   CONVERSATION_SCHEMA_SQL,
   createConversationStore,
   deriveConversationMetadata,
-  normalizeNamespace,
-  normalizeUserIdentity,
 } from './conversationStore.js'
 
 const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -205,6 +204,10 @@ app.use(cors({
 // Base64 images expand by roughly one third. This leaves room for the
 // 20 MB attachment budget plus conversation history while staying bounded.
 app.use(express.json({ limit: '35mb' }))
+app.use(
+  ['/v1', '/upload', '/image-data', '/docx-markdown'],
+  requireAgentUser,
+)
 
 const PORT = Number(process.env.PORT ?? 4000)
 const LLM_BASE_URL = process.env.LLM_BASE_URL ?? 'https://llm-29a9b93te5uwccoz.cn-beijing.maas.aliyuncs.com/compatible-mode/v1'
@@ -222,22 +225,6 @@ const databasePool = new Pool({
 })
 const conversations = createConversationStore(databasePool)
 
-function conversationScope(req, res) {
-  const userId = normalizeUserIdentity(req.get('agent-user-id'))
-  if (!userId) {
-    res.status(401).json({
-      code: 1,
-      msg: '缺少有效的 Agent-User-Id 请求头',
-    })
-    return undefined
-  }
-
-  return {
-    userId,
-    namespace: normalizeNamespace(req.get('x-agent-namespace')),
-  }
-}
-
 function conversationId(req, res) {
   const id = req.params.id
   if (!/^[\w-]{1,200}$/.test(id)) {
@@ -248,26 +235,25 @@ function conversationId(req, res) {
 }
 
 app.get('/v1/conversations', async (req, res) => {
-  const scope = conversationScope(req, res)
-  if (!scope)
-    return
-
   const limit = typeof req.query.limit === 'string'
     ? Number(req.query.limit)
     : 50
-  const data = await conversations.list({ ...scope, limit })
+  const data = await conversations.list({
+    ...res.locals.agentUser,
+    limit,
+  })
   res.json({ code: 0, data })
 })
 
 app.get('/v1/conversations/:id', async (req, res) => {
-  const scope = conversationScope(req, res)
-  if (!scope)
-    return
   const id = conversationId(req, res)
   if (!id)
     return
 
-  const data = await conversations.get({ ...scope, id })
+  const data = await conversations.get({
+    ...res.locals.agentUser,
+    id,
+  })
   if (!data) {
     res.status(404).json({ code: 1, msg: '会话不存在' })
     return
@@ -276,9 +262,6 @@ app.get('/v1/conversations/:id', async (req, res) => {
 })
 
 app.put('/v1/conversations/:id', async (req, res) => {
-  const scope = conversationScope(req, res)
-  if (!scope)
-    return
   const id = conversationId(req, res)
   if (!id)
     return
@@ -295,7 +278,7 @@ app.put('/v1/conversations/:id', async (req, res) => {
   }
 
   const data = await conversations.save({
-    ...scope,
+    ...res.locals.agentUser,
     id,
     mode,
     ...metadata,

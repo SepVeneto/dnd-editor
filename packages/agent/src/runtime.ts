@@ -44,6 +44,7 @@ export interface AgentRuntimeConfig {
 export interface AgentRuntimeOptions extends Partial<AgentRuntimeConfig> {
   subAgents?: AgentSubAgent[]
   getContext?: () => Record<string, unknown>
+  headers?: Readonly<Record<string, string>>
 }
 
 export interface AgentRuntimeTurn {
@@ -224,6 +225,7 @@ function messageText(message: ChatMessage) {
 export function createAgentRuntime(
   options: AgentRuntimeOptions = {},
 ): AgentRuntime {
+  const requestHeaders = { ...options.headers }
   const config: AgentRuntimeConfig = {
     baseURL: normalizeBaseURL(options.baseURL),
     model: options.model?.trim() || DEFAULT_AGENT_MODEL,
@@ -244,7 +246,11 @@ export function createAgentRuntime(
     const cacheKey = `${file.name}:${file.url ?? ''}`
     let pending = imageDataCache.get(cacheKey)
     if (!pending) {
-      pending = readAgentImageData(config.baseURL, file).catch((error) => {
+      pending = readAgentImageData(
+        config.baseURL,
+        file,
+        requestHeaders,
+      ).catch((error) => {
         imageDataCache.delete(cacheKey)
         throw error
       })
@@ -296,6 +302,7 @@ export function createAgentRuntime(
       const client = new OpenAI({
         apiKey: browserProxyPlaceholder,
         baseURL: config.baseURL,
+        defaultHeaders: requestHeaders,
         dangerouslyAllowBrowser: true,
       })
       runner = new Runner({

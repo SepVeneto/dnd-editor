@@ -49,7 +49,8 @@ pnpm -C packages/agent-bff proxy:remote
 
 ## 会话 API
 
-会话接口通过宿主传入的 `Agent-User-Id` 标识用户，通过 `X-Agent-Namespace` 隔离不同 Agent
+模型调用、会话、附件上传和文档读取接口要求宿主传入非空 `Agent-User-Id`。缺少该请求头时
+BFF 返回通用 `401`，具体原因只写入服务端日志。`X-Agent-Namespace` 用于隔离不同 Agent
 场景。生产部署应由可信网关写入或覆盖用户请求头，不能直接信任公网客户端提供的身份。
 
 - `GET /v1/conversations`：最近的会话摘要

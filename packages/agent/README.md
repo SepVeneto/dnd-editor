@@ -77,9 +77,10 @@ const agentApi: AgentHostApi = {
 }
 ```
 
-`<mpd-editor>` 会自动注入这组编辑器 API，业务宿主通常只需配置 `model` 和
-`history.userId`。生产环境应由已认证的宿主会话提供用户 ID；BFF 网关应覆盖客户端传入的
-`Agent-User-Id` 请求头，不能把它当作可直接信任的权限凭据。
+`<mpd-editor>` 会自动注入这组编辑器 API，业务宿主必须配置 `model` 和
+`history.userId`。未提供用户 ID 时不会伪造身份，BFF 会拒绝模型及历史会话请求。生产环境
+应由已认证的宿主会话提供用户 ID；BFF 网关应覆盖客户端传入的 `Agent-User-Id` 请求头，
+不能把它当作可直接信任的权限凭据。
 
 ## 宿主子 Agent
 
@@ -226,7 +227,8 @@ const queryProduct = tool({
 
 会话消息由 `agent-bff` 写入 PostgreSQL，不再写入 localStorage。聊天工具条会显示当前
 用户的历史会话列表，并支持加载和切换会话。编辑器宿主通过 `agent-history-enabled`
-属性关闭服务端历史，并通过 `agent-history-user-id` 提供默认用户身份：
+属性关闭服务端历史；必须通过 `agent-history-user-id` 提供已认证用户身份。未提供时历史
+功能不会启用，BFF 请求会返回通用 `401`：
 
 ```vue
 <mpd-editor

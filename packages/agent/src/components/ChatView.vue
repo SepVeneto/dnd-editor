@@ -331,11 +331,13 @@ const props = withDefaults(
     initialMessages?: ChatMessage[]
     historyEnabled?: boolean
     conversationOptions: AgentConversationClientOptions
+    requestHeaders?: Readonly<Record<string, string>>
     embedded?: boolean
   }>(),
   {
     initialMessages: () => [],
     historyEnabled: true,
+    requestHeaders: () => ({}),
     embedded: false,
   },
 )
@@ -359,6 +361,7 @@ const fileInput = useTemplateRef<HTMLInputElement>('fileInput')
 const fileUpload = useFile(
   fileInput,
   () => props.runtime.config.baseURL,
+  () => props.requestHeaders,
 )
 const {
   list: uploadedFiles,
@@ -434,6 +437,7 @@ async function sendMessage() {
         filePart.text = await readAgentDocumentMarkdown(
           props.runtime.config.baseURL,
           selectedFile,
+          props.requestHeaders,
         )
       }
       return filePart

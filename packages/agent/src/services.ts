@@ -106,12 +106,14 @@ async function readResponse<T>(response: Response): Promise<T> {
 export async function uploadAgentFile(
   baseURL: string,
   file: File,
+  headers: Readonly<Record<string, string>> = {},
 ): Promise<AgentUploadedFile> {
   const formData = new FormData()
   formData.append('file', file)
 
   const response = await fetch(resolveAgentServiceURL(baseURL, 'upload'), {
     method: 'POST',
+    headers,
     body: formData,
   })
   const uploaded = await readResponse<AgentUploadedFile>(response)
@@ -137,10 +139,12 @@ export const uploadAgentDocument = uploadAgentFile
 export async function readAgentDocumentMarkdown(
   baseURL: string,
   uploaded: AgentUploadedFile,
+  headers: Readonly<Record<string, string>> = {},
 ): Promise<string> {
   const endpoint = resolveAgentServiceURL(baseURL, 'docx-markdown')
   const response = await fetch(
     `${endpoint}?id=${encodeURIComponent(uploaded.name)}`,
+    { headers },
   )
 
   return readResponse<string>(response)
@@ -149,10 +153,12 @@ export async function readAgentDocumentMarkdown(
 export async function readAgentImageData(
   baseURL: string,
   uploaded: Pick<AgentUploadedFile, 'name'>,
+  headers: Readonly<Record<string, string>> = {},
 ): Promise<string> {
   const endpoint = resolveAgentServiceURL(baseURL, 'image-data')
   const response = await fetch(
     `${endpoint}?id=${encodeURIComponent(uploaded.name)}`,
+    { headers },
   )
 
   return readResponse<string>(response)

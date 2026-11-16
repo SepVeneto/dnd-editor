@@ -61,11 +61,15 @@ function requestHeaders(
   options: AgentConversationClientOptions,
   withBody = false,
 ) {
+  const userId = options.userId.trim()
+  if (!userId)
+    throw new Error('会话服务未授权')
+
   return {
     ...(withBody ? { 'Content-Type': 'application/json' } : {}),
-    'Agent-User-Id': options.userId,
-    'X-Agent-Namespace': options.namespace,
     ...options.headers,
+    'Agent-User-Id': userId,
+    'X-Agent-Namespace': options.namespace,
   }
 }
 

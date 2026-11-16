@@ -13,6 +13,7 @@ import {
 export function useFile(
   fileInput: Readonly<Ref<HTMLInputElement | null>>,
   getBaseURL: () => string,
+  getHeaders: () => Readonly<Record<string, string>> = () => ({}),
 ) {
   const list = shallowRef<AgentUploadedFile[]>([])
   const uploading = ref(false)
@@ -78,7 +79,11 @@ export function useFile(
     uploading.value = true
     try {
       const uploaded = await Promise.all(
-        files.map(file => uploadAgentFile(getBaseURL(), file)),
+        files.map(file => uploadAgentFile(
+          getBaseURL(),
+          file,
+          getHeaders(),
+        )),
       )
       list.value = [...list.value, ...uploaded]
     }

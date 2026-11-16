@@ -72,6 +72,22 @@ describe('agent conversation API client', () => {
     assert.equal(conversations[0]?.messageCount, 2)
   })
 
+  it('缺少 Agent-User-Id 时拒绝历史会话请求', async () => {
+    let requested = false
+    globalThis.fetch = async () => {
+      requested = true
+      return new Response(JSON.stringify({ code: 0, data: [] }), {
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    await assert.rejects(
+      listAgentConversations({ ...options, userId: '  ' }),
+      /未授权/,
+    )
+    assert.equal(requested, false)
+  })
+
   it('将会话消息写入 BFF', async () => {
     let body: Record<string, unknown> | undefined
     globalThis.fetch = async (input, init) => {

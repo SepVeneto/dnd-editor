@@ -145,6 +145,7 @@
             :initial-messages="activeMessages"
             :history-enabled="serverHistoryEnabled"
             :conversation-options="conversationOptions"
+            :request-headers="agentRequestHeaders"
             :runtime="runtime"
             embedded
             @running="isRunning = $event"
@@ -209,7 +210,7 @@ const props = withDefaults(defineProps<{
   sessionId: '',
   storageKey: 'dnd-agent-chat',
   historyEnabled: true,
-  userId: 'anonymous',
+  userId: '',
   title: '装修助手',
   description: '由宿主子 Agent 完成页面设计。',
   placeholder: '描述你想设计的页面...',
@@ -224,23 +225,35 @@ const drawerId = `dnd-agent-drawer-${generatedSessionId}`
 const drawerTitleId = `dnd-agent-drawer-title-${generatedSessionId}`
 const drawerStorageKey = computed(() => `${props.storageKey}:drawer-width`)
 const model = computed(() => props.api.model?.model || 'qwen3.6-flash')
+const agentUserId = computed(() => (
+  props.api.history?.userId?.trim()
+  || props.userId.trim()
+))
+const agentRequestHeaders = computed<Record<string, string>>(() => ({
+  ...props.api.history?.headers,
+  ...(agentUserId.value
+    ? { 'Agent-User-Id': agentUserId.value }
+    : {}),
+  'X-Agent-Namespace': props.storageKey,
+}))
 const runtime = computed(() => createAgentRuntime({
   baseURL: props.api.model?.baseURL,
   model: props.api.model?.model,
   apiMode: props.api.model?.apiMode,
   subAgents: props.subAgents,
   getContext: props.context,
+  headers: agentRequestHeaders.value,
 }))
 const serverHistoryEnabled = computed(() => (
-  props.historyEnabled && props.api.history?.enabled !== false
+  Boolean(agentUserId.value)
+  && props.historyEnabled
+  && props.api.history?.enabled !== false
 ))
 const conversationOptions = computed<AgentConversationClientOptions>(() => ({
   baseURL: runtime.value.config.baseURL,
-  userId: props.api.history?.userId?.trim()
-    || props.userId.trim()
-    || 'anonymous',
+  userId: agentUserId.value,
   namespace: props.storageKey,
-  headers: props.api.history?.headers,
+  headers: agentRequestHeaders.value,
 }))
 const {
   acceptSaved: handleHistorySaved,

@@ -29,6 +29,5 @@ export const editorProps = {
   },
   agentHistoryUserId: {
     type: String,
-    default: 'anonymous',
   },
 } as const
