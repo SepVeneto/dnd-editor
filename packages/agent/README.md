@@ -214,7 +214,14 @@ const queryProduct = tool({
 
 输入框支持多选附件，包括 `.docx`、JPG、PNG、WebP、BMP、TIFF 和 HEIC；一次最多
 6 个附件、总计不超过 20 MB。文档会转换为文本上下文，图片以千问 OpenAI 兼容的多模态
-格式发送。会话历史保存图片引用而不是 Base64。
+格式发送。本地历史开启时，会话记录保存图片引用而不是 Base64。
+
+宿主通过 `history-storage-enabled` 属性控制浏览器会话记录，默认开启。传入 `false`
+后会停止读取和写入本地历史；当前页面中的对话仍可继续使用。
+
+```vue
+<dnd-agent :history-storage-enabled="false"></dnd-agent>
+```
 
 聊天 UI、流式输出、reasoning、工具调用、停止生成和历史记录全部位于
 `<dnd-agent>` 的 Shadow DOM 内。

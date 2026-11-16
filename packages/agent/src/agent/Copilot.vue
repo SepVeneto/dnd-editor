@@ -101,6 +101,7 @@
             :examples="examples"
             :session-id="sessionId"
             :storage-namespace="storageKey"
+            :history-storage-enabled="historyStorageEnabled"
             :runtime="runtime"
             embedded
             @running="isRunning = $event"
@@ -150,6 +151,7 @@ const props = withDefaults(defineProps<{
   context?: () => Record<string, unknown>
   sessionId?: string
   storageKey?: string
+  historyStorageEnabled?: boolean
   title?: string
   description?: string
   placeholder?: string
@@ -158,6 +160,7 @@ const props = withDefaults(defineProps<{
   subAgents: () => [],
   sessionId: '',
   storageKey: 'dnd-agent-chat',
+  historyStorageEnabled: true,
   title: '装修助手',
   description: '由宿主子 Agent 完成页面设计。',
   placeholder: '描述你想设计的页面...',

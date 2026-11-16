@@ -293,6 +293,10 @@ import type { AgentFileKind, ChatMessage, ChatMode, FilePart } from '../types'
 import { computed, onBeforeUnmount, ref, useTemplateRef, watch } from 'vue'
 import { useFile } from '../composables'
 import {
+  readStoredHistory,
+  writeStoredHistory,
+} from '../historyStorage'
+import {
   formatAgentDocumentContext,
   isAgentImageFilePart,
   readAgentDocumentMarkdown,
@@ -309,10 +313,12 @@ const props = withDefaults(
     sessionId: string
     runtime: AgentRuntime
     storageNamespace?: string
+    historyStorageEnabled?: boolean
     embedded?: boolean
   }>(),
   {
     storageNamespace: 'dnd-agent',
+    historyStorageEnabled: true,
     embedded: false,
   },
 )
@@ -323,35 +329,15 @@ const emit = defineEmits<{
 
 const runtimeConfig = computed(() => props.runtime.config)
 
-function loadMessages(): ChatMessage[] {
-  try {
-    const stored = localStorage.getItem(
-      `${props.storageNamespace}:${props.mode}:${props.sessionId}`,
-    )
-    if (!stored)
-      return []
-
-    const parsed: unknown = JSON.parse(stored)
-    return Array.isArray(parsed) ? parsed as ChatMessage[] : []
-  }
-  catch {
-    return []
-  }
-}
-
-function saveMessages(messages: ChatMessage[]) {
-  try {
-    localStorage.setItem(
-      `${props.storageNamespace}:${props.mode}:${props.sessionId}`,
-      JSON.stringify(messages),
-    )
-  }
-  catch {
-    // The chat remains usable when storage is unavailable.
-  }
-}
-
-const messages = ref<ChatMessage[]>(loadMessages())
+const messages = ref<ChatMessage[]>(
+  props.historyStorageEnabled
+    ? readStoredHistory(
+        props.storageNamespace,
+        props.mode,
+        props.sessionId,
+      )
+    : [],
+)
 const draft = ref('')
 const isStreaming = ref(false)
 const submitting = ref(false)
@@ -380,8 +366,31 @@ let activeController: AbortController | undefined
 
 watch(
   messages,
-  value => saveMessages(value),
+  (value) => {
+    if (props.historyStorageEnabled) {
+      writeStoredHistory(
+        props.storageNamespace,
+        props.mode,
+        props.sessionId,
+        value,
+      )
+    }
+  },
   { deep: true },
+)
+
+watch(
+  () => props.historyStorageEnabled,
+  (enabled) => {
+    if (enabled) {
+      writeStoredHistory(
+        props.storageNamespace,
+        props.mode,
+        props.sessionId,
+        messages.value,
+      )
+    }
+  },
 )
 
 watch(isStreaming, value => emit('running', value))
