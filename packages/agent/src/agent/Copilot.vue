@@ -225,6 +225,7 @@ const drawerId = `dnd-agent-drawer-${generatedSessionId}`
 const drawerTitleId = `dnd-agent-drawer-title-${generatedSessionId}`
 const drawerStorageKey = computed(() => `${props.storageKey}:drawer-width`)
 const model = computed(() => props.api.model?.model || 'qwen3.6-flash')
+const examples = computed(() => props.api.examples ?? [])
 const agentUserId = computed(() => (
   props.api.history?.userId?.trim()
   || props.userId.trim()
@@ -279,12 +280,6 @@ const {
 const chatViewKey = computed(
   () => `${sessionId.value}-${model.value}-${chatViewRevision.value}`,
 )
-
-const examples = [
-  '帮我设计一个租房产品首页',
-  '这个页面如何优化布局？',
-  '查询一下当前场景的开通状态',
-]
 
 const viewportWidth = ref(
   typeof window === 'undefined' ? 1440 : window.innerWidth,

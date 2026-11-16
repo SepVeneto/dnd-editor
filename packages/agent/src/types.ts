@@ -58,6 +58,8 @@ export interface AgentHostApi {
   model?: AgentModelConfig
   editor?: Partial<AgentEditorApi>
   history?: AgentHistoryConfig
+  /** Prompt suggestions shown in an empty conversation. */
+  examples?: string[]
 }
 
 export interface TextPart {

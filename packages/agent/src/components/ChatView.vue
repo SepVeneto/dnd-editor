@@ -51,6 +51,7 @@
             发送消息后，Agents SDK 会在浏览器中运行，并实时展示思考、工具调用和文本结果。
           </p>
           <div
+            v-if="examples.length"
             class="example-list"
             aria-label="示例问题"
           >

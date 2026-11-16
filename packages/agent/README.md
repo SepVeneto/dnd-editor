@@ -61,6 +61,10 @@ const agentApi: AgentHostApi = {
     model: 'qwen3.6-plus',
     apiMode: 'responses',
   },
+  examples: [
+    '帮我设计一个活动报名页面',
+    '检查当前页面有哪些可优化的布局',
+  ],
   editor: {
     getCurrentEditor: () => editor.getAgentEditor(),
     getWidgets: () => editor.getCapabilities(),
@@ -76,6 +80,9 @@ const agentApi: AgentHostApi = {
   },
 }
 ```
+
+空会话中的示例问题由宿主通过 `agentApi.examples` 配置；未配置时不展示示例入口。
+示例文案属于业务流程，不内置在 Agent Runtime 中。
 
 `<mpd-editor>` 会自动注入这组编辑器 API，业务宿主必须配置 `model` 和
 `history.userId`。未提供用户 ID 时不会伪造身份，BFF 会拒绝模型及历史会话请求。生产环境
