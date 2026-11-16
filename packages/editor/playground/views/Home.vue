@@ -189,8 +189,12 @@ const agentApi: AgentHostApi = {
     model: 'deepseek-v4.1-flash-1017',
     apiMode: 'responses' as const,
   },
+  examples: [
+    '帮我设计一个租房产品首页',
+    '这个页面如何优化布局？',
+    '查询一下当前场景的开通状态',
+  ],
   history: {
-    userId: 'playground-user',
   },
 }
 

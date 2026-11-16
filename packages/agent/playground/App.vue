@@ -23,6 +23,11 @@ const api: AgentHostApi = {
     model: 'deepseek-v4.1-flash-1017',
     apiMode: 'responses',
   },
+  examples: [
+    '帮我设计一个活动报名页面',
+    '检查当前页面有哪些可优化的布局',
+    '查询一下当前场景的开通状态',
+  ],
   history: {
     userId: 'playground-user',
   },
