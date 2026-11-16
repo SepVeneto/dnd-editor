@@ -97,11 +97,9 @@ export function useConversationHistory(
         return
       }
 
-      await loadList()
       const preferredId = toValue(options.preferredSessionId).trim()
-      const targetId = preferredId || conversations.value[0]?.id
-      const conversation = targetId
-        ? await loadConversation(targetId)
+      const conversation = preferredId
+        ? await loadConversation(preferredId)
         : undefined
       if (conversation)
         selectConversation(conversation)

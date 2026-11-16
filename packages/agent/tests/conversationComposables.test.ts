@@ -61,7 +61,7 @@ afterEach(() => {
 })
 
 describe('conversation composables', () => {
-  it('加载最近会话并切换历史会话', async () => {
+  it('加载指定会话并切换历史会话', async () => {
     globalThis.fetch = async (input) => {
       const url = String(input)
       if (url.endsWith('/v1/conversations'))
@@ -74,7 +74,7 @@ describe('conversation composables', () => {
     const history = useConversationHistory({
       enabled: true,
       clientOptions: options,
-      preferredSessionId: '',
+      preferredSessionId: 'conversation-new',
     })
 
     await history.initialize()
@@ -92,6 +92,39 @@ describe('conversation composables', () => {
 
     history.startNewSession('conversation-new-session')
     assert.equal(history.sessionId.value, 'conversation-new-session')
+    assert.deepEqual(history.messages.value, [])
+  })
+
+  it('初始化时不自动显示最近会话', async () => {
+    const requestedURLs: string[] = []
+    globalThis.fetch = async (input) => {
+      const url = String(input)
+      requestedURLs.push(url)
+      if (url.endsWith('/v1/conversations'))
+        return jsonResponse(summaries)
+      const id = url.split('/').at(-1)
+      return jsonResponse(conversation(
+        summaries.find(item => item.id === id) ?? summaries[0]!,
+      ))
+    }
+    const history = useConversationHistory({
+      enabled: true,
+      clientOptions: options,
+      preferredSessionId: '',
+    })
+    const initialSessionId = history.sessionId.value
+
+    await history.initialize()
+
+    assert.equal(history.sessionId.value, initialSessionId)
+    assert.deepEqual(history.messages.value, [])
+    assert.equal(requestedURLs.length, 0)
+
+    await history.toggle()
+
+    assert.equal(history.open.value, true)
+    assert.equal(history.conversations.value.length, summaries.length)
+    assert.equal(history.sessionId.value, initialSessionId)
     assert.deepEqual(history.messages.value, [])
   })
 
