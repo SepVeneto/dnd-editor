@@ -271,7 +271,20 @@
           >
         </form>
         <div class="composer-hint">
-          <span>Enter 发送 · Shift + Enter 换行 · 支持多个文档和图片</span>
+          <span
+            v-if="historyError"
+            class="history-status is-error"
+            :title="historyError"
+          >
+            历史保存失败
+          </span>
+          <span
+            v-else-if="historySaving"
+            class="history-status"
+          >
+            正在保存会话...
+          </span>
+          <span v-else>Enter 发送 · Shift + Enter 换行 · 支持多个文档和图片</span>
           <span>思考 + 工具调用</span>
         </div>
       </footer>
@@ -288,14 +301,17 @@
 </template>
 
 <script setup lang="ts">
+import type {
+  AgentConversationClientOptions,
+  AgentConversationSummary,
+} from '../conversationStorage'
 import type { AgentRuntime } from '../runtime'
 import type { AgentFileKind, ChatMessage, ChatMode, FilePart } from '../types'
 import { computed, onBeforeUnmount, ref, useTemplateRef, watch } from 'vue'
-import { useFile } from '../composables'
 import {
-  readStoredHistory,
-  writeStoredHistory,
-} from '../historyStorage'
+  useConversationPersistence,
+  useFile,
+} from '../composables'
 import {
   formatAgentDocumentContext,
   isAgentImageFilePart,
@@ -312,31 +328,27 @@ const props = withDefaults(
     examples: string[]
     sessionId: string
     runtime: AgentRuntime
-    storageNamespace?: string
-    historyStorageEnabled?: boolean
+    initialMessages?: ChatMessage[]
+    historyEnabled?: boolean
+    conversationOptions: AgentConversationClientOptions
     embedded?: boolean
   }>(),
   {
-    storageNamespace: 'dnd-agent',
-    historyStorageEnabled: true,
+    initialMessages: () => [],
+    historyEnabled: true,
     embedded: false,
   },
 )
 
 const emit = defineEmits<{
   running: [value: boolean]
+  historySaved: [conversation: AgentConversationSummary]
 }>()
 
 const runtimeConfig = computed(() => props.runtime.config)
 
 const messages = ref<ChatMessage[]>(
-  props.historyStorageEnabled
-    ? readStoredHistory(
-        props.storageNamespace,
-        props.mode,
-        props.sessionId,
-      )
-    : [],
+  JSON.parse(JSON.stringify(props.initialMessages)) as ChatMessage[],
 )
 const draft = ref('')
 const isStreaming = ref(false)
@@ -363,35 +375,18 @@ const isBusy = computed(() => (
 let activeRun = 0
 let scrollFrame = 0
 let activeController: AbortController | undefined
-
-watch(
+const {
+  dispose: disposeConversationHistory,
+  error: historyError,
+  saving: historySaving,
+} = useConversationPersistence({
   messages,
-  (value) => {
-    if (props.historyStorageEnabled) {
-      writeStoredHistory(
-        props.storageNamespace,
-        props.mode,
-        props.sessionId,
-        value,
-      )
-    }
-  },
-  { deep: true },
-)
-
-watch(
-  () => props.historyStorageEnabled,
-  (enabled) => {
-    if (enabled) {
-      writeStoredHistory(
-        props.storageNamespace,
-        props.mode,
-        props.sessionId,
-        messages.value,
-      )
-    }
-  },
-)
+  enabled: () => props.historyEnabled,
+  clientOptions: () => props.conversationOptions,
+  sessionId: () => props.sessionId,
+  mode: () => props.mode,
+  onSaved: conversation => emit('historySaved', conversation),
+})
 
 watch(isStreaming, value => emit('running', value))
 
@@ -558,5 +553,6 @@ onBeforeUnmount(() => {
   activeController?.abort()
   activeRun += 1
   cancelAnimationFrame(scrollFrame)
+  void disposeConversationHistory()
 })
 </script>

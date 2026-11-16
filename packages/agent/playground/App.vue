@@ -20,8 +20,11 @@ import {
 const api: AgentHostApi = {
   model: {
     baseURL: 'http://localhost:4000/v1',
-    model: 'qwen3.6-plus',
+    model: 'deepseek-v4.1-flash-1017',
     apiMode: 'responses',
+  },
+  history: {
+    userId: 'playground-user',
   },
   editor: {
     getCurrentEditor: () => ({ page: { id: 'root', children: [] } }),
@@ -64,7 +67,7 @@ const editorTools = createEditorDslTools(api)
 const pageAgent = new Agent({
   name: 'Page Agent',
   handoffDescription: '处理页面编辑和业务查询请求。',
-  model: 'qwen3.6-plus',
+  model: 'deepseek-v4.1-flash-1017',
   instructions: [
     '先读取当前编辑器与组件能力目录。',
     '只能通过 apply_editor_dsl 提交完整、版本化的编辑器 DSL。',

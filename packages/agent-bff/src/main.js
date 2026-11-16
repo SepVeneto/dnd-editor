@@ -8,8 +8,16 @@ import cors from 'cors'
 import express from 'express'
 import mammoth from 'mammoth'
 import multer from 'multer'
+import { Pool } from 'pg'
 import TurndownService from 'turndown'
 import turndownPluginGfm from 'turndown-plugin-gfm'
+import {
+  CONVERSATION_SCHEMA_SQL,
+  createConversationStore,
+  deriveConversationMetadata,
+  normalizeNamespace,
+  normalizeUserIdentity,
+} from './conversationStore.js'
 
 const packageDir = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const uploadsDir = resolve(packageDir, 'uploads')
@@ -25,6 +33,7 @@ function loadEnvFile(file) {
   }
 
   for (const line of readFileSync(file, 'utf8').split(/\r?\n/)) {
+    // eslint-disable-next-line regexp/no-super-linear-backtracking
     const match = line.match(/^\s*(?:export\s+)?([\w.-]+)\s*=\s*(.*)$/)
     if (!match) {
       continue
@@ -189,7 +198,7 @@ app.use(cors({
   //   // 'http://localhost:8083',
   //   // 'http://localhost:4000',
   // ],
-  methods: ['GET', 'POST', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'OPTIONS'],
   allowedHeaders: '*',
 }))
 
@@ -200,10 +209,103 @@ app.use(express.json({ limit: '35mb' }))
 const PORT = Number(process.env.PORT ?? 4000)
 const LLM_BASE_URL = process.env.LLM_BASE_URL ?? 'https://llm-29a9b93te5uwccoz.cn-beijing.maas.aliyuncs.com/compatible-mode/v1'
 const LLM_API_KEY = process.env.LLM_API_KEY
+const DATABASE_URL = process.env.DATABASE_URL
+  ?? 'postgresql://agent_bff:agent_bff@localhost:5432/agent_bff'
 
 if (!LLM_API_KEY) {
   throw new Error('LLM_API_KEY is required: add it to packages/agent-bff/.env.local')
 }
+
+const databasePool = new Pool({
+  connectionString: DATABASE_URL,
+  max: Number(process.env.DATABASE_POOL_MAX ?? 10),
+})
+const conversations = createConversationStore(databasePool)
+
+function conversationScope(req, res) {
+  const userId = normalizeUserIdentity(req.get('agent-user-id'))
+  if (!userId) {
+    res.status(401).json({
+      code: 1,
+      msg: '缺少有效的 Agent-User-Id 请求头',
+    })
+    return undefined
+  }
+
+  return {
+    userId,
+    namespace: normalizeNamespace(req.get('x-agent-namespace')),
+  }
+}
+
+function conversationId(req, res) {
+  const id = req.params.id
+  if (!/^[\w-]{1,200}$/.test(id)) {
+    res.status(400).json({ code: 1, msg: '无效的会话 ID' })
+    return undefined
+  }
+  return id
+}
+
+app.get('/v1/conversations', async (req, res) => {
+  const scope = conversationScope(req, res)
+  if (!scope)
+    return
+
+  const limit = typeof req.query.limit === 'string'
+    ? Number(req.query.limit)
+    : 50
+  const data = await conversations.list({ ...scope, limit })
+  res.json({ code: 0, data })
+})
+
+app.get('/v1/conversations/:id', async (req, res) => {
+  const scope = conversationScope(req, res)
+  if (!scope)
+    return
+  const id = conversationId(req, res)
+  if (!id)
+    return
+
+  const data = await conversations.get({ ...scope, id })
+  if (!data) {
+    res.status(404).json({ code: 1, msg: '会话不存在' })
+    return
+  }
+  res.json({ code: 0, data })
+})
+
+app.put('/v1/conversations/:id', async (req, res) => {
+  const scope = conversationScope(req, res)
+  if (!scope)
+    return
+  const id = conversationId(req, res)
+  if (!id)
+    return
+
+  const metadata = deriveConversationMetadata(req.body)
+  const mode = req.body?.mode
+  if (mode !== 'data' && mode !== 'text') {
+    res.status(400).json({ code: 1, msg: '无效的会话类型' })
+    return
+  }
+  if (!Array.isArray(req.body?.messages)) {
+    res.status(400).json({ code: 1, msg: 'messages 必须是数组' })
+    return
+  }
+
+  const data = await conversations.save({
+    ...scope,
+    id,
+    mode,
+    ...metadata,
+  })
+  if (!data) {
+    res.status(409).json({ code: 1, msg: '会话 ID 已属于其他用户' })
+    return
+  }
+  res.json({ code: 0, data })
+})
 
 app.post('/v1/responses', async (req, res) => {
   try {
@@ -215,8 +317,6 @@ app.post('/v1/responses', async (req, res) => {
       },
       body: JSON.stringify(req.body),
     })
-    console.log(response.status)
-
     res.status(response.status)
 
     const contentType = response.headers.get('content-type')
@@ -356,8 +456,9 @@ app.post('/upload', upload.single('file'), (req, res) => {
   })
 })
 
-app.get('/health', (_, res) => {
-  res.json({ status: 'ok' })
+app.get('/health', async (_, res) => {
+  await databasePool.query('SELECT 1')
+  res.json({ status: 'ok', database: 'ok' })
 })
 
 const turndown = new TurndownService({
@@ -454,6 +555,26 @@ app.use((error, _req, res, next) => {
   next(error)
 })
 
-app.listen(PORT, () => {
-  console.log(`LLM proxy listening on :${PORT}`)
+let server
+
+async function start() {
+  await databasePool.query(CONVERSATION_SCHEMA_SQL)
+  server = app.listen(PORT, () => {
+    // eslint-disable-next-line no-console
+    console.log(`LLM proxy listening on :${PORT}`)
+  })
+}
+
+async function shutdown() {
+  server?.close()
+  await databasePool.end()
+}
+
+process.once('SIGTERM', shutdown)
+process.once('SIGINT', shutdown)
+
+void start().catch((error) => {
+  console.error('Failed to start agent-bff:', error)
+  process.exitCode = 1
+  void databasePool.end()
 })

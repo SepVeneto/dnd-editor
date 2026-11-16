@@ -6,5 +6,7 @@
 !.npmrc
 !packages/agent-bff/package.json
 !packages/agent-bff/src/**
+!packages/agent-bff/migrations/**
+!packages/agent-bff/docker-entrypoint.sh
 !packages/agent-bff/Dockerfile
 !packages/agent-bff/Dockerfile.dockerignore

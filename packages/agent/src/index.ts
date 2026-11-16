@@ -21,6 +21,19 @@ export type {
   CreateAgentsOptions,
 } from './agents'
 
+export type {
+  AgentConversation,
+  AgentConversationClientOptions,
+  AgentConversationSummary,
+} from './conversationStorage'
+export {
+  conversationPreview,
+  conversationTitle,
+  getAgentConversation,
+  listAgentConversations,
+  saveAgentConversation,
+} from './conversationStorage'
+
 export {
   createAgents,
   DEFAULT_AGENT_BFF_URL,
@@ -55,6 +68,7 @@ export type {
   AgentEditorDsl,
   AgentEditorDslValidation,
   AgentFileKind,
+  AgentHistoryConfig,
   AgentHostApi,
   AgentModelConfig,
   ChatMessage,

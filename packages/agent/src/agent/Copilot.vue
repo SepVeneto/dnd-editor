@@ -53,6 +53,26 @@
 
           <div class="assistant-toolbar-actions">
             <button
+              v-if="serverHistoryEnabled"
+              type="button"
+              class="assistant-history-toggle"
+              :class="{ active: historyOpen }"
+              :aria-expanded="historyOpen"
+              aria-controls="dnd-agent-history-panel"
+              aria-label="查看历史会话"
+              title="历史会话"
+              @click="toggleHistory"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+                <path d="M3 3v5h5M12 7v5l3 2" />
+              </svg>
+              <span>历史</span>
+            </button>
+            <button
               type="button"
               class="assistant-new-session"
               aria-label="开启新会话"
@@ -91,20 +111,44 @@
           </div>
         </header>
 
+        <Transition name="assistant-history">
+          <ConversationHistoryPanel
+            v-if="historyOpen"
+            :conversations="conversations"
+            :active-session-id="sessionId"
+            :list-loading="historyListLoading"
+            :conversation-loading="conversationLoading"
+            :error="historyError"
+            @close="historyOpen = false"
+            @select="switchConversation"
+          />
+        </Transition>
+
         <div class="assistant-drawer-body">
+          <div
+            v-if="conversationLoading"
+            class="assistant-conversation-loading"
+            aria-live="polite"
+          >
+            <span />
+            正在加载会话...
+          </div>
           <ChatView
-            :key="`${sessionId}-${model}`"
+            v-else-if="conversationReady"
+            :key="chatViewKey"
             mode="data"
             :title="title"
             :description="description"
             :placeholder="placeholder"
             :examples="examples"
             :session-id="sessionId"
-            :storage-namespace="storageKey"
-            :history-storage-enabled="historyStorageEnabled"
+            :initial-messages="activeMessages"
+            :history-enabled="serverHistoryEnabled"
+            :conversation-options="conversationOptions"
             :runtime="runtime"
             embedded
             @running="isRunning = $event"
+            @history-saved="handleHistorySaved"
           />
         </div>
       </aside>
@@ -132,6 +176,7 @@
 
 <script setup lang="ts">
 import type { AgentSubAgent } from '../agents'
+import type { AgentConversationClientOptions } from '../conversationStorage'
 import type { AgentHostApi } from '../types'
 import {
   computed,
@@ -143,6 +188,8 @@ import {
   watch,
 } from 'vue'
 import ChatView from '../components/ChatView.vue'
+import ConversationHistoryPanel from '../components/ConversationHistoryPanel.vue'
+import { useConversationHistory } from '../composables'
 import { createAgentRuntime } from '../runtime'
 
 const props = withDefaults(defineProps<{
@@ -151,7 +198,8 @@ const props = withDefaults(defineProps<{
   context?: () => Record<string, unknown>
   sessionId?: string
   storageKey?: string
-  historyStorageEnabled?: boolean
+  historyEnabled?: boolean
+  userId?: string
   title?: string
   description?: string
   placeholder?: string
@@ -160,7 +208,8 @@ const props = withDefaults(defineProps<{
   subAgents: () => [],
   sessionId: '',
   storageKey: 'dnd-agent-chat',
-  historyStorageEnabled: true,
+  historyEnabled: true,
+  userId: 'anonymous',
   title: '装修助手',
   description: '由宿主子 Agent 完成页面设计。',
   placeholder: '描述你想设计的页面...',
@@ -174,7 +223,6 @@ const generatedSessionId = crypto.randomUUID()
 const drawerId = `dnd-agent-drawer-${generatedSessionId}`
 const drawerTitleId = `dnd-agent-drawer-title-${generatedSessionId}`
 const drawerStorageKey = computed(() => `${props.storageKey}:drawer-width`)
-const sessionId = ref(props.sessionId.trim() || generatedSessionId)
 const model = computed(() => props.api.model?.model || 'qwen3.6-flash')
 const runtime = computed(() => createAgentRuntime({
   baseURL: props.api.model?.baseURL,
@@ -183,6 +231,41 @@ const runtime = computed(() => createAgentRuntime({
   subAgents: props.subAgents,
   getContext: props.context,
 }))
+const serverHistoryEnabled = computed(() => (
+  props.historyEnabled && props.api.history?.enabled !== false
+))
+const conversationOptions = computed<AgentConversationClientOptions>(() => ({
+  baseURL: runtime.value.config.baseURL,
+  userId: props.api.history?.userId?.trim()
+    || props.userId.trim()
+    || 'anonymous',
+  namespace: props.storageKey,
+  headers: props.api.history?.headers,
+}))
+const {
+  acceptSaved: handleHistorySaved,
+  conversations,
+  error: historyError,
+  initialize: initializeConversations,
+  listLoading: historyListLoading,
+  loading: conversationLoading,
+  messages: activeMessages,
+  open: historyOpen,
+  ready: conversationReady,
+  revision: chatViewRevision,
+  sessionId,
+  startNewSession: createNewConversation,
+  switchTo: selectConversation,
+  toggle: toggleHistory,
+  usePreferredSession,
+} = useConversationHistory({
+  enabled: serverHistoryEnabled,
+  clientOptions: conversationOptions,
+  preferredSessionId: () => props.sessionId,
+})
+const chatViewKey = computed(
+  () => `${sessionId.value}-${model.value}-${chatViewRevision.value}`,
+)
 
 const examples = [
   '帮我设计一个租房产品首页',
@@ -321,9 +404,14 @@ function openDrawer() {
   open.value = true
 }
 
+async function switchConversation(id: string) {
+  isRunning.value = false
+  await selectConversation(id)
+}
+
 function startNewSession() {
   isRunning.value = false
-  sessionId.value = crypto.randomUUID()
+  createNewConversation()
   void nextTick(() => {
     drawer.value
       ?.querySelector<HTMLTextAreaElement>('#dnd-agent-message')
@@ -332,6 +420,7 @@ function startNewSession() {
 }
 
 function closeDrawer() {
+  isRunning.value = false
   open.value = false
   void nextTick(() => launcher.value?.focus())
 }
@@ -348,7 +437,12 @@ function handleViewportResize() {
 }
 
 watch(() => props.sessionId, (value) => {
-  sessionId.value = value.trim() || generatedSessionId
+  const nextSessionId = value.trim()
+  if (!nextSessionId || nextSessionId === sessionId.value)
+    return
+  usePreferredSession(nextSessionId)
+  if (open.value)
+    void initializeConversations()
 })
 
 watch(open, async (value) => {
@@ -356,6 +450,7 @@ watch(open, async (value) => {
     return
   await nextTick()
   closeButton.value?.focus()
+  await initializeConversations()
 })
 
 onMounted(() => {
@@ -476,9 +571,10 @@ onBeforeUnmount(() => {
   display: flex;
   flex: 0 0 auto;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
+.assistant-history-toggle,
 .assistant-new-session {
   display: inline-flex;
   height: 32px;
@@ -497,14 +593,48 @@ onBeforeUnmount(() => {
     background 160ms ease;
 }
 
+.assistant-history-toggle:hover,
 .assistant-new-session:hover {
   border-color: #bdbdb8;
   color: #111;
   background: #f5f5f2;
 }
 
+.assistant-history-toggle.active {
+  border-color: #111;
+  color: #fff;
+  background: #111;
+}
+
+.assistant-history-toggle svg,
 .assistant-new-session svg {
   width: 14px;
+}
+
+.assistant-conversation-loading {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  color: #85857f;
+  font-size: 11.5px;
+}
+
+.assistant-conversation-loading span {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #deded9;
+  border-top-color: #222;
+  border-radius: 50%;
+  animation: assistant-spin 700ms linear infinite;
+}
+
+@keyframes assistant-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .assistant-status {
@@ -679,12 +809,14 @@ onBeforeUnmount(() => {
     display: none;
   }
 
+  .assistant-history-toggle,
   .assistant-new-session {
     width: 32px;
     padding: 0;
     justify-content: center;
   }
 
+  .assistant-history-toggle span,
   .assistant-new-session span {
     display: none;
   }

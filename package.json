@@ -20,6 +20,7 @@
     "dev:agent": "pnpm -C packages/agent dev",
     "test:core": "pnpm -C packages/core test",
     "test:editor": "pnpm -C packages/editor test",
+    "test:agent-bff": "pnpm -C packages/agent-bff test",
     "test:e2e": "node e2e/run.mjs",
     "test:e2e:fixed": "node e2e/playwright-fixed.mjs",
     "test:e2e:hmr": "node e2e/hmr.mjs",

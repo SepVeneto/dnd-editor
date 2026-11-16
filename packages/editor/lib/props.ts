@@ -23,8 +23,12 @@ export const editorProps = {
     type: Array as PropType<any[]>,
     default: () => ([]),
   },
-  agentHistoryStorageEnabled: {
+  agentHistoryEnabled: {
     type: Boolean,
     default: true,
+  },
+  agentHistoryUserId: {
+    type: String,
+    default: 'anonymous',
   },
 } as const

@@ -68,10 +68,18 @@ const agentApi: AgentHostApi = {
     applyDsl: dsl => editor.applyDsl(dsl),
     undo: revision => editor.undo(revision),
   },
+  history: {
+    userId: currentUser.id,
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  },
 }
 ```
 
-`<mpd-editor>` 会自动注入这组编辑器 API，业务宿主通常只需配置 `model`。
+`<mpd-editor>` 会自动注入这组编辑器 API，业务宿主通常只需配置 `model` 和
+`history.userId`。生产环境应由已认证的宿主会话提供用户 ID；BFF 网关应覆盖客户端传入的
+`Agent-User-Id` 请求头，不能把它当作可直接信任的权限凭据。
 
 ## 宿主子 Agent
 
@@ -216,15 +224,20 @@ const queryProduct = tool({
 6 个附件、总计不超过 20 MB。文档会转换为文本上下文，图片以千问 OpenAI 兼容的多模态
 格式发送。本地历史开启时，会话记录保存图片引用而不是 Base64。
 
-编辑器宿主通过 `agent-history-storage-enabled` 属性控制浏览器会话记录，默认开启。
-传入 `false` 后会停止读取和写入本地历史；当前页面中的对话仍可继续使用。
+会话消息由 `agent-bff` 写入 PostgreSQL，不再写入 localStorage。聊天工具条会显示当前
+用户的历史会话列表，并支持加载和切换会话。编辑器宿主通过 `agent-history-enabled`
+属性关闭服务端历史，并通过 `agent-history-user-id` 提供默认用户身份：
 
 ```vue
 <mpd-editor
   agent
-  :agent-history-storage-enabled="false"
+  :agent-history-user-id="currentUser.id"
 ></mpd-editor>
 ```
 
-聊天 UI、流式输出、reasoning、工具调用、停止生成和历史记录全部位于
+更完整的认证头可通过 `agentApi.history.headers` 注入。BFF 的 PostgreSQL 连接由
+`DATABASE_URL` 配置，启动时会自动创建 `agent_conversations` 表；也可以按需执行
+`packages/agent-bff/migrations/001_agent_conversations.sql`。
+
+聊天 UI、流式输出、reasoning、工具调用、停止生成和服务端历史会话全部位于
 `<dnd-agent>` 的 Shadow DOM 内。

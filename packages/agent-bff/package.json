@@ -9,13 +9,15 @@
   "main": "index.js",
   "scripts": {
     "dev": "node src/main.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "proxy:remote": "node src/proxy.js",
+    "test": "node --test \"tests/**/*.test.js\""
   },
   "dependencies": {
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "mammoth": "catalog:",
     "multer": "catalog:",
+    "pg": "^8.16.3",
     "turndown": "catalog:",
     "turndown-plugin-gfm": "^1.0.2"
   }

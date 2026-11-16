@@ -15,6 +15,15 @@ export interface AgentModelConfig {
   apiMode?: AgentApiMode
 }
 
+export interface AgentHistoryConfig {
+  /** Disable server-side conversation history when set to false. */
+  enabled?: boolean
+  /** Authenticated user identity. Production hosts should always provide it. */
+  userId?: string
+  /** Additional headers forwarded to the BFF, such as Authorization. */
+  headers?: Record<string, string>
+}
+
 /** The public, versioned DSL used by host sub-agents to edit the document. */
 export type AgentEditorDsl = EditorDsl
 export type AgentEditorDslValidation = DslValidationResult
@@ -48,6 +57,7 @@ export interface AgentEditorApi {
 export interface AgentHostApi {
   model?: AgentModelConfig
   editor?: Partial<AgentEditorApi>
+  history?: AgentHistoryConfig
 }
 
 export interface TextPart {

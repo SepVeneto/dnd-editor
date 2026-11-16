@@ -58,7 +58,7 @@ const queryScenario = tool({
   strict: false,
   async execute(input) {
     const { name } = input as { name: string }
-    const res = await fetch('http://localhost:4000/v1/business/scenes')
+    const res = await fetch('/v1/business/scenes')
     const resJson = await res.json()
     return resJson.data.find((each: any) => each.name === name) ?? null
   },
@@ -89,7 +89,7 @@ const checkScenario = tool({
   strict: false,
   async execute(input) {
     const { scenarios } = input as { scenarios: Array<{ name: string }> }
-    const res = await fetch('http://localhost:4000/v1/business/scenes')
+    const res = await fetch('/v1/business/scenes')
     const resJson = await res.json()
     return scenarios.map((item) => {
       const target = resJson.data.find((each: any) => each.name === item.name)
@@ -120,7 +120,7 @@ const enableScenario = tool({
     if (!window.confirm(`场景「${name}」未开通，是否需要开通？`))
       return { rejected: true }
 
-    const res = await fetch('http://localhost:4000/v1/business/scene', { method: 'post' })
+    const res = await fetch('/v1/business/scene', { method: 'post' })
     const resJson = await res.json()
     if (resJson.code !== 0)
       throw new Error(resJson.message ?? `场景 ${name} 开通失败`)
@@ -158,7 +158,7 @@ const agentEditorTools = createEditorDslTools({
 const pageAgent = new Agent({
   name: 'Page Agent',
   handoffDescription: '处理页面编辑、布局和业务数据查询请求。',
-  model: 'qwen3.6-plus',
+  model: 'deepseek-v4.1-flash-1017',
   instructions: [
     '先读取当前编辑器与组件能力目录，再规划修改。',
     '所有页面修改都通过 apply_editor_dsl 提交完整、版本化的 DSL。',
@@ -174,8 +174,8 @@ const agentSubAgents: AgentSubAgent[] = [pageAgent]
 
 const agentApi: AgentHostApi = {
   model: {
-    baseURL: 'http://localhost:4000/v1',
-    model: 'qwen3.6-plus',
+    baseURL: new URL('/v1', window.location.origin).toString(),
+    model: 'deepseek-v4.1-flash-1017',
     apiMode: 'responses' as const,
   },
 }

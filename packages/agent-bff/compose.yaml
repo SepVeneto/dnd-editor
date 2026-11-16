@@ -3,21 +3,28 @@ name: ${AGENT_BFF_PROJECT_NAME:-agent-bff}
 services:
   agent-bff:
     image: ${AGENT_BFF_IMAGE:-agent-bff:latest}
+    build:
+      context: ../..
+      dockerfile: packages/agent-bff/Dockerfile
     restart: unless-stopped
     ports:
       - "${AGENT_BFF_BIND:-0.0.0.0}:${AGENT_BFF_PORT:-4000}:4000"
     env_file:
       - .env
     environment:
+      LLM_API_KEY: ${LLM_API_KEY:?LLM_API_KEY is required in .env}
       NODE_ENV: production
       PORT: 4000
+      POSTGRES_DB: ${POSTGRES_DB:-agent_bff}
+      POSTGRES_USER: ${POSTGRES_USER:-agent_bff}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agent_bff}
     volumes:
       - uploads:/app/packages/agent-bff/uploads
+      - postgres-data:/var/lib/postgresql/data
     read_only: true
     tmpfs:
       - /tmp
-    cap_drop:
-      - ALL
+      - /run/postgresql
     security_opt:
       - no-new-privileges:true
     stop_grace_period: 15s
@@ -30,3 +37,5 @@ services:
 volumes:
   uploads:
     name: ${AGENT_BFF_UPLOAD_VOLUME:-agent-bff-uploads}
+  postgres-data:
+    name: ${AGENT_BFF_POSTGRES_VOLUME:-agent-bff-postgres}

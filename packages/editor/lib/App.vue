@@ -103,7 +103,8 @@
       :api="agentApi"
       :sub-agents="agentSubAgents"
       :context="runtimeContext"
-      :history-storage-enabled="agentHistoryStorageEnabled"
+      :history-enabled="agentHistoryEnabled"
+      :user-id="agentHistoryUserId"
     />
   </ElConfigProvider>
 </template>

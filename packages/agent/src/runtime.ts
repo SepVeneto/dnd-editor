@@ -26,6 +26,7 @@ import {
   DEFAULT_AGENT_BFF_URL,
   DEFAULT_AGENT_MODEL,
 } from './agents'
+import { providerStreamErrorMessage } from './runtimeErrors.ts'
 import {
   buildAgentUserContent,
   formatAgentDocumentContext,
@@ -216,24 +217,6 @@ function messageText(message: ChatMessage) {
     .join('\n\n')
 }
 
-function readStoredAgent(key: string) {
-  try {
-    return localStorage.getItem(key) ?? undefined
-  }
-  catch {
-    return undefined
-  }
-}
-
-function saveStoredAgent(key: string, agentName: string) {
-  try {
-    localStorage.setItem(key, agentName)
-  }
-  catch {
-    // The runtime remains usable when storage is unavailable.
-  }
-}
-
 /**
  * llm-agent runtime. The Agents SDK owns the agent loop, tool calls and session
  * history; this module only maps its stream events to the chat UI parts.
@@ -255,11 +238,6 @@ export function createAgentRuntime(
   )
   const sessionStore = new Map<string, Promise<RuntimeSession>>()
   const imageDataCache = new Map<string, Promise<string>>()
-  const runtimeStoragePrefix = [
-    'dnd-agent:runtime',
-    encodeURIComponent(config.baseURL),
-    encodeURIComponent(config.model),
-  ].join(':')
   const runners = new Map<AgentRuntimeConfig['apiMode'], Runner>()
 
   function resolveImageData(file: FilePart) {
@@ -334,25 +312,12 @@ export function createAgentRuntime(
     return runner
   }
 
-  function agentStorageKey(runtimeSessionId: string) {
-    return `${runtimeStoragePrefix}:agent:${runtimeSessionId}`
-  }
-
-  function saveActiveAgent(runtimeSessionId: string, agentName: string) {
-    saveStoredAgent(agentStorageKey(runtimeSessionId), agentName)
-  }
-
   async function createRuntimeSession(
     runtimeSessionId: string,
     history: ChatMessage[],
   ): Promise<RuntimeSession> {
-    const storedAgentName = readStoredAgent(agentStorageKey(runtimeSessionId))
-    const activeAgentName = storedAgentName && agentRegistry.has(storedAgentName)
-      ? storedAgentName
-      : agent.name
-
     return {
-      activeAgentName,
+      activeAgentName: agent.name,
       session: new MemorySession({
         sessionId: runtimeSessionId,
         initialItems: await toAgentHistory(history),
@@ -420,56 +385,64 @@ export function createAgentRuntime(
     )
 
     let textPart: { type: 'text', text: string } | undefined
+    let providerErrorMessage: string | undefined
 
-    for await (const event of stream as AsyncIterable<RunStreamEvent>) {
-      if (signal.aborted)
-        break
+    try {
+      for await (const event of stream as AsyncIterable<RunStreamEvent>) {
+        if (signal.aborted)
+          break
 
-      if (event.type === 'raw_model_stream_event') {
-        if (event.data.type === 'response_started') {
-          textPart = undefined
-        }
-        else if (event.data.type === 'output_text_delta') {
-          if (!textPart)
-            textPart = appendPart(message, { type: 'text', text: '' })
-          textPart.text += event.data.delta
-          onUpdate()
-        }
-        continue
-      }
-
-      if (event.type === 'run_item_stream_event') {
-        if (
-          event.name === 'message_output_created'
-          && event.item.type === 'message_output_item'
-          && (!textPart || !textPart.text)
-        ) {
-          const content = event.item.content
-          if (content) {
-            textPart = appendPart(message, { type: 'text', text: content })
+        if (event.type === 'raw_model_stream_event') {
+          providerErrorMessage = providerStreamErrorMessage(event.data)
+            ?? providerErrorMessage
+          if (event.data.type === 'response_started') {
+            textPart = undefined
+          }
+          else if (event.data.type === 'output_text_delta') {
+            if (!textPart)
+              textPart = appendPart(message, { type: 'text', text: '' })
+            textPart.text += event.data.delta
             onUpdate()
           }
           continue
         }
-        handleRunItemEvent(event, message, mode, onUpdate)
-        continue
+
+        if (event.type === 'run_item_stream_event') {
+          if (
+            event.name === 'message_output_created'
+            && event.item.type === 'message_output_item'
+            && (!textPart || !textPart.text)
+          ) {
+            const content = event.item.content
+            if (content) {
+              textPart = appendPart(message, { type: 'text', text: content })
+              onUpdate()
+            }
+            continue
+          }
+          handleRunItemEvent(event, message, mode, onUpdate)
+          continue
+        }
+
+        runtime.activeAgentName = event.agent.name
+        if (mode === 'data') {
+          appendPart(message, {
+            type: 'data',
+            name: 'active_agent',
+            data: { name: event.agent.name },
+          })
+          onUpdate()
+        }
       }
 
-      runtime.activeAgentName = event.agent.name
-      saveActiveAgent(runtimeSessionId, runtime.activeAgentName)
-      if (mode === 'data') {
-        appendPart(message, {
-          type: 'data',
-          name: 'active_agent',
-          data: { name: event.agent.name },
-        })
-        onUpdate()
-      }
+      await stream.completed
     }
-
-    await stream.completed
+    catch (error) {
+      if (providerErrorMessage && !signal.aborted)
+        throw new Error(`模型服务请求失败：${providerErrorMessage}`)
+      throw error
+    }
     runtime.activeAgentName = stream.currentAgent?.name ?? runtime.activeAgentName
-    saveActiveAgent(runtimeSessionId, runtime.activeAgentName)
   }
 
   return {

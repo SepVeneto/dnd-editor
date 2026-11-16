@@ -930,6 +930,17 @@ svg {
   font-size: 10.5px;
 }
 
+.history-status {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-status.is-error {
+  color: var(--danger);
+  cursor: help;
+}
+
 .demo-note {
   margin: 15px 4px 0;
   color: #777771;
