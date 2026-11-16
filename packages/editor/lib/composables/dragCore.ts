@@ -27,6 +27,45 @@ export interface DragAddEvent {
   to: { dataset: { id?: string } }
 }
 
+/** fixed 节点在列表中的固定分区顺序：header → 普通节点 → footer */
+function fixedRank(node: Node): number {
+  if (node.widget.isFixed === 'header')
+    return 0
+  if (node.widget.isFixed === 'footer')
+    return 2
+  return 1
+}
+
+/**
+ * 列表是否满足 fixed 布局约束。
+ *
+ * header fixed 必须连续位于顶部，footer fixed 必须连续位于底部；
+ * 同类型 fixed 可以连续存在，但它们之间不能插入普通节点。
+ */
+function isFixedOrderValid(list: Node[]): boolean {
+  let previousRank = 0
+  for (const node of list) {
+    const rank = fixedRank(node)
+    if (rank < previousRank)
+      return false
+    previousRank = rank
+  }
+  return true
+}
+
+function fixedOrderError(list: Node[], index?: number): string | undefined {
+  if (isFixedOrderValid(list))
+    return
+
+  const node = index === undefined ? undefined : list[index]
+  if (node?.widget.isFixed === 'header')
+    return `组件「${node.name || node.wid}」只能放在顶部。`
+  if (node?.widget.isFixed === 'footer')
+    return `组件「${node.name || node.wid}」只能放在底部。`
+
+  return '非预期的操作失败。'
+}
+
 /**
  * 找出列表中第一处重复出现的 wid。
  *
@@ -84,13 +123,14 @@ export function resolveDuplicateRemovalIndex(
 
 /**
  * 处理一次「放入」：
- * - 落点紧邻 fixed 节点时撤销这次插入；
+ * - 插入后不满足 fixed 分区顺序时撤销这次插入；
  * - 跨容器拖动被撤销时，把节点还原回原容器；
  * - 否则把节点登记到目标父节点下。
  */
-export function handleNodeAdd(target: DragTarget, evt: DragAddEvent, host: DragHost): void {
+export function handleNodeAdd(target: DragTarget, evt: DragAddEvent, host: DragHost): string | undefined {
   const list = target.list
-  if (isFixedBoundary(list, evt.newIndex)) {
+  if (!isFixedOrderValid(list)) {
+    const error = fixedOrderError(list, evt.newIndex)
     const [removed] = list.splice(evt.newIndex, 1)
     const containerId = evt.from.dataset.id
 
@@ -99,7 +139,7 @@ export function handleNodeAdd(target: DragTarget, evt: DragAddEvent, host: DragH
     if (evt.to !== evt.from && containerId && removed)
       host.restoreToContainer(containerId, evt.oldIndex, removed)
 
-    return
+    return error
   }
 
   const node = list[evt.newDraggableIndex]
@@ -115,10 +155,11 @@ export function handleNodeAdd(target: DragTarget, evt: DragAddEvent, host: DragH
  *
  * `defer` 用于把清理后的写入推迟到下一个 tick（与 vuedraggable 的更新时机对齐）。
  */
-export function handleNodeInput(target: DragTarget, val: Node[], defer: (fn: () => void) => void): void {
+export function handleNodeInput(target: DragTarget, val: Node[], defer: (fn: () => void) => void): string | undefined {
   if (target.list.length >= val.length) {
-    target.setList(val)
-    return
+    const error = fixedOrderError(val)
+    target.setList(error ? target.list : val)
+    return error
   }
 
   const wid = findDuplicatedWid(val)

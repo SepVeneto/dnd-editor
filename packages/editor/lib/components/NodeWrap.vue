@@ -10,9 +10,14 @@
       isHover && 'hover',
       preview && 'preview',
     ]"
+    @pointerdown="handlePointerDown"
+    @pointermove="handlePointerMove"
+    @pointerup="resetPointerAttempt"
+    @pointercancel="resetPointerAttempt"
   >
     <div
       class="node-wrap"
+      @contextmenu="handleContextMenu"
       @mouseenter.stop="editor.hovering = node.wid"
       @mouseleave.stop="editor.hovering = undefined"
       @click.stop="handleSelect"
@@ -25,6 +30,10 @@
         <div>拖曳组件</div>
       </slot>
     </div>
+    <NodeContextMenu
+      ref="contextMenu"
+      :node="node"
+    />
     <NodeOperate
       v-if="isActive && !preview"
       :node="node"
@@ -45,11 +54,12 @@
 <script lang="ts" setup>
 import type { Node } from '@sepveneto/dnde-core/class'
 import { Hide as IconHide } from '@element-plus/icons-vue'
-import { ElIcon } from 'element-plus'
-import { computed } from 'vue'
+import { ElIcon, ElMessage } from 'element-plus'
+import { computed, ref } from 'vue'
 import { useEditor } from '@/store'
 import { normalizeStyle } from '@/utils'
 import NodeContainer from './NodeContainer.vue'
+import NodeContextMenu from './NodeContextMenu.vue'
 import NodeOperate from './NodeOperate.vue'
 
 const props = defineProps<{
@@ -78,12 +88,48 @@ const isHover = computed(() => {
   return props.node.wid === editor.hovering
 })
 const isDraggable = computed(() => props.node.widget?.draggable)
+const contextMenu = ref<{ open: (event: MouseEvent) => void }>()
 
-function handleSelect() {
+let pointerStart: { x: number, y: number } | undefined
+
+function handlePointerDown(event: PointerEvent) {
+  const target = event.target as Element | null
+  if (event.button !== 0 || isDraggable.value || target?.closest('.mpd-node') !== event.currentTarget)
+    return
+
+  pointerStart = { x: event.clientX, y: event.clientY }
+}
+
+function handlePointerMove(event: PointerEvent) {
+  if (!pointerStart)
+    return
+
+  if (Math.hypot(event.clientX - pointerStart.x, event.clientY - pointerStart.y) >= 4) {
+    ElMessage.warning(`组件「${props.node.name}」无法拖拽。`)
+    pointerStart = undefined
+  }
+}
+
+function resetPointerAttempt() {
+  pointerStart = undefined
+}
+
+function handleContextMenu(event: MouseEvent) {
+  event.preventDefault()
+  event.stopPropagation()
+  selectNode()
+  contextMenu.value?.open(event)
+}
+
+function selectNode() {
   if (props.select)
     props.select(props.node)
   else
     editor.selectNode(props.node.wid)
+}
+
+function handleSelect() {
+  selectNode()
 }
 </script>
 

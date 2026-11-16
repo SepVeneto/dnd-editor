@@ -8,6 +8,7 @@ import IconWidget from '@/assets/widget.vue'
 import { useEditor } from '@/store'
 import { useApp } from '@/store/app'
 import { loadFromRemote } from '@/utils'
+import NodeTree from './nodeTree.vue'
 
 export default {
   setup() {
@@ -62,7 +63,7 @@ export default {
         'clone': handleClone,
         'sort': false,
         'itemKey': 'name',
-        'class': 'mpd-grid mpd-gap-4',
+        'class': 'mpd-grid mpd-gap-[10px]',
         'style': 'grid-template-columns: repeat(3, 90px);',
         'onUpdate:modelValue': (val: Widget[]) => app.widgets = val,
         'onEnd': handleEnd,
@@ -99,7 +100,7 @@ export default {
             'clone': handleClone,
             'sort': false,
             'itemKey': 'name',
-            'class': 'mpd-grid mpd-gap-4',
+            'class': 'mpd-grid mpd-gap-[10px]',
             'style': 'grid-template-columns: repeat(3, 90px);',
             'onUpdate:modelValue': (val: Widget[]) => item.list = val,
             'onEnd': handleEnd,
@@ -118,6 +119,15 @@ export default {
             ElScrollbar,
             { wrapStyle: 'height: 700px;', noresize: true },
             () => hasGroup(app.widgets) ? groupRenderer() : singleRenderer(true),
+          ),
+        ),
+        h(
+          ElTabPane,
+          { label: '节点' },
+          () => h(
+            ElScrollbar,
+            { wrapStyle: 'height: 700px;', noresize: true },
+            () => h(NodeTree),
           ),
         ),
         editor.plugins.widget.list.map(item => h(
@@ -143,6 +153,7 @@ export default {
     return h(
       'aside',
       {
+        class: 'mpd-w-[320px]',
         style: { padding: '1rem', border: '1px solid var(--mpd-border-color)' },
       },
       this.tabRenderer(),

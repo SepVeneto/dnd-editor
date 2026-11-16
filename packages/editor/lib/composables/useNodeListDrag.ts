@@ -1,6 +1,7 @@
-import type { DraggableEvt } from '@/type'
 import type { Node } from '@sepveneto/dnde-core/class'
-import type { DragHost, DragTarget } from './dragCore'
+import type { DragTarget } from './dragCore'
+import type { DraggableEvt } from '@/type'
+import { ElMessage } from 'element-plus'
 import { nextTick } from 'vue'
 import { useEditor } from '@/store'
 import { handleNodeAdd, handleNodeInput } from './dragCore'
@@ -22,7 +23,7 @@ export function useNodeListDrag(target: NodeListDragTarget) {
   }
 
   function onAdd(evt: DraggableEvt) {
-    handleNodeAdd(target, evt, {
+    const error = handleNodeAdd(target, evt, {
       restoreToContainer: (containerId, index, node) => {
         const oldContainer = editor.nodeMap.get(containerId)
         // Node 是递归类型，直接调用 splice 会触发 TS2589，需要断言为 Node[]
@@ -32,10 +33,14 @@ export function useNodeListDrag(target: NodeListDragTarget) {
       },
       addNode: (node, parent) => editor.addNode(node, parent),
     })
+    if (error)
+      ElMessage.warning(error)
   }
 
   function onInput(val: Node[]) {
-    handleNodeInput(target, val, fn => nextTick().then(fn))
+    const error = handleNodeInput(target, val, fn => nextTick().then(fn))
+    if (error)
+      ElMessage.warning(error)
   }
 
   return { onStart, onAdd, onInput }

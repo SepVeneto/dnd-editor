@@ -201,6 +201,52 @@ describe('handleNodeAdd（fixed 拦截）', () => {
     assert.equal(added[0].node, b)
     assert.equal(added[0].parent, parent)
   })
+
+  it('从组件栏拖入的 header fixed 不能落在普通节点之间', () => {
+    const h = node('h', 'header')
+    const target = { list: [node('a'), h, node('b')], parent: node('root'), setList: () => {} }
+    const { host, added } = makeHost()
+
+    const error = handleNodeAdd(target, crossListEvent(1, 0, undefined, 'new'), host)
+
+    assert.deepEqual(wids(target.list), ['a', 'b'])
+    assert.equal(added.length, 0)
+    assert.match(error ?? '', /fixed: header/)
+  })
+
+  it('fixed 节点落在对应分区时允许登记', () => {
+    const parent = node('root')
+    const headerTarget = { list: [node('h', 'header'), node('a')], parent, setList: () => {} }
+    const footerTarget = { list: [node('a'), node('f', 'footer')], parent, setList: () => {} }
+    const { host, added } = makeHost()
+
+    handleNodeAdd(headerTarget, crossListEvent(0, 0, undefined, 'new'), host)
+    handleNodeAdd(footerTarget, crossListEvent(1, 0, undefined, 'new'), host)
+
+    assert.deepEqual(added.map(item => item.node.wid), ['h', 'f'])
+    assert.ok(added.every(item => item.parent === parent))
+  })
+
+  it('多个同类型 fixed 节点不能越过普通节点分区', () => {
+    const headerTarget = {
+      list: [node('h1', 'header'), node('a'), node('h2', 'header')],
+      parent: node('root'),
+      setList: () => {},
+    }
+    const footerTarget = {
+      list: [node('f2', 'footer'), node('a'), node('f1', 'footer')],
+      parent: node('root'),
+      setList: () => {},
+    }
+    const { host, added } = makeHost()
+
+    handleNodeAdd(headerTarget, crossListEvent(2, 0, undefined, 'new'), host)
+    handleNodeAdd(footerTarget, crossListEvent(0, 0, undefined, 'new'), host)
+
+    assert.deepEqual(wids(headerTarget.list), ['h1', 'a'])
+    assert.deepEqual(wids(footerTarget.list), ['a', 'f1'])
+    assert.equal(added.length, 0)
+  })
 })
 
 describe('handleNodeInput（fixed 边界保留）', () => {
@@ -212,6 +258,19 @@ describe('handleNodeInput（fixed 边界保留）', () => {
     handleNodeInput(target, val, fn => fn())
 
     assert.deepEqual(calls, [val])
+  })
+
+  it('同级重排若破坏 fixed 分区顺序，则保留原列表', () => {
+    const original = [node('h', 'header'), node('a'), node('f', 'footer')]
+    const calls: Node[][] = []
+    const target = { list: original, parent: node('root'), setList: (l: Node[]) => calls.push(l) }
+    const val = [node('a'), node('h', 'header'), node('f', 'footer')]
+
+    const error = handleNodeInput(target, val, fn => fn())
+
+    assert.equal(calls.length, 1)
+    assert.equal(calls[0], original)
+    assert.match(error ?? '', /fixed/)
   })
 
   it('长度增加但没有重复时直接替换', () => {
