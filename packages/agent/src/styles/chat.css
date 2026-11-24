@@ -500,6 +500,10 @@ svg {
   color: var(--text-muted);
 }
 
+.markdown-content img {
+  max-width: 100%;
+}
+
 .part-card {
   min-width: 0;
   padding: 12px;
