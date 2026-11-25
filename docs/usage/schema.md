@@ -10,6 +10,18 @@ title: 数据
 
 支持`required`快速设置必填校验，同时也支持通过`rules`进行自定义校验。关于`rules`的用法，可以参见[element-plus](https://element-plus.org/zh-CN/component/form#%E8%A1%A8%E5%8D%95%E9%AA%8C%E8%AF%81)
 
+## 默认值
+
+通过`defaultValue`为 schema 字段设置默认值。加载旧数据或组件新增 schema 字段时，编辑器会只补齐缺失字段，不会覆盖已有数据；`key`支持嵌套路径。
+
+```ts
+const input = schema.input({
+  label: '标题',
+  key: 'title',
+  defaultValue: '未命名',
+})
+```
+
 ## 示例
 
 ```ts
@@ -97,6 +109,10 @@ interface BaseConfig {
    */
   key: string
   /**
+   * 数据缺失时用于补齐旧数据的默认值
+   */
+  defaultValue?: unknown
+  /**
    * 对于这个属性的提示信息
    */
   tips?: string
@@ -117,6 +133,7 @@ interface BaseConfig {
 interface SchemaItemBase {
   label: string
   key: string
+  defaultValue?: unknown
   formItem?: Partial<FormItemProps>
   rules?: FormItemRule | FormItemRule[]
 }

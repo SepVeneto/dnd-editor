@@ -41,6 +41,10 @@ describe('schema', () => {
     expect(schema.input({ label: '标题', key: 'title', rules: [rule] }).rules).toEqual([rule])
   })
 
+  it('透传字段默认值', () => {
+    expect(schema.input({ label: '标题', key: 'title', defaultValue: '' }).defaultValue).toBe('')
+  })
+
   it('custom 类型会把 type 映射到 name', () => {
     expect(schema.custom({ type: 'richText', label: '内容', key: 'content' })).toMatchObject({
       type: 'custom',

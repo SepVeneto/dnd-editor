@@ -29,6 +29,8 @@ interface SchemaItemBase {
   _role?: string
   label: string
   key: string
+  /** 数据缺失时用于补齐旧数据的默认值 */
+  defaultValue?: unknown
   /** Capability range used by DSL scope validation. */
   scope?: FieldScope
   /** A field may be discovered but not written by the configuration Agent. */

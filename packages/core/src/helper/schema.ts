@@ -19,6 +19,7 @@ interface BaseConfig {
   _role?: string
   label: SchemaItem['label']
   key: SchemaItem['key']
+  defaultValue?: SchemaItem['defaultValue']
   scope?: FieldScope
   readOnly?: boolean
   tips?: string
@@ -33,6 +34,7 @@ export const schema = {
       _role: config._role,
       label: config.label,
       key: config.key,
+      defaultValue: config.defaultValue,
       scope: config.scope,
       readOnly: config.readOnly,
       type,

@@ -52,7 +52,10 @@ Vue.watch(() => editor.rootNode, () => {
 }, { deep: true })
 // 业务侧重新下发组件配置（改 schema、按需加载配置等）时就地更新组件定义，
 // 不重建根节点，因此画布上的数据与选中态都会保留
-Vue.watch(() => props.widgets, widgets => appStore.setWidgets(widgets))
+Vue.watch(() => props.widgets, (widgets) => {
+  appStore.setWidgets(widgets)
+  editor.applySchemaDefaultsToTree()
+})
 // 让动态组件的样式加载在 shadow dom 中，而不是宿主环境中：
 // 生产者运行时的 <link> 由 shadowCss 接管，热更新与 shadow root 重建（宿主热更新、路由切换）
 // 也一并处理，避免改了样式不生效 / 重建后样式丢失。

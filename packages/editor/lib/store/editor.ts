@@ -18,6 +18,7 @@ import { Node, Widget } from '@sepveneto/dnde-core/class'
 import Validator from 'async-validator'
 import { defineStore } from 'pinia'
 import { computed, customRef, ref, shallowRef, watchEffect } from 'vue'
+import { applySchemaDefaults } from '@/schemaPath'
 import { createDebug, removePopper } from '@/utils'
 import { useApp } from './app'
 import { toReactiveNode } from './reactiveNode'
@@ -320,6 +321,8 @@ export const useEditor = defineStore('editor', () => {
   function addNode(node: Node, pNode: Node = rootNode.value as Node, manual = false) {
     // addNode 的返回值会被业务侧直接修改（例如 Agent 创建金刚区后写 node.data），
     // 必须返回和文档树同一份响应式代理；返回原始 Node 会绕过 Vue 的依赖追踪。
+    applySchemaDefaults(node.data, node.widget.props)
+    applySchemaDefaults(node.style as Record<string, any>, node.widget.style)
     const registeredNode = toReactiveNode(node)
     registeredNode.parent = pNode
     setNodeLevel(registeredNode, pNode.level + 1)
@@ -661,6 +664,8 @@ export const useEditor = defineStore('editor', () => {
   }
   /** 替换整棵文档树：先注销旧树，避免 rootNode 变更后旧节点滞留在 nodeMap 中 */
   function setRoot(node: Node) {
+    applySchemaDefaults(node.data, node.widget.props)
+    applySchemaDefaults(node.style as Record<string, any>, node.widget.style)
     unregister(rootNode.value)
     rootNode.value = node
     plugins.config.bindRoot(rootNode.value as Node)
@@ -692,6 +697,13 @@ export const useEditor = defineStore('editor', () => {
 
   function setSchema(schema: IWidget['schema']) {
     rootNode.value.widget._data.schema = schema
+    applySchemaDefaultsToTree()
+  }
+
+  function applySchemaDefaultsToTree(node: Node = rootNode.value as Node) {
+    applySchemaDefaults(node.data, node.widget.props)
+    applySchemaDefaults(node.style as Record<string, any>, node.widget.style)
+    node.list.forEach(item => applySchemaDefaultsToTree(item))
   }
 
   return {
@@ -729,5 +741,6 @@ export const useEditor = defineStore('editor', () => {
     revision,
     setData,
     setSchema,
+    applySchemaDefaultsToTree,
   }
 })

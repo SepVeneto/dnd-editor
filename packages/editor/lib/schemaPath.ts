@@ -32,6 +32,37 @@ export function setSchemaValue(data: DataRecord, key: string, value: unknown): v
   current[path.at(-1)!] = value
 }
 
+/** 判断点路径上的值是否存在，保留显式写入的 null / undefined。 */
+function hasSchemaValue(data: DataRecord, key: string): boolean {
+  let current: any = data
+  for (const part of key.split('.')) {
+    if (current == null || !Object.prototype.hasOwnProperty.call(current, part))
+      return false
+    current = current[part]
+  }
+  return true
+}
+
+function cloneDefaultValue(value: unknown): unknown {
+  if (value === null || typeof value !== 'object')
+    return value
+  return JSON.parse(JSON.stringify(value))
+}
+
+/** 只补齐 schema 中配置了 defaultValue 且旧数据缺失的字段。 */
+export function applySchemaDefaults(
+  data: DataRecord,
+  configs: SchemaItem[],
+): DataRecord {
+  for (const config of configs) {
+    if (config.defaultValue !== undefined && !hasSchemaValue(data, config.key)) {
+      setSchemaValue(data, config.key, cloneDefaultValue(config.defaultValue))
+    }
+    applySchemaDefaults(data, getLinkedSchemaItems(config, data))
+  }
+  return data
+}
+
 /** 根据当前配置值查找 select/radio/radioButton 的联动配置项。 */
 export function getLinkedSchemaItems(config: SchemaItem, data: DataRecord): SchemaItem[] {
   if (config.type !== 'select' && config.type !== 'radio' && config.type !== 'radioButton')

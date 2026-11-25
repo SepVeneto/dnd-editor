@@ -3,6 +3,7 @@ import type { SchemaItem } from '@sepveneto/dnde-core/class'
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
+  applySchemaDefaults,
   getLinkedSchemaItems,
   getSchemaValue,
   setSchemaValue,
@@ -58,5 +59,79 @@ describe('schema path', () => {
       [linkedItem],
     )
     assert.deepEqual(getLinkedSchemaItems(config, { layout: { type: 'text' } }), [])
+  })
+
+  it('只补齐旧数据缺失的 schema 默认值', () => {
+    const data = {
+      title: '已有标题',
+      enabled: false,
+      layout: {
+        align: null,
+      },
+    }
+    const configs = [
+      { type: 'input', label: '标题', key: 'title', defaultValue: '默认标题' },
+      { type: 'switch', label: '启用', key: 'enabled', defaultValue: true },
+      { type: 'input', label: '副标题', key: 'subtitle', defaultValue: '' },
+      { type: 'input', label: '对齐', key: 'layout.align', defaultValue: 'center' },
+      { type: 'input', label: '间距', key: 'layout.gap', defaultValue: 0 },
+      { type: 'input', label: '未设置默认值', key: 'empty' },
+    ] as SchemaItem[]
+
+    applySchemaDefaults(data, configs)
+
+    assert.deepEqual(data, {
+      title: '已有标题',
+      enabled: false,
+      subtitle: '',
+      layout: {
+        align: null,
+        gap: 0,
+      },
+    })
+  })
+
+  it('为每个节点复制对象默认值', () => {
+    const schema = [
+      { type: 'input', label: '选项', key: 'options', defaultValue: { align: 'center' } },
+    ] as SchemaItem[]
+    const first = {}
+    const second = {}
+
+    applySchemaDefaults(first, schema)
+    applySchemaDefaults(second, schema)
+    ;(first as any).options.align = 'left'
+
+    assert.equal((second as any).options.align, 'center')
+    assert.equal((schema[0] as any).defaultValue.align, 'center')
+  })
+
+  it('只为当前命中的联动配置补齐默认值', () => {
+    const linked = {
+      type: 'input',
+      label: '图片地址',
+      key: 'image.url',
+      defaultValue: '/default.png',
+    } as SchemaItem
+    const config = {
+      type: 'select',
+      label: '布局',
+      key: 'layout',
+      link: {
+        image: [linked],
+      },
+    } as SchemaItem
+
+    const imageData = { layout: 'image' }
+    const textData = { layout: 'text' }
+
+    applySchemaDefaults(imageData, [config])
+    applySchemaDefaults(textData, [config])
+
+    assert.deepEqual(imageData, {
+      layout: 'image',
+      image: { url: '/default.png' },
+    })
+    assert.deepEqual(textData, { layout: 'text' })
   })
 })
