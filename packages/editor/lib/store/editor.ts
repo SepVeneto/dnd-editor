@@ -84,7 +84,9 @@ export const CONFIG_PANEL_SHOW_KEY = 'isShow'
 
 export interface ConfigPluginContext {
   addNode: (node: Node, pNode?: Node, manual?: boolean) => Node
+  removeNode: (node: Node) => void
   rootNode: () => Node
+  resetActivePane: (wid: string) => void
 }
 export interface ConfigPanelOptions {
   /** 标签显示名（默认取组件的名字或数据键） */
@@ -153,6 +155,14 @@ class ConfigPlugin {
     const data = ensurePanelData(root, instance)
 
     instance._data.meta = { ...instance._data.meta, draggable: false }
+    // 同一组件类型只保留一个配置标签，重复注册时原位更新定义并保留已有数据。
+    const existing = this.list.find(panel => panel.type === instance.view)
+    if (existing) {
+      Object.assign(existing.widget, instance)
+      existing.data = data
+      return existing
+    }
+
     // 组件默认数据并入同一份配置对象，响应式与 getData() 都能覆盖到
     const node = new Node(instance, {
       props: data,
@@ -163,6 +173,20 @@ class ConfigPlugin {
 
     this.list.push(registeredNode)
     return registeredNode
+  }
+
+  /** 按组件定义、类型或实例 wid 卸载配置标签；只移除展示与节点注册，不删除根节点上的配置数据。 */
+  removePanel(definition: IWidget | string): boolean {
+    const target = typeof definition === 'string' ? definition : definition._view
+    const index = this.list.findIndex(panel => panel.type === target || panel.wid === target)
+    if (index === -1)
+      return false
+
+    const [node] = this.list.splice(index, 1)
+    node.parent = undefined
+    this.ctx.removeNode(node)
+    this.ctx.resetActivePane(node.wid)
+    return true
   }
 
   /**
@@ -287,7 +311,15 @@ export const useEditor = defineStore('editor', () => {
   const plugins = {
     helper: new HelperPlugin({ addNode, delNode }),
     widget: new WidgetPlugin({ addPanel }),
-    config: new ConfigPlugin({ addNode, rootNode: () => rootNode.value as Node }),
+    config: new ConfigPlugin({
+      addNode,
+      removeNode: unregister,
+      rootNode: () => rootNode.value as Node,
+      resetActivePane(wid) {
+        if (activeConfigPane.value === wid)
+          activeConfigPane.value = 'props'
+      },
+    }),
   }
   const selectedNode = computed(() => {
     const node = nodeMap.get(selected.value)
