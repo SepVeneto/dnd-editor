@@ -2,7 +2,7 @@ import type { IWidget } from '@sepveneto/dnde-core'
 import { widgetType } from '@sepveneto/dnde-core'
 import { Node, Widget } from '@sepveneto/dnde-core/class'
 import { defineStore } from 'pinia'
-import { computed, shallowRef } from 'vue'
+import { computed, shallowReactive, shallowRef } from 'vue'
 import { useEditor } from './editor'
 
 export interface WidgetGroup { name: string, list: Widget[] }
@@ -50,7 +50,7 @@ export const useApp = defineStore('app', () => {
   function applyWidget(widget: IWidget) {
     const exist = widgetMap.get(widget._view)
     if (!exist) {
-      const inst = new Widget(widget)
+      const inst = shallowReactive(new Widget(widget) as any) as Widget
       widgetMap.set(inst.view, inst)
       return inst
     }

@@ -696,7 +696,12 @@ export const useEditor = defineStore('editor', () => {
   }
 
   function setSchema(schema: IWidget['schema']) {
-    rootNode.value.widget._data.schema = schema
+    Object.assign(rootNode.value.widget, {
+      _data: {
+        ...rootNode.value.widget._data,
+        schema,
+      },
+    })
     applySchemaDefaultsToTree()
   }
 
