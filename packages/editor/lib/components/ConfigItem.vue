@@ -5,6 +5,14 @@
     :rules="config.rules"
     v-bind="config.formItem"
   >
+    <template v-if="config.tips" #label>
+      <span class="config-label">
+        {{ config.label }}
+        <ElTooltip :content="config.tips" placement="top">
+          <ElIcon class="config-tip"><QuestionFilled /></ElIcon>
+        </ElTooltip>
+      </span>
+    </template>
     <ConfigRender
       :model-value="getSchemaValue(form, config.key) ?? null"
       :config="config"
@@ -24,7 +32,8 @@
 
 <script lang="ts" setup>
 import type { SchemaItem } from '@sepveneto/dnde-core/class'
-import { ElFormItem } from 'element-plus'
+import { QuestionFilled } from '@element-plus/icons-vue'
+import { ElFormItem, ElIcon, ElTooltip } from 'element-plus'
 import { computed } from 'vue'
 import { getLinkedSchemaItems, getSchemaValue, setSchemaValue } from '@/schemaPath'
 import ConfigRender from './ConfigRender.vue'
@@ -42,3 +51,15 @@ function updateData(key: string, val: unknown) {
   emit('change')
 }
 </script>
+
+<style scoped>
+.config-label {
+  display: inline-flex;
+  align-items: center;
+}
+
+.config-tip {
+  margin-left: 4px;
+  color: var(--el-text-color-secondary);
+}
+</style>

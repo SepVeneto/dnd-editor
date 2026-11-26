@@ -35,6 +35,8 @@ interface SchemaItemBase {
   scope?: FieldScope
   /** A field may be discovered but not written by the configuration Agent. */
   readOnly?: boolean
+  /** 字段标签旁的提示信息 */
+  tips?: string
   formItem?: Partial<FormItemProps>
   rules?: FormItemRule | FormItemRule[]
 }

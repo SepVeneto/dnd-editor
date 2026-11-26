@@ -37,6 +37,7 @@ export const schema = {
       defaultValue: config.defaultValue,
       scope: config.scope,
       readOnly: config.readOnly,
+      tips: config.tips,
       type,
       formItem: config.formItem,
       rules: normalizeRules(config),

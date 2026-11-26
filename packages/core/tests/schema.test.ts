@@ -45,6 +45,10 @@ describe('schema', () => {
     expect(schema.input({ label: '标题', key: 'title', defaultValue: '' }).defaultValue).toBe('')
   })
 
+  it('透传字段提示信息', () => {
+    expect(schema.input({ label: '标题', key: 'title', tips: '用于展示标题' }).tips).toBe('用于展示标题')
+  })
+
   it('custom 类型会把 type 映射到 name', () => {
     expect(schema.custom({ type: 'richText', label: '内容', key: 'content' })).toMatchObject({
       type: 'custom',
