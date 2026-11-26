@@ -16,6 +16,8 @@ export type EditorApiMethod
     | 'validate'
     | 'getData'
     | 'setData'
+    | 'addConfigPanel'
+    | 'removeConfigPanel'
     | 'getCapabilities'
     | 'getRevision'
     | 'validateDsl'

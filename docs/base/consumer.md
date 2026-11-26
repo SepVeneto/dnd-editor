@@ -165,6 +165,8 @@ register({ remoteUrl: 'http://localhost:8090' })
 | validate | <Desc desc="() => Promise<void>" :raw="false">Function</Desc> | 验证配置区数据，校验失败时抛出异常 |
 | getData | <Desc desc="() => any">Function</Desc> | 获取编辑区的数据 |
 | setData | <Desc desc="(data: any) => void">Function</Desc> | 设置编辑区的数据 |
+| addConfigPanel | <Desc desc="(panel: IWidget) => Node">Function</Desc> | 注册根节点配置标签；相同组件类型重复注册时更新原标签 |
+| removeConfigPanel | <Desc desc="(panel: IWidget | string) => boolean">Function</Desc> | 按组件定义、类型或 wid 卸载根节点配置标签 |
 
 ::: tip
 编辑器还没挂载完时调用上述方法不会失败：调用会先排队，挂载后按顺序补上（此时返回 Promise，

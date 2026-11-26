@@ -6,9 +6,10 @@
  *
  * - 组件定义是异步的（等宿主 `register()` 给出生产者地址、生产者 `setup` 加载完再挂载），
  *   等待期间先往 shadow root 里放一个加载占位，挂载时由 Editor.vue 撤掉；
- * - 挂载前调用的指令式 API（register / validate / getData / setData）会先排队，
+ * - 挂载前调用的指令式 API（register / setData / addConfigPanel 等）会先排队，
  *   挂载后补上，见 ./api.ts。
  */
+import type { IWidget } from '@sepveneto/dnde-core'
 import type { App, Component } from 'vue'
 import type { EditorApi } from './api'
 import { defineCustomElement } from 'vue'
@@ -93,6 +94,14 @@ export function createEditorElement({ definition, configureApp }: EditorElementI
 
     setData(data: { _view: string, list: any[] }) {
       return invokeEditorApi(this, 'setData', [data])
+    }
+
+    addConfigPanel(panel: IWidget) {
+      return invokeEditorApi(this, 'addConfigPanel', [panel])
+    }
+
+    removeConfigPanel(panel: IWidget | string) {
+      return invokeEditorApi(this, 'removeConfigPanel', [panel])
     }
 
     getCapabilities() {

@@ -6,6 +6,7 @@
 </template>
 
 <script lang="ts" setup>
+import type { IWidget } from '@sepveneto/dnde-core'
 import { useDebounceFn, useEventListener } from '@vueuse/core'
 import * as Vue from 'vue'
 import { onUnmounted, useHost, useTemplateRef } from 'vue'
@@ -98,6 +99,12 @@ const api = {
   },
   setData(data: { _view: 'page', list: any[] }) {
     editor.setData(data)
+  },
+  addConfigPanel(panel: IWidget) {
+    return editor.plugins.config.addPanel(panel)
+  },
+  removeConfigPanel(panel: IWidget | string) {
+    return editor.plugins.config.removePanel(panel)
   },
   getCapabilities() {
     return editor.getAgentCapabilities()
