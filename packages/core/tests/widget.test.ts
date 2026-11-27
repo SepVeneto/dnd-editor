@@ -72,6 +72,60 @@ describe('Widget', () => {
     expect(w.clone().agent?.nodeIR).toBe(nodeIR)
   })
 
+  it('保留 schema.attrs 中嵌套的回调函数', () => {
+    const validate = () => true
+    const format = () => 'formatted'
+    const w = new Widget({
+      _name: '卡片',
+      _view: 'card',
+      schema: {
+        props: [{
+          type: 'custom',
+          name: 'custom',
+          label: '配置',
+          key: 'config',
+          attrs: {
+            validate,
+            options: { format },
+          },
+        }],
+      } as any,
+    })
+    const attrs = (w.props[0] as any).attrs
+
+    expect(attrs.validate).toBe(validate)
+    expect(attrs.options.format).toBe(format)
+    expect((w.clone().props[0] as any).attrs.validate).toBe(validate)
+  })
+
+  it('深拷贝 defaultData 并保留函数引用', () => {
+    const callback = () => 'runtime'
+    const defaultValue = { nested: { callback } }
+    const w = new Widget({
+      _name: '卡片',
+      _view: 'card',
+      data: defaultValue,
+    })
+
+    expect(w.defaultData).not.toBe(defaultValue)
+    expect(w.defaultData.nested).not.toBe(defaultValue.nested)
+    expect(w.defaultData.nested.callback).toBe(callback)
+  })
+
+  it('正确深拷贝非普通对象', () => {
+    const date = new Date('2026-11-27T00:00:00+08:00')
+    const w = new Widget({
+      _name: '卡片',
+      _view: 'card',
+      data: { date, value: undefined },
+    })
+
+    expect(w.defaultData.date).not.toBe(date)
+    expect(w.defaultData.date).toBeInstanceOf(Date)
+    expect(w.defaultData.date.getTime()).toBe(date.getTime())
+    expect(w.defaultData).toHaveProperty('value', undefined)
+  })
+
   it('draggable / visible 默认值', () => {
     expect(new Widget({ _name: 'a', _view: 'a' }).draggable).toBe(true)
     expect(new Widget({ _name: 'a', _view: 'a' }).visible).toBe(true)

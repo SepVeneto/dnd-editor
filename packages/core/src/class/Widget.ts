@@ -19,6 +19,7 @@ import type {
 import type { FieldScope } from '@/capability'
 import type { IWidget } from '@/types'
 import Validator from 'async-validator'
+import cloneDeep from 'lodash/cloneDeep.js'
 
 export type Option = InstanceType<typeof ElOption>['$props']
 export type RadioOption = InstanceType<typeof ElRadio>['$props']
@@ -92,10 +93,7 @@ export class Widget {
   public container: IWidget['container']
 
   constructor(widget: IWidget) {
-    this._data = JSON.parse(JSON.stringify(widget))
-    // JSON 深拷贝会丢掉 agent 上的函数（如 update），单独保留
-    if (widget.agent)
-      this._data.agent = { ...widget.agent }
+    this._data = cloneDeep(widget)
     this.name = widget._name
     this.view = widget._view
     this.container = widget.container
