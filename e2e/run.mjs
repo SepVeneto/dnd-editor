@@ -333,15 +333,6 @@ try {
     state.presetPanel?.data === 1 && state.presetPanel?.preview === true,
     JSON.stringify(state.presetPanel),
   )
-  check(
-    'widgets 响应式更新后，同类型根配置面板同步自定义 schema 与绑定默认值',
-    state.reactivePanel?.binding === 'reactive-bound'
-      && state.reactivePanel?.hasTab === true
-      && state.reactivePanel?.hasCustomConfig === true
-      && state.reactivePanel?.hasBoundValue === true,
-    JSON.stringify(state.reactivePanel),
-  )
-
   // 生产者不再注入冗余的 el- 主题；shadow 里应当是编辑器自己的 mpd 主题
   check(
     'shadow DOM 使用编辑器自己的 mpd 主题',

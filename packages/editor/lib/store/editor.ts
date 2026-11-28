@@ -160,7 +160,6 @@ class ConfigPlugin {
     if (existing) {
       Object.assign(existing.widget, instance)
       existing.data = data
-      this.ctx.addNode(existing, root, false)
       return existing
     }
 
@@ -215,25 +214,6 @@ class ConfigPlugin {
       Object.assign(data, incoming)
       root.data[key] = data
       panel.data = data
-      this.ctx.addNode(panel, root, false)
-    }
-  }
-
-  /** 画布组件定义响应式更新后，同步与之同类型的根配置面板。 */
-  syncWidgets(getWidget: (view: string) => Widget | undefined) {
-    const root = this.ctx.rootNode()
-    for (const panel of this.list) {
-      const widget = getWidget(panel.type)
-      if (!widget)
-        continue
-
-      const definition = widget.clone()
-      definition._data.meta = {
-        ...definition._data.meta,
-        draggable: false,
-      }
-      Object.assign(panel.widget, definition)
-      panel.data = ensurePanelData(root, panel.widget as Widget)
       this.ctx.addNode(panel, root, false)
     }
   }
@@ -763,13 +743,6 @@ export const useEditor = defineStore('editor', () => {
     node.list.forEach(item => applySchemaDefaultsToTree(item))
   }
 
-  function syncConfigPanels() {
-    // Pinia 对跨 store 的 Map 推断会递归展开到编辑器上下文，这里收窄为实际注册表类型。
-    const widgetMap = app.widgetMap as Map<string, Widget>
-    const getWidget = (view: string): Widget | undefined => widgetMap.get(view)
-    plugins.config.syncWidgets(getWidget)
-  }
-
   return {
     rootNode,
     nodeMap,
@@ -806,6 +779,5 @@ export const useEditor = defineStore('editor', () => {
     setData,
     setSchema,
     applySchemaDefaultsToTree,
-    syncConfigPanels,
   }
 })
