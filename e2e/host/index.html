@@ -388,6 +388,56 @@
           state.configPanel = info
         })()
 
+        // 回归检查：widgets 响应式更新后，同类型的根配置面板要同步新 schema，
+        // 并为自定义配置项补齐 defaultValue，保证配置组件能拿到绑定数据。
+        await (async () => {
+          const info = {}
+          await el.addConfigPanel({
+            _name: '响应式配置',
+            _view: 'reactivePanel',
+            schema: {
+              props: [{ type: 'input', label: '初始配置', key: 'reactiveConfig' }],
+              style: [],
+            },
+            data: { isShow: 0 },
+          })
+
+          const nextWidgets = JSON.parse(JSON.stringify(widgets))
+          nextWidgets.push({
+            _name: '响应式配置',
+            _view: 'reactivePanel',
+            schema: {
+              props: [{
+                type: 'custom',
+                name: 'tabbar',
+                label: '绑定数据',
+                key: 'reactiveConfig',
+                defaultValue: { label: 'reactive-bound' },
+              }],
+              style: [],
+            },
+            data: { isShow: 0 },
+            style: {},
+          })
+          el.widgets = nextWidgets
+
+          await waitFor(() => el.getData()?.data?.reactivePanel?.reactiveConfig?.label === 'reactive-bound')
+          info.binding = el.getData()?.data?.reactivePanel?.reactiveConfig?.label
+
+          el.shadowRoot.querySelector('.mpd-editor').dispatchEvent(new MouseEvent('click', { bubbles: true }))
+          await sleep(300)
+          const tab = [...el.shadowRoot.querySelectorAll('.mpd-tabs__item')]
+            .find(item => item.textContent.trim() === '响应式配置')
+          info.hasTab = !!tab
+          tab?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+          await sleep(500)
+          const customItem = [...el.shadowRoot.querySelectorAll('.mpd-form-item')]
+            .find(item => item.textContent.includes('绑定数据'))
+          info.hasCustomConfig = !!customItem
+          info.hasBoundValue = customItem?.textContent.includes('reactive-bound') === true
+          state.reactivePanel = info
+        })()
+
         state.phase = 'done'
       }
       catch (err) {

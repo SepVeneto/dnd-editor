@@ -55,6 +55,7 @@ Vue.watch(() => editor.rootNode, () => {
 // 不重建根节点，因此画布上的数据与选中态都会保留
 Vue.watch(() => props.widgets, (widgets) => {
   appStore.setWidgets(widgets)
+  editor.syncConfigPanels()
   editor.applySchemaDefaultsToTree()
 })
 // 让动态组件的样式加载在 shadow dom 中，而不是宿主环境中：
